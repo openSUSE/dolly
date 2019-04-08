@@ -1,9 +1,9 @@
 	    Dolly - A program to clone disks / partitions
 	    ---------------------------------------------
 
-			    Version  0.57
-			      8 may 2003
-		   Felix Rauch <rauch@inf.ethz.ch>
+ Version  0.58C
+ 24 March 2005
+ Felix Rauch <rauch@inf.ethz.ch>
 
 
 This document describes the program "dolly", its purpose and the
@@ -165,6 +165,23 @@ multiple-file image to the clients. This allows to story arbitrary
 long partitions on file systems with a file size limit. For details
 and examples, see the section about the configuration file below
 (parameters <em>infile</em> and <em>outfile</em>).
+
+
+Change in version 0.58
+----------------------
+
+Thanks to David Mathog, dolly is now able to read or write data from its standard input or to its standard output. That means that you can e.g. pipe a tar stream through dolly. Whether that feature is useful or not depends on your situation. By using tar (instead of cloning the whole partition) your disks' reads and writes will be slower, but you only transfer the data that is actually needed. This feature might be most useful in situations where e.g. your disks/partitions are mostly empty or have different sizes/geometries.
+
+Please note that version 0.58 has not yet been thoroughly tested (I'm no longer working with clusters). E.g. it is not yet clear what happens when somebody tries to reach you with the write, talk or wall commands while dolly is running (which might potentially interfere with with your stdin/stdout, see below).
+
+Note also, that since all of dolly's output is now written to stderr (instead of stdout as before), some third-party scripts might no longer work.
+
+To use the feature, you should specify /dev/stdin as your infile and/or /dev/stdout as your outfile.
+
+Change in version 0.58C
+-----------------------
+
+Again, thanks to David Mathog, dolly can now be run without explicit sync() at the end of the cloning process (option "-n"). This can speed up dolly's runtime considerably when cloning smaller files, but there is no garantuee that the data actually made it to the disk if there is e.g. a power loss right after dolly finished.
 
 Configuration file
 ------------------

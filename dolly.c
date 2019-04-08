@@ -42,12 +42,50 @@
    V 0.57 8-MAY-2003 Felix Rauch <rauch@inf.ethz.ch>
           Splitted infiles and outfiles are now possible.
 	  Parameter 'hyphennormal' treats '-' as normal character in hostnames.
+   V 0.58 2-NOV-2004 David Mathog <mathog@caltech.edu>
+          (plus some minor cleanups by Felix Rauch)
+          Added changes to allow "/dev/stdin", "/dev/stdout" processing for
+	  input file and output file. "-" would have been used but
+	  that already has some other meanings in this program.
+	  This makes it easy to use dolly in a pipe
+	  like this:
+	  
+	  master:  tar cf - /tree_to_send | dolly -s -f config
+	  clients: dolly | tar xpf -
+	  
+	  In this mode compression should be disabled. That allows
+	  compression option to be used on each machines' pipe.
+	  
+	  Redirected messages which used to be to stdout to stderr.
+	  Also, since in some modes the main node knows the slave node
+	  names, but they don't, this information is put into the
+	  environment variable MYNODENAME and retrieved via
+	  getenv("MYNODENAME") in the program. If this succeeds the
+	  node will not even try gethostbyname(). For compatibility
+	  with other systems, dolly also checks the "HOST" environment
+	  variable.
+	  
+	  Default to TCP_NODELAY. Set large input/output buffers.
+	  Ignore errno EINTR on select on client. Option to suppress
+	  the warning (there can be a lot of them!).
+
+   V 0.58C 23-MAR-2005 David Mathog <mathog@caltech.edu>
+          Changed TRANSFER_BLOCK_SIZE to T_B_SIZE and replaced all
+          explicit 4096 with this define.  Similarly, replaced all
+          4095 with T_B_SIZEM1.  This allows a test to see if increasing
+          this from 4096 to 8192 speeds anything up.  Netpipe suggests
+          it should.
+          
+          Added a flag -n = 'no sync'.  When dolly waits for sync
+          on an 80 Mb file it can take twice as long for the transfer
+          to finish.  When dolly exits the disk light does come on, so
+          it appears that the data flushes to disk asynchronously anyway
+          when sync() is omitted.  
 	  
    If you change the history, then please also change the version_string
-   right below!
-*/
+   right below!  */
 
-static const char version_string[] = "0.57, 8-MAY-2003";
+static const char version_string[] = "0.58C, 23-MAR-2005";
 
 #include <unistd.h>
 #include <stdio.h>
@@ -72,7 +110,9 @@ static const char version_string[] = "0.57, 8-MAY-2003";
 
 #define MAXFANOUT 8
 
-#define TRANSFER_BLOCK_SIZE 4096 /* Size of blocks transf. to/from net/disk */
+/* Size of blocks transf. to/from net/disk and one less than that */
+#define T_B_SIZE   4096
+#define T_B_SIZEM1 (T_B_SIZE - 1)
 
 #define DOLLY_NONBLOCK 1                 /* Use nonblocking network sockets */
 
@@ -96,8 +136,11 @@ static unsigned long long output_split = 0;
 /* Numbers for splitted input/output files */
 static unsigned int input_nr = 0, output_nr = 0;
 
-/* TCP Segment Size */
+/* TCP Segment Size (useful for benchmarking only) */
 static int segsize = 0;
+
+/* size of buffers for TCP sockets (approx. 100KB, multiple of 4 KB) */
+#define SCKBUFSIZE 98304
 
 /* Describes the tree-structure */
 static int fanout = 1;   /* default is linear list */
@@ -116,11 +159,13 @@ static int compressed_in = 0;           /* compressed transfer or not? */
 static int compressed_out = 0;          /* write results compressed? */
 static char flag_v = 0;                 /* verbose */
 static char dummy_mode = 0;             /* No disk accesses */
+static int dosync = 1;                  /* sync() after transfer */
 static int dummy_time = 0;              /* Time for run in dummy-mode */
 static int dummysize = 0;
 static int exitloop = 0;
 static int timeout = 0;                 /* Timeout for startup */
 static int hyphennormal = 0;      /* '-' normal or interf. sep. in hostnames */
+static int verbignoresignals = 1;       /* warn on ignore signal errors */
 
 /* Number of extra links for data transfers */
 static unsigned char add_nr = 0;
@@ -174,9 +219,32 @@ static void parse_dollytab(FILE *df)
   char *sp, *sp2;
   unsigned int i;
   int me = -2;
+  int hadmynodename = 0; /* Did this node already get its node name? */
+  char *mnname = NULL;
 
   /* Read the parameters... */
-
+  
+  /* Is there a MYNODENAME? If so, use that for the nodename. There
+     won't be a line like this on the server node, but there should always
+     be a first line of some kind
+   */
+  mnname = getenv("MYNODENAME");
+  if(mnname != NULL) {
+    (void)strcpy(myhostname, mnname);
+    (void)fprintf(stderr,
+	    "\nAssigned nodename %s from MYNODENAME environment variable\n",
+	    myhostname);
+     hadmynodename = 1;
+  }
+  mnname = getenv("HOST");
+  if(mnname != NULL) {
+    (void)strcpy(myhostname, mnname);
+    (void)fprintf(stderr,
+	    "\nAssigned nodename %s from MYNODENAME environment variable\n",
+	    myhostname);
+     hadmynodename = 1;
+  }
+  
   /* First we want to know the input filename */
   if(!dummy_mode) {
     if(fgets(str, 256, df) == NULL) {
@@ -204,7 +272,7 @@ static void parse_dollytab(FILE *df)
       char tmp_str[256];
       strncpy(tmp_str, sp2, sp - sp2);
       tmp_str[sp - sp2] = '\0';
-      fprintf(stdout,
+      fprintf(stderr,
 	      "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
 	      tmp_str);
     }
@@ -239,7 +307,7 @@ static void parse_dollytab(FILE *df)
       char tmp_str[256];
       strncpy(tmp_str, sp2, sp - sp2);
       tmp_str[sp - sp2] = '\0';
-      fprintf(stdout,
+      fprintf(stderr,
 	      "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
 	      tmp_str);
     }
@@ -408,8 +476,10 @@ static void parse_dollytab(FILE *df)
   }
   
   /* Get our own hostname */
-  if(gethostname(myhostname, 63) == -1) {
-    perror("gethostname");
+  if(!hadmynodename){
+    if(gethostname(myhostname, 63) == -1) {
+      perror("gethostname");
+    }
   }
   /* Get the server's name. */
   if(strncmp("server ", str, 7) != 0) {
@@ -556,7 +626,7 @@ static void parse_dollytab(FILE *df)
   }
 
   /* Did we reach the end? */
-    if(fgets(str, 256, df) == NULL) {
+  if(fgets(str, 256, df) == NULL) {
     perror("fgets for endconfig");
     exit(1);
   }
@@ -570,10 +640,10 @@ static void parse_dollytab(FILE *df)
     exit(1);
   }
   if(flag_v) {
-    fprintf(stdout, "done.\n");
+    fprintf(stderr, "done.\n");
   }
   if(flag_v) {
-    fprintf(stdout, "I'm number %d\n", me);
+    fprintf(stderr, "I'm number %d\n", me);
   }
 }
 
@@ -590,10 +660,10 @@ static void getparams(int f)
   char tmpfile[32] = "/tmp/dollytmpXXXXXX";
 
   if(flag_v) {
-    fprintf(stdout, "Trying to read parameters...");
-    fflush(stdout);
+    fprintf(stderr, "Trying to read parameters...");
+    fflush(stderr);
   }
-  dollybuf = (char *)malloc(4096);
+  dollybuf = (char *)malloc(T_B_SIZE);
   if(dollybuf == NULL) {
     fprintf(stderr, "Couldn't get memory for dollybuf.\n");
     exit(1);
@@ -601,11 +671,11 @@ static void getparams(int f)
 
   readsize = 0;
   do {
-    ret = read(f, dollybuf + readsize, 4096);
+    ret = read(f, dollybuf + readsize, T_B_SIZE);
     if(ret == -1) {
       perror("read in getparams while");
       exit(1);
-    } else if(ret == 4096) {  /* This will probably not happen... */
+    } else if(ret == T_B_SIZE) {  /* This will probably not happen... */
       fprintf(stderr, "Ups, the transmitted config-file seems to long.\n"
 	      "Please rewrite dolly.\n");
       exit(1);
@@ -637,11 +707,11 @@ static void getparams(int f)
   }
   rewind(dolly_df);
   if(flag_v) {
-    fprintf(stdout, "done.\n");
+    fprintf(stderr, "done.\n");
   }
   if(flag_v) {
-    fprintf(stdout, "Parsing parameters...");
-    fflush(stdout);
+    fprintf(stderr, "Parsing parameters...");
+    fflush(stderr);
   }
   parse_dollytab(dolly_df);
   fclose(dolly_df);
@@ -654,93 +724,95 @@ static void getparams(int f)
 static void print_params(void)
 {
   unsigned int i;
-  fprintf(stdout, "Parameter file: \n");
+  fprintf(stderr, "Parameter file: \n");
   if(!dummy_mode) {
     if(compressed_in) {
-      fprintf(stdout, "compressed ");
+      fprintf(stderr, "compressed ");
     }
-    fprintf(stdout, "infile = '%s'", infile);
+    fprintf(stderr, "infile = '%s'", infile);
     if(input_split != 0) {
-      fprintf(stdout, ", splitted in parts.\n");
+      fprintf(stderr, ", splitted in parts.\n");
     } else {
-      fprintf(stdout, "\n");
+      fprintf(stderr, "\n");
     }
     if(compressed_out) {
-      fprintf(stdout, "compressed ");
+      fprintf(stderr, "compressed ");
     }
-    fprintf(stdout, "outfile = '%s'", outfile);
+    fprintf(stderr, "outfile = '%s'", outfile);
     if(output_split != 0) {
-      fprintf(stdout, ", splitted in %llu byte parts.\n", output_split);
+      fprintf(stderr, ", splitted in %llu byte parts.\n", output_split);
     } else {
-      fprintf(stdout, "\n");
+      fprintf(stderr, "\n");
     }
   } else {
-    fprintf(stdout, "dummy filesize = %d MB\n", dummysize/1024/1024);
+    fprintf(stderr, "dummy filesize = %d MB\n", dummysize/1024/1024);
   }
-  fprintf(stdout, "using data port %u\n", dataport);
-  fprintf(stdout, "using ctrl port %u\n", ctrlport);
-  fprintf(stdout, "myhostname = '%s'\n", myhostname);
+  fprintf(stderr, "using data port %u\n", dataport);
+  fprintf(stderr, "using ctrl port %u\n", ctrlport);
+  fprintf(stderr, "myhostname = '%s'\n", myhostname);
   if(segsize > 0) {
-    fprintf(stdout, "TCP segment size = %d\n", segsize);
+    fprintf(stderr, "TCP segment size = %d\n", segsize);
   }
   if(add_nr > 0) {
-    fprintf(stdout, "add_nr (extra network interfaces) = %d\n", add_nr);
+    fprintf(stderr, "add_nr (extra network interfaces) = %d\n", add_nr);
     if(add_mode == 1) {
-      fprintf(stdout, "Postfixes: ");
+      fprintf(stderr, "Postfixes: ");
     } else if(add_mode == 2) {
-      fprintf(stdout, "Midfixes: ");
+      fprintf(stderr, "Midfixes: ");
     } else {
       fprintf(stderr, "Undefined value fuer add_mode: %d\n", add_mode);
       exit(1);
     }
     for(i = 0; i < add_nr; i++) {
-      fprintf(stdout, "%s", add_name[i]);
-      if(i < add_nr - 1) fprintf(stdout, ":");
+      fprintf(stderr, "%s", add_name[i]);
+      if(i < add_nr - 1) fprintf(stderr, ":");
     }
-    fprintf(stdout, "\n");
+    fprintf(stderr, "\n");
   }
   if (add_primary == 1) {
-    fprintf(stdout, "add to primary hostname = ");
-    fprintf(stdout, "%s", add_name[0]);
-    fprintf(stdout, "\n");
+    fprintf(stderr, "add to primary hostname = ");
+    fprintf(stderr, "%s", add_name[0]);
+    fprintf(stderr, "\n");
   }
-  fprintf(stdout, "fanout = %d\n", fanout);
-  fprintf(stdout, "nr_childs = %d\n", nr_childs);
-  fprintf(stdout, "server = '%s'\n", servername);
-  fprintf(stdout, "I'm %sthe server.\n", (meserver ? "" : "not "));
-  fprintf(stdout, "I'm %sthe last host.\n", (melast ? "" : "not "));
-  fprintf(stdout, "There are %d hosts in the ring (excluding server):\n",
+  fprintf(stderr, "fanout = %d\n", fanout);
+  fprintf(stderr, "nr_childs = %d\n", nr_childs);
+  fprintf(stderr, "server = '%s'\n", servername);
+  fprintf(stderr, "I'm %sthe server.\n", (meserver ? "" : "not "));
+  fprintf(stderr, "I'm %sthe last host.\n", (melast ? "" : "not "));
+  fprintf(stderr, "There are %d hosts in the ring (excluding server):\n",
 	  hostnr);
   for(i = 0; i < hostnr; i++) {
-    fprintf(stdout, "\t'%s'\n", hostring[i]);
+    fprintf(stderr, "\t'%s'\n", hostring[i]);
   }
-  fprintf(stdout, "Next hosts in ring:\n");
+  fprintf(stderr, "Next hosts in ring:\n");
   if(nr_childs == 0) {
-    fprintf(stdout, "\tnone.\n");
+    fprintf(stderr, "\tnone.\n");
   } else {
     for(i = 0; i < nr_childs; i++) {
-      fprintf(stdout, "\t%s (%d)\n",
+      fprintf(stderr, "\t%s (%d)\n",
 	      hostring[nexthosts[i]], nexthosts[i]);
     }
   }
-  fprintf(stdout, "All parameters read successfully.\n");
+  fprintf(stderr, "All parameters read successfully.\n");
   if(compressed_in && !meserver) {
-    fprintf(stdout,
+    fprintf(stderr,
 	    "Will use gzip to uncompress data before writing.\n");
   } else if(compressed_in && meserver) {
-    fprintf(stdout,
+    fprintf(stderr,
 	"Clients will have to use gzip to uncompress data before writing.\n");
   } else {
-    fprintf(stdout, "No compression used.\n");
+    fprintf(stderr, "No compression used.\n");
   }
-  fprintf(stdout, "Using transfer size %d bytes.\n", TRANSFER_BLOCK_SIZE);
+  fprintf(stderr, "Using transfer size %d bytes.\n", T_B_SIZE);
 }
 
 static void open_insocks(void)
 {
   struct sockaddr_in addr;
   int optval;
-
+  char *drcvbuf = NULL;
+  int recv_size, sizeofint = sizeof(int);
+  
   /* All machines have an incoming data link */
   datasock = socket(PF_INET, SOCK_STREAM, 0);
   if(datasock == -1) {
@@ -754,23 +826,43 @@ static void open_insocks(void)
     exit(1);
   }
   
+  /* Attempt to set TCP_NODELAY */
+  optval = 1;
+  if(setsockopt(datasock, IPPROTO_TCP, TCP_NODELAY,
+        	&optval, sizeof(int)) < 0) {
+    (void)fprintf(stderr, "setsockopt: TCP_NODELAY failed! errno = %d\n",
+		  errno);
+    // exit(1);
+  }
+
   if(segsize > 0) {
-    /* Attempt to set TCP_NODELAY */
-    optval = 1;
-    if(setsockopt(datasock, IPPROTO_TCP, TCP_NODELAY,
-		  &optval, sizeof(int)) < 0) {
-      printf("setsockopt: TCP_NODELAY failed! errno=%d\n", errno);
-      // exit(1);
-    }
-    
     /* Attempt to set TCP_MAXSEG */
-    fprintf(stdout, "Set TCP_MAXSEG to %d bytes\n", segsize);
+    fprintf(stderr, "Set TCP_MAXSEG to %d bytes\n", segsize);
     if(setsockopt(datasock, IPPROTO_TCP, TCP_MAXSEG,
 		  &segsize, sizeof(int)) < 0) {
-      printf("setsockopt: TCP_MAXSEG failed! errno=%d\n", errno);
+     (void) fprintf(stderr,"setsockopt: TCP_MAXSEG failed! errno=%d\n", errno);
       // exit(1);
     }
   }
+  
+  /* MATHOG, set a large buffer for the data socket, this section is
+     taken from NETPIPE. */
+  /* Attempt to set input BUFFER sizes */
+   drcvbuf = malloc(SCKBUFSIZE);
+   if(drcvbuf == NULL) {
+     perror("Error creating buffer for input data socket");
+     exit(1);
+   }
+   if(setsockopt(datasock, SOL_SOCKET, SO_RCVBUF, &drcvbuf, SCKBUFSIZE) < 0) {
+  	(void) fprintf(stderr, "setsockopt: SO_RCVBUF failed! errno = %d\n",
+		       errno);
+  	exit(556);
+   }
+   getsockopt(datasock, SOL_SOCKET, SO_RCVBUF,
+  		   (char *) &recv_size, (void *) &sizeofint);
+   if(flag_v) {
+     (void)fprintf(stderr, "Receive buffer is %d bytes\n", recv_size);
+   }
   
   addr.sin_family = AF_INET;
   addr.sin_port = htons(dataport);
@@ -819,6 +911,8 @@ static void open_outsocks(void)
   int optval;
   int max;
   char hn[256+32];
+  char *dsndbuf = NULL;
+  int send_size, sizeofint = sizeof(int);
 
   if(nr_childs > 1) {
     max = nr_childs;
@@ -828,7 +922,6 @@ static void open_outsocks(void)
     max = 1;
   }
   for(i = 0; i < max; i++) {  /* For all childs we have */
-
     if(nr_childs > 1) {
       strcpy(hn, hostring[nexthosts[i]]);
     } else if(add_nr > 0) {
@@ -879,6 +972,7 @@ static void open_outsocks(void)
     }
     
     hent = gethostbyname(hn);
+/*  (void)fprintf(stderr,"DEBUG gethostbyname on >%s<\n",hn); */
     if(hent == NULL) {
       char str[256];
       sprintf(str, "gethostbyname for host '%s' error %d",
@@ -887,17 +981,18 @@ static void open_outsocks(void)
       exit(1);
     }
     if(hent->h_addrtype != AF_INET) {
-      fprintf(stdout, "Expected h_addrtype of AF_INET, got %d\n",
+      fprintf(stderr, "Expected h_addrtype of AF_INET, got %d\n",
 	      hent->h_addrtype);
     }
     
     if(flag_v) {
-      fprintf(stdout, "Connecting to host %s... ", hn);
-      fflush(stdout);
+      fprintf(stderr, "Connecting to host %s... ", hn);
+      fflush(stderr);
     }
     
     /* Wait until we connected to everything... */
-    dataok = ctrlok = 0;
+    dataok  = ctrlok = 0;
+    dsndbuf = NULL;
     do {
       dataout[i] = socket(PF_INET, SOCK_STREAM, 0);
       if(dataout[i] == -1) {
@@ -913,29 +1008,53 @@ static void open_outsocks(void)
 	}
       }
       
+      /* Attempt to set TCP_NODELAY */
+      optval = 1;
+      if(setsockopt(dataout[i], IPPROTO_TCP, TCP_NODELAY,
+        	    &optval, sizeof(int)) < 0) {
+        (void) fprintf(stderr,"setsockopt: TCP_NODELAY failed! errno = %d\n",
+		      errno);
+        // exit(1);
+      }
+
       if(segsize > 0) {
-	/* Attempt to set TCP_NODELAY */
-	optval = 1;
-	if(setsockopt(dataout[i], IPPROTO_TCP, TCP_NODELAY,
-		      &optval, sizeof(int)) < 0) {
-	  printf("setsockopt: TCP_NODELAY failed! errno=%d\n", errno);
-	  // exit(1);
-	}
-	
 	/* Attempt to set TCP_MAXSEG */
-	fprintf(stdout, "Set TCP_MAXSEG to %d bytes\n", segsize);
+	fprintf(stderr, "Set TCP_MAXSEG to %d bytes\n", segsize);
 	if(setsockopt(dataout[i], IPPROTO_TCP, TCP_MAXSEG,
 		      &segsize, sizeof(int)) < 0) {
-	  printf("setsockopt: TCP_MAXSEG failed! errno=%d\n", errno);
+	 (void) fprintf(stderr, "setsockopt: TCP_MAXSEG failed! errno = %d\n", 
+			errno);
 	  // exit(1);
 	}
       }
       
+      /* MATHOG, set a large buffer for the data socket, this section is
+     	 taken from NETPIPE */
+      /* Attempt to set output BUFFER sizes */
+      if(dsndbuf == NULL){
+      	 dsndbuf = malloc(SCKBUFSIZE);/* Note it may reallocate, which is ok */
+      	 if(dsndbuf == NULL){
+      	   perror("Error creating buffer for input data socket");
+      	   exit(1);
+      	 }
+      	 if(setsockopt(dataout[i], SOL_SOCKET, SO_SNDBUF, &dsndbuf,
+		       SCKBUFSIZE) < 0)
+      	 {
+     	     (void) fprintf(stderr,
+			    "setsockopt: SO_SNDBUF failed! errno = %d\n",
+			    errno);
+     	      exit(556);
+      	 }
+      	 getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF,
+     	 		 (char *) &send_size, (void *) &sizeofint);
+      	 fprintf(stderr, "Send buffer %d is %d bytes\n", i, send_size);
+      }
+
       /* Setup data port */
       addrdata.sin_family = hent->h_addrtype;
       addrdata.sin_port = htons(dataport);
       bcopy(hent->h_addr, &addrdata.sin_addr, hent->h_length);
-      
+
       if((nr_childs > 1) || (i == 0)) {
 	/* Setup control port */
 	addrctrl.sin_family = hent->h_addrtype;
@@ -967,8 +1086,8 @@ static void open_outsocks(void)
 	    }
 	  }
 	  if(flag_v) {
-	    fprintf(stdout, "data ");
-	    fflush(stdout);
+	    fprintf(stderr, "data ");
+	    fflush(stderr);
 	  }
 	}
       }
@@ -984,8 +1103,8 @@ static void open_outsocks(void)
 	  } else {
 	    ctrlok = 1;
 	    if(flag_v) {
-	      fprintf(stdout, "control ");
-	      fflush(stdout);
+	      fprintf(stderr, "control ");
+	      fflush(stderr);
 	    }
 	  }
 	} else {
@@ -997,7 +1116,7 @@ static void open_outsocks(void)
       }
     } while(dataok + ctrlok != 2);
     if(flag_v) {
-      fprintf(stdout, "\b.\n");
+      fprintf(stderr, "\b.\n");
     }
   }
 }
@@ -1204,7 +1323,7 @@ static int movebytes(int fd, int dir, char *addr, unsigned int n)
 	    }
 	  }
 	}
-	printf("read returned %d\n", ret);
+	(void) fprintf(stderr,"read returned %d\n", ret);
       }
     } else {
       fprintf(stderr, "Bad direction in movebytes!\n");
@@ -1232,8 +1351,7 @@ static int movebytes(int fd, int dir, char *addr, unsigned int n)
 
 static void buildring(void)
 {
-  int ret, i, nr;
-  socklen_t size;
+  int size, ret, i, nr;
   int ready_mach = 0;  /* Number of ready machines */
   char msg[128];
   char info_buf[1024];
@@ -1242,8 +1360,8 @@ static void buildring(void)
     /* Open the input sockets and wait for connections... */
     open_insocks();
     if(flag_v) {
-      fprintf(stdout, "Accepting...");
-      fflush(stdout);
+      fprintf(stderr, "Accepting...");
+      fflush(stderr);
     }
     
     /* All except the first accept a connection now */
@@ -1253,8 +1371,8 @@ static void buildring(void)
       exit(1);
     }
     if(flag_v) {
-      fprintf(stdout, "control...\n");
-      fflush(stdout);
+      fprintf(stderr, "control...\n");
+      fflush(stderr);
     }
     
     /* Clients should now read everything from the ctrl-socket. */
@@ -1290,7 +1408,7 @@ static void buildring(void)
       }
     }
     if(flag_v) {
-      fprintf(stdout, "Connected data...done.\n");
+      fprintf(stderr, "Connected data...done.\n");
     }
     /* The input sockets are now connected. */
 
@@ -1300,7 +1418,7 @@ static void buildring(void)
     if(ret != strlen(msg)) {
       fprintf(stderr,
 	      "Couldn't write got-parameters-message back to server "
-	      "(sent %d instead of %zu bytes).\n",
+	      "(sent %d instead of %d bytes).\n",
 	      ret, strlen(msg));
     }
   }
@@ -1320,7 +1438,7 @@ static void buildring(void)
   
   /* Finally, the first machine also accepts a connection */
   if(meserver) {
-    char buf[4096];
+    char buf[T_B_SIZE];
     size_t readsize;
     int fd, ret, maxsetnr = -1;
     fd_set real_set, cur_set;
@@ -1331,11 +1449,11 @@ static void buildring(void)
       perror("open dollytab");
       exit(1);
     }
-    readsize = read(fd, buf, 4096);
+    readsize = read(fd, buf, T_B_SIZE);
     if(readsize == -1) {
       perror("read dollytab");
       exit(1);
-    } else if(readsize == 4096) {
+    } else if(readsize == T_B_SIZE) {
       fprintf(stderr, "Dollytab possibly too long, adjust program...\n");
       exit(1);
     } else if(readsize == 1448) {
@@ -1349,7 +1467,7 @@ static void buildring(void)
 
 
     /* Wait for backflow-information or the data socket connection */
-    fprintf(stdout, "Waiting for ring to build...\n");
+    fprintf(stderr, "Waiting for ring to build...\n");
     FD_ZERO(&real_set);
     maxsetnr = -1;
     for(i = 0; i < nr_childs; i++) {
@@ -1382,13 +1500,13 @@ static void buildring(void)
 	    p = info_buf;
 	    info_buf[ret] = 0;	
 	    if(flag_v) {
-	      fprintf(stdout, info_buf);
+	      fprintf(stderr, info_buf);
 	    }
 	    while((p = strstr(p, "ready")) != NULL) {
 	      ready_mach++;
 	      p++;
 	    }
-	    fprintf(stdout,
+	    fprintf(stderr,
 		    "Machines left to wait for: %d\n", hostnr - ready_mach);
 	  }
 	}
@@ -1397,7 +1515,7 @@ static void buildring(void)
   }
 
   if(flag_v) {
-    fprintf(stdout, "Accepted.\n");
+    fprintf(stderr, "Accepted.\n");
   }
   
   if(!meserver) {
@@ -1414,7 +1532,7 @@ static void buildring(void)
     if(ret != strlen(msg)) {
       fprintf(stderr,
 	      "Couldn't write ready-message back to server "
-	      "(sent %d instead of %zu bytes).\n",
+	      "(sent %d instead of %d bytes).\n",
 	      ret, strlen(msg));
     }
   }
@@ -1425,7 +1543,7 @@ static void transmit(void)
 {
   char *buf_addr, *buf;
   unsigned long long t, transbytes = 0, lastout = 0;
-  unsigned int bytes = TRANSFER_BLOCK_SIZE;
+  unsigned int bytes = T_B_SIZE;
   int ret = 1, maxsetnr = 0;
   unsigned long td = 0, tdlast = 0;
   int i, a;
@@ -1433,10 +1551,10 @@ static void transmit(void)
   struct timeval tv1, tv2, tv3;
   fd_set real_set, cur_set;
 
-  buf_addr = (char *)malloc(2 * 4095);
-  buf = (char *)((unsigned long)(buf_addr + 4095) & (~4095));
+  buf_addr = (char *)malloc(2 * T_B_SIZEM1);
+  buf = (char *)((unsigned long)(buf_addr + T_B_SIZEM1) & (~T_B_SIZEM1));
   if(dummy_mode) {
-    bzero(buf, TRANSFER_BLOCK_SIZE);
+    bzero(buf, T_B_SIZE);
   }
 
   t = 0x7fffffff;
@@ -1526,16 +1644,18 @@ static void transmit(void)
 	}
 	if(!input_split || (res < 0)) {
 	  if(flag_v) {
-	    fprintf(stdout, "\nRead %llu bytes from file(s).\n", maxbytes);
+	    fprintf(stderr, "\nRead %llu bytes from file(s).\n", maxbytes);
 	  }
 	  if(add_nr == 0) {
 	    for(i = 0; i < nr_childs; i++) {
-	      printf("Writing maxbytes = %lld to ctrlout\n", maxbytes);
+	     (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
+			   maxbytes);
 	      movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8);
 	      shutdown(dataout[i], 2);
 	    }
 	  } else {
-	    printf("Writing maxbytes = %lld to ctrlout\n", maxbytes);
+	   (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
+			 maxbytes);
 	    movebytes(ctrlout[0], WRITE, (char *)&maxbytes, 8);
 	    for(i = 0; i <= add_nr; i++) {
 	      shutdown(dataout[i], 2);
@@ -1569,12 +1689,24 @@ static void transmit(void)
       cur_set = real_set;
       ret = select(maxsetnr, &cur_set, NULL, NULL, NULL);
       if(ret == -1) {
-	perror("select");
-	exit(1);
+        if(errno != EINTR) {
+	  /* MATHOG: (on above "if" statement)
+	   * Some signal was received, don't have a handler, ignore it.
+	   */
+	  perror("select");
+	  exit(1);
+	}
+	ret = 0;
       }
       if(ret < 1) {
-	printf("Select returned %d\n", ret);
-      } else {
+	if(verbignoresignals) {
+	  /* fr: Shouldn't that be a bit further up? */
+	  (void)fprintf(stderr,
+			"\nIgnoring unhandled signal (select() returned %d.\n",
+			ret);
+	}
+      }
+      else {
 	nr_descr = ret;
 	for(i = 0; i < nr_descr; i++) {
 	  if(FD_ISSET(ctrlin, &cur_set)) {
@@ -1603,13 +1735,13 @@ static void transmit(void)
 	    }
 	    t = maxbytes - transbytes;
 	    if(flag_v) {
-	      fprintf(stdout,"\nMax. bytes will be %llu bytes. %llu bytes left.\n", maxbytes, t);
+	      fprintf(stderr,"\nMax. bytes will be %llu bytes. %llu bytes left.\n", maxbytes, t);
 	    }
 	    FD_CLR(ctrlin, &real_set);
 	    FD_CLR(ctrlin, &cur_set);
 	  } else if(FD_ISSET(datain[0], &cur_set)) {
 	    /* There is data to be read from the net */
-	    bytes = (t >= 4096 ? 4096 : t);
+	    bytes = (t >= T_B_SIZE ? T_B_SIZE : t);
 	    ret = movebytes(datain[0], READ, buf, bytes);
 	    if(!dummy_mode) {
 	      if(!output_split) {
@@ -1639,7 +1771,7 @@ static void transmit(void)
 	    FD_CLR(datain[0], &cur_set);
 	    /* Handle additional network interfaces, if available */
 	    for(a = 1; a <= add_nr; a++) {
-	      bytes = (t >= 4096 ? 4096 : t);
+	      bytes = (t >= T_B_SIZE ? T_B_SIZE : t);
 	      ret = movebytes(datain[a], READ, buf, bytes);
 	      if(!dummy_mode) {
 		movebytes(output, WRITE, buf, ret);
@@ -1656,7 +1788,7 @@ static void transmit(void)
 	    for(i = 0; i < nr_childs; i++) {
 	      if(FD_ISSET(ctrlout[i], &cur_set)) {
 		/* Backflow of control-information, just pass it on */
-		ret = read(ctrlout[i], buf, 4096);
+		ret = read(ctrlout[i], buf, T_B_SIZE);
 		if(ret == -1) {
 		  perror("read backflow in transmit");
 		  exit(1);
@@ -1765,18 +1897,23 @@ static void transmit(void)
       //fprintf(logfd, "There are %d hosts in the ring (excluding server):\n", hostnr);
     }
   } else {
-    fprintf(stdout, "Transfered MB: %.0f, MB/s: %.3f \n\n",
+    fprintf(stderr, "Transfered MB: %.0f, MB/s: %.3f \n\n",
 	    (float)transbytes/1000000, (float)transbytes/td);
     fprintf(stdtty, "\n");
   }
   
   close(output);
-  sync();
-  if(flag_v) {
-    fprintf(stdout, "Synced.\n");
+  if(dosync){
+    sync();
+    if(flag_v) {
+      fprintf(stderr, "Synced.\n");
+    }
   }
   if(meserver) {
     for(i = 0; i < nr_childs; i++) {
+      if(flag_v) {
+        fprintf(stderr, "Waiting for child %d.\n",i);
+      }
       ret = movebytes(ctrlout[i], READ, buf, 8);
       if(ret != 8) {
 	fprintf(stderr,
@@ -1792,18 +1929,18 @@ static void transmit(void)
 	      *(unsigned long long *)&buf,
 	      maxbytes, maxbytes);
     } else {
-      fprintf(stdout, "Clients done.\n");
+      fprintf(stderr, "Clients done.\n");
     }
 
-    fprintf(stdout, "Time: %lu.%03lu\n", td / 1000000, td % 1000000);
-    fprintf(stdout, "MBytes/s: %0.3f\n", (double)maxbytes / td);
-    fprintf(stdout, "Aggregate MBytes/s: %0.3f\n",
+    fprintf(stderr, "Time: %lu.%03lu\n", td / 1000000, td % 1000000);
+    fprintf(stderr, "MBytes/s: %0.3f\n", (double)maxbytes / td);
+    fprintf(stderr, "Aggregate MBytes/s: %0.3f\n",
 	    (double)maxbytes * hostnr / td);
     if(maxcbytes != 0) {
-      fprintf(stdout, "Bytes written on each node: %llu\n", maxcbytes);
-      fprintf(stdout, "MBytes/s written: %0.3f\n",
+      fprintf(stderr, "Bytes written on each node: %llu\n", maxcbytes);
+      fprintf(stderr, "MBytes/s written: %0.3f\n",
 	      (double)maxcbytes / td);
-      fprintf(stdout, "Aggregate MBytes/s written: %0.3f\n",
+      fprintf(stderr, "Aggregate MBytes/s written: %0.3f\n",
 	      (double)maxcbytes * hostnr / td);
     }
     if(flag_log) {
@@ -1847,7 +1984,7 @@ static void transmit(void)
     movebytes(ctrlin, WRITE, (char *)&maxbytes, 8);
   }
   if(flag_v) {
-    fprintf(stdout, "Transmitted.\n");
+    fprintf(stderr, "Transmitted.\n");
   }
   free(buf_addr);
   if(maxbytes == 0) {
@@ -1860,7 +1997,7 @@ static void usage(void)
 {
   fprintf(stderr, "\n");
   fprintf(stderr,
-	  "Usage: dolly [-h] [-V] [-v] [-s] [-c <size>] [-d] [-f configfile] "
+	  "Usage: dolly [-h] [-V] [-v] [-s] [-n] [-c <size>] [-d] [-f configfile] "
 	  "[-o logfile] [-t time]\n");
   fprintf(stderr, "\t-s: this is the server, check hostname\n");
   fprintf(stderr, "\t-S: this is the server, do not check hostname\n");
@@ -1878,7 +2015,10 @@ static void usage(void)
   fprintf(stderr, "\t-t <time>, where <time> is the run-time in seconds of this "
 	  "dummy-mode\n");
   fprintf(stderr, "\t-a <timeout>: Lets dolly terminate if it could not transfer\n\t\tany data after <timeout> seconds.\n");
+  fprintf(stderr, "\t-n: Do not sync before exit. Dolly exits sooner.\n");
+  fprintf(stderr, "\t    Data may not make it to disk if power fails soon after dolly exits.\n");
   fprintf(stderr, "\t-h: Print this help and exit\n");
+  fprintf(stderr, "\t-q: Suppresss \"ignored signal\" messages\n");
   fprintf(stderr, "\t-V: Print version number and exit\n");
   fprintf(stderr, "\nDolly is part of the Patagonia cluster project, ");
   fprintf(stderr, "see also\nhttp://www.cs.inf.ethz.ch/cops/patagonia/\n");
@@ -1894,7 +2034,7 @@ int main(int argc, char *argv[])
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "f:c:vo:sShdt:a:V");
+    c = getopt(argc, argv, "f:c:vqo:Sshndt:a:V");
     if(c == -1) break;
     
     switch(c) {
@@ -1940,6 +2080,11 @@ int main(int argc, char *argv[])
       maxcbytes = atoi(optarg);
       break;
       
+    case 'n':
+      dosync = 0;
+      break;
+      
+      
     case 's':
       /* This machine is the server. */
       meserver = 1;
@@ -1977,7 +2122,7 @@ int main(int argc, char *argv[])
       }
       timeout = i;
       if(flag_v) {
-	fprintf(stdout, "Will set timeout to %d seconds.\n", timeout);
+	fprintf(stderr, "Will set timeout to %d seconds.\n", timeout);
       }
       signal(SIGALRM, alarm_handler);
       break;
@@ -1986,9 +2131,13 @@ int main(int argc, char *argv[])
       /* Give a little help */
       usage();
       break;
+      
+    case 'q':
+      verbignoresignals = 0;
+      break;
 
     case 'V':
-      fprintf(stdout, "Dolly version %s\n", version_string);
+      fprintf(stderr, "Dolly version %s\n", version_string);
       exit(0);
       break;
       
@@ -2009,16 +2158,16 @@ int main(int argc, char *argv[])
   }
 
   /* try to open standard terminal output */
-  /* if it fails, redirect stdtty to stdout */
-  stdtty=fopen("/dev/tty","a");
+  /* if it fails, redirect stdtty to stderr */
+  stdtty = fopen("/dev/tty","a");
   if (stdtty == NULL)
   {
-    stdtty=stdout;
+    stdtty = stderr;
   }
 
   do {
     if(flag_v) {
-      fprintf(stdout, "\nTrying to build ring...\n");
+      fprintf(stderr, "\nTrying to build ring...\n");
     }
     
     alarm(timeout);
@@ -2046,7 +2195,7 @@ int main(int argc, char *argv[])
       close(dataout[i]);
     }
     if(flag_v) {
-      fprintf(stdout, "\n");
+      fprintf(stderr, "\n");
     }
   } while (!meserver && dummy_mode && !exitloop);
  
