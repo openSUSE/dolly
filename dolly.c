@@ -1351,7 +1351,8 @@ static int movebytes(int fd, int dir, char *addr, unsigned int n)
 
 static void buildring(void)
 {
-  int size, ret, i, nr;
+  socklen_t size;
+  int ret, i, nr;
   int ready_mach = 0;  /* Number of ready machines */
   char msg[128];
   char info_buf[1024];
@@ -1418,7 +1419,7 @@ static void buildring(void)
     if(ret != strlen(msg)) {
       fprintf(stderr,
 	      "Couldn't write got-parameters-message back to server "
-	      "(sent %d instead of %d bytes).\n",
+	      "(sent %d instead of %zu bytes).\n",
 	      ret, strlen(msg));
     }
   }
@@ -1532,7 +1533,7 @@ static void buildring(void)
     if(ret != strlen(msg)) {
       fprintf(stderr,
 	      "Couldn't write ready-message back to server "
-	      "(sent %d instead of %d bytes).\n",
+	      "(sent %d instead of %zu bytes).\n",
 	      ret, strlen(msg));
     }
   }
