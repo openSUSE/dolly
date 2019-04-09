@@ -974,7 +974,7 @@ static void open_outsocks(void)
     hent = gethostbyname(hn);
 /*  (void)fprintf(stderr,"DEBUG gethostbyname on >%s<\n",hn); */
     if(hent == NULL) {
-      char str[256];
+      char str[strlen(hn)];
       sprintf(str, "gethostbyname for host '%s' error %d",
 	      hn, h_errno);
       herror(str);
@@ -1149,7 +1149,7 @@ static int open_infile(int try_hard)
     input = open(name, O_RDONLY);
     if(input == -1) {
       if(try_hard == 1) {
-	char str[256];
+	char str[strlen(name)];
 	sprintf(str, "open inputfile '%s'", name);
 	perror(str);
 	exit(1);
@@ -1161,7 +1161,7 @@ static int open_infile(int try_hard)
     /* Input should be compressed first. */
     if(access(name, R_OK) == -1) {
       if(try_hard == 1) {
-	char str[256];
+	char str[strlen(name)];
 	sprintf(str, "open inputfile '%s'", name);
 	perror(str);
 	exit(1);
@@ -1228,7 +1228,7 @@ static int open_outfile(int try_hard)
     }
     if(output == -1) {
       if(try_hard == 1) {
-	char str[256];
+	char str[strlen(name)];
 	sprintf(str, "open outputfile '%s'", name);
 	perror(str);
 	exit(1);
@@ -1239,7 +1239,7 @@ static int open_outfile(int try_hard)
   } else { /* Compressed_In */
     if(access(name, W_OK) == -1) {
       if(try_hard == 1) {
-	char str[256];
+	char str[strlen(name)];
 	sprintf(str, "open outputfile '%s'", name);
 	perror(str);
 	exit(1);
