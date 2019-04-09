@@ -1,4 +1,4 @@
-VERSION=0.58C
+VERSION=0.59
 CC=gcc
 CFLAGS=-Wall -g -O3
 

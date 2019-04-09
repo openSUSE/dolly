@@ -204,6 +204,12 @@ up dolly's runtime considerably when cloning smaller files, but there
 is no garantuee that the data actually made it to the disk if there is
 e.g. a power loss right after dolly finished.
 
+Change in version 0.59
+----------------------
+
+Some output improvments and add some options to deal with socket and 
+buffer size to experiment some parameter on the fly. Done some cleanup
+in the C code to get less warning in building with recent GCC7.
 
 Configuration file
 ------------------
@@ -445,7 +451,14 @@ Dolly has a few options which are explained here:
   -n
     Do not sync() before exit. Thus, dolly will exit sooner, but data
     may not make it to disk if power fails soon after dolly exits.
-        
+
+  -u <size>
+    Specify the size of buffers for TCP sockets. Should be a Multiple
+    of 4K.
+
+  -b <size>
+    option to specify the TRANSFER_BLOCK_SIZE. Should be a multiple of
+    the size of buffers for TCP sockets.
 
 Starting the process
 --------------------

@@ -81,11 +81,17 @@
           to finish.  When dolly exits the disk light does come on, so
           it appears that the data flushes to disk asynchronously anyway
           when sync() is omitted.  
+
+   V 0.59 09-APR-2019 Antoine Ginies <aginies@suse.com>
+          Cleanup warning building
+	  Change default output in non verbose mode (get some stats)
+	  Add -b option to specify the TRANSFER_BLOCK_SIZE
+	  Add -u to specify the size of buffers for TCP sockets
 	  
    If you change the history, then please also change the version_string
    right below!  */
 
-static const char version_string[] = "0.58C, 23-MAR-2005";
+static const char version_string[] = "0.59, 09-APR-2019";
 
 #include <unistd.h>
 #include <stdio.h>
