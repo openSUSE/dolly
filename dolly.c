@@ -142,7 +142,8 @@ static unsigned int input_nr = 0, output_nr = 0;
 static int segsize = 0;
 
 /* size of buffers for TCP sockets (approx. 100KB, multiple of 4 KB) */
-#define SCKBUFSIZE 98304
+static int buffer_size = 98304;
+#define SCKBUFSIZE buffer_size
 
 /* Describes the tree-structure */
 static int fanout = 1;   /* default is linear list */
@@ -242,7 +243,7 @@ static void parse_dollytab(FILE *df)
   if(mnname != NULL) {
     (void)strcpy(myhostname, mnname);
     (void)fprintf(stderr,
-	    "\nAssigned nodename %s from MYNODENAME environment variable\n",
+	    "\nAssigned nodename %s from HOST environment variable\n",
 	    myhostname);
      hadmynodename = 1;
   }
@@ -645,7 +646,9 @@ static void parse_dollytab(FILE *df)
     fprintf(stderr, "done.\n");
   }
   if(flag_v) {
+    if(!meserver) {
     fprintf(stderr, "I'm number %d\n", me);
+   }
   }
 }
 
@@ -850,6 +853,7 @@ static void open_insocks(void)
   /* MATHOG, set a large buffer for the data socket, this section is
      taken from NETPIPE. */
   /* Attempt to set input BUFFER sizes */
+  if(flag_v) { fprintf(stderr, "Buffer size: %d\n", SCKBUFSIZE); }
    drcvbuf = malloc(SCKBUFSIZE);
    if(drcvbuf == NULL) {
      perror("Error creating buffer for input data socket");
@@ -2001,12 +2005,13 @@ static void usage(void)
 {
   fprintf(stderr, "\n");
   fprintf(stderr,
-	  "Usage: dolly [-h] [-V] [-v] [-s] [-n] [-c <size>] [-b <size>] [-d] [-f configfile] "
+	  "Usage: dolly [-h] [-V] [-v] [-s] [-n] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
 	  "[-o logfile] [-t time]\n");
   fprintf(stderr, "\t-s: this is the server, check hostname\n");
   fprintf(stderr, "\t-S: this is the server, do not check hostname\n");
   fprintf(stderr, "\t-v: verbose\n");
   fprintf(stderr, "\t-b <size>, where size is the size of block to transfer (default 4096)\n");
+  fprintf(stderr, "\t-u <size>, size of the buffer (multiple of 4K)\n");
   fprintf(stderr, "\t-c <size>, where size is uncompressed size of "
 	  "compressed inputfile\n\t\t(for statistics only)\n");
   fprintf(stderr, "\t-f <configfile>, where <configfile> is the "
@@ -2039,7 +2044,7 @@ int main(int argc, char *argv[])
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "f:c:b:vqo:Sshndt:a:V");
+    c = getopt(argc, argv, "f:c:b:u:vqo:Sshndt:a:V");
     if(c == -1) break;
     
     switch(c) {
@@ -2087,6 +2092,10 @@ int main(int argc, char *argv[])
       
     case 'b':
       t_b_size = atoi(optarg);
+      break;
+
+    case 'u':
+      buffer_size = atoi(optarg);
       break;
 
     case 'n':
