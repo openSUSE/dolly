@@ -111,8 +111,10 @@ static const char version_string[] = "0.58C, 23-MAR-2005";
 #define MAXFANOUT 8
 
 /* Size of blocks transf. to/from net/disk and one less than that */
-#define T_B_SIZE   4096
+static int t_b_size = 4096;
+#define T_B_SIZE   t_b_size
 #define T_B_SIZEM1 (T_B_SIZE - 1)
+
 
 #define DOLLY_NONBLOCK 1                 /* Use nonblocking network sockets */
 
@@ -120,7 +122,7 @@ static FILE *stdtty;           /* file pointer to the standard terminal tty */
 
 static int meserver = 0;                    /* This machine sends the data. */
 static int melast = 0;   /* This machine doesn't have children to send data */
-static char myhostname[64] = "";
+static char myhostname[256] = "";
 
 /* Clients need the ports before they can listen, so we use defaults. */
 static unsigned int dataport = 9998;
@@ -1668,7 +1670,8 @@ static void transmit(void)
 	  continue;
 	} /* end input_split */
       }
-      if(flag_v && (maxbytes - lastout >= 10000000)) {
+      //if(flag_v && (maxbytes - lastout >= 10000000)) {
+      if(maxbytes - lastout >= 10000000) {
 	tv3=tv2;
 	gettimeofday(&tv2, NULL);
 	td = (tv2.tv_sec*1000000 + tv2.tv_usec)
@@ -1998,11 +2001,12 @@ static void usage(void)
 {
   fprintf(stderr, "\n");
   fprintf(stderr,
-	  "Usage: dolly [-h] [-V] [-v] [-s] [-n] [-c <size>] [-d] [-f configfile] "
+	  "Usage: dolly [-h] [-V] [-v] [-s] [-n] [-c <size>] [-b <size>] [-d] [-f configfile] "
 	  "[-o logfile] [-t time]\n");
   fprintf(stderr, "\t-s: this is the server, check hostname\n");
   fprintf(stderr, "\t-S: this is the server, do not check hostname\n");
   fprintf(stderr, "\t-v: verbose\n");
+  fprintf(stderr, "\t-b <size>, where size is the size of block to transfer (default 4096)\n");
   fprintf(stderr, "\t-c <size>, where size is uncompressed size of "
 	  "compressed inputfile\n\t\t(for statistics only)\n");
   fprintf(stderr, "\t-f <configfile>, where <configfile> is the "
@@ -2035,7 +2039,7 @@ int main(int argc, char *argv[])
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "f:c:vqo:Sshndt:a:V");
+    c = getopt(argc, argv, "f:c:b:vqo:Sshndt:a:V");
     if(c == -1) break;
     
     switch(c) {
@@ -2081,6 +2085,10 @@ int main(int argc, char *argv[])
       maxcbytes = atoi(optarg);
       break;
       
+    case 'b':
+      t_b_size = atoi(optarg);
+      break;
+
     case 'n':
       dosync = 0;
       break;
@@ -2176,7 +2184,7 @@ int main(int argc, char *argv[])
     buildring();
     
     if(meserver) {
-      fprintf(stdtty, "Sending...\n");
+      fprintf(stdtty, "Server: Sending data...\n");
     } else {    
       if(flag_v) {
 	fprintf(stdtty, "Receiving...\n");
