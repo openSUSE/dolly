@@ -187,7 +187,7 @@ static char add_name[MAXFANOUT][32];
 /* Some explanations about the meanings of postfix and midfix:
    postfix ex.: hostname = "cops1", postfix = "-giga" -> "cops1-giga"
    midfix ex.: hostname = "xibalba101", midfix = "-fast" -> "xibalba-fast101"
- */
+*/
 static unsigned short add_mode = 0;
 
 static char infile[256] = "";
@@ -236,22 +236,22 @@ static void parse_dollytab(FILE *df)
   /* Is there a MYNODENAME? If so, use that for the nodename. There
      won't be a line like this on the server node, but there should always
      be a first line of some kind
-   */
+  */
   mnname = getenv("MYNODENAME");
   if(mnname != NULL) {
     (void)strcpy(myhostname, mnname);
     (void)fprintf(stderr,
-	    "\nAssigned nodename %s from MYNODENAME environment variable\n",
-	    myhostname);
-     hadmynodename = 1;
+		  "\nAssigned nodename %s from MYNODENAME environment variable\n",
+		  myhostname);
+    hadmynodename = 1;
   }
   mnname = getenv("HOST");
   if(mnname != NULL) {
     (void)strcpy(myhostname, mnname);
     (void)fprintf(stderr,
-	    "\nAssigned nodename %s from HOST environment variable\n",
-	    myhostname);
-     hadmynodename = 1;
+		  "\nAssigned nodename %s from HOST environment variable\n",
+		  myhostname);
+    hadmynodename = 1;
   }
   
   /* First we want to know the input filename */
@@ -508,7 +508,7 @@ static void parse_dollytab(FILE *df)
   /* 
      disgusting hack to make -S work.  If the server name
      specified in the file is wrong bad things will probably happen!
-   */
+  */
   
   if(meserver == 2){
     (void) strcpy(myhostname,servername);
@@ -653,8 +653,8 @@ static void parse_dollytab(FILE *df)
   }
   if(flag_v) {
     if(!meserver) {
-    fprintf(stderr, "I'm number %d\n", me);
-   }
+      fprintf(stderr, "I'm number %d\n", me);
+    }
   }
 }
 
@@ -810,7 +810,7 @@ static void print_params(void)
 	    "Will use gzip to uncompress data before writing.\n");
   } else if(compressed_in && meserver) {
     fprintf(stderr,
-	"Clients will have to use gzip to uncompress data before writing.\n");
+	    "Clients will have to use gzip to uncompress data before writing.\n");
   } else {
     fprintf(stderr, "No compression used.\n");
   }
@@ -851,7 +851,7 @@ static void open_insocks(void)
     fprintf(stderr, "Set TCP_MAXSEG to %d bytes\n", segsize);
     if(setsockopt(datasock, IPPROTO_TCP, TCP_MAXSEG,
 		  &segsize, sizeof(int)) < 0) {
-     (void) fprintf(stderr,"setsockopt: TCP_MAXSEG failed! errno=%d\n", errno);
+      (void) fprintf(stderr,"setsockopt: TCP_MAXSEG failed! errno=%d\n", errno);
       // exit(1);
     }
   }
@@ -860,21 +860,21 @@ static void open_insocks(void)
      taken from NETPIPE. */
   /* Attempt to set input BUFFER sizes */
   if(flag_v) { fprintf(stderr, "Buffer size: %d\n", SCKBUFSIZE); }
-   drcvbuf = malloc(SCKBUFSIZE);
-   if(drcvbuf == NULL) {
-     perror("Error creating buffer for input data socket");
-     exit(1);
-   }
-   if(setsockopt(datasock, SOL_SOCKET, SO_RCVBUF, &drcvbuf, SCKBUFSIZE) < 0) {
-  	(void) fprintf(stderr, "setsockopt: SO_RCVBUF failed! errno = %d\n",
-		       errno);
-  	exit(556);
-   }
-   getsockopt(datasock, SOL_SOCKET, SO_RCVBUF,
-  		   (char *) &recv_size, (void *) &sizeofint);
-   if(flag_v) {
-     (void)fprintf(stderr, "Receive buffer is %d bytes\n", recv_size);
-   }
+  drcvbuf = malloc(SCKBUFSIZE);
+  if(drcvbuf == NULL) {
+    perror("Error creating buffer for input data socket");
+    exit(1);
+  }
+  if(setsockopt(datasock, SOL_SOCKET, SO_RCVBUF, &drcvbuf, SCKBUFSIZE) < 0) {
+    (void) fprintf(stderr, "setsockopt: SO_RCVBUF failed! errno = %d\n",
+		   errno);
+    exit(556);
+  }
+  getsockopt(datasock, SOL_SOCKET, SO_RCVBUF,
+	     (char *) &recv_size, (void *) &sizeofint);
+  if(flag_v) {
+    (void)fprintf(stderr, "Receive buffer is %d bytes\n", recv_size);
+  }
   
   addr.sin_family = AF_INET;
   addr.sin_port = htons(dataport);
@@ -984,7 +984,7 @@ static void open_outsocks(void)
     }
     
     hent = gethostbyname(hn);
-/*  (void)fprintf(stderr,"DEBUG gethostbyname on >%s<\n",hn); */
+    /*  (void)fprintf(stderr,"DEBUG gethostbyname on >%s<\n",hn); */
     if(hent == NULL) {
       char str[strlen(hn)];
       sprintf(str, "gethostbyname for host '%s' error %d",
@@ -1025,7 +1025,7 @@ static void open_outsocks(void)
       if(setsockopt(dataout[i], IPPROTO_TCP, TCP_NODELAY,
         	    &optval, sizeof(int)) < 0) {
         (void) fprintf(stderr,"setsockopt: TCP_NODELAY failed! errno = %d\n",
-		      errno);
+		       errno);
         // exit(1);
       }
 
@@ -1034,8 +1034,8 @@ static void open_outsocks(void)
 	fprintf(stderr, "Set TCP_MAXSEG to %d bytes\n", segsize);
 	if(setsockopt(dataout[i], IPPROTO_TCP, TCP_MAXSEG,
 		      &segsize, sizeof(int)) < 0) {
-	 (void) fprintf(stderr, "setsockopt: TCP_MAXSEG failed! errno = %d\n", 
-			errno);
+	  (void) fprintf(stderr, "setsockopt: TCP_MAXSEG failed! errno = %d\n", 
+			 errno);
 	  // exit(1);
 	}
       }
@@ -1044,22 +1044,22 @@ static void open_outsocks(void)
      	 taken from NETPIPE */
       /* Attempt to set output BUFFER sizes */
       if(dsndbuf == NULL){
-      	 dsndbuf = malloc(SCKBUFSIZE);/* Note it may reallocate, which is ok */
-      	 if(dsndbuf == NULL){
-      	   perror("Error creating buffer for input data socket");
-      	   exit(1);
-      	 }
-      	 if(setsockopt(dataout[i], SOL_SOCKET, SO_SNDBUF, &dsndbuf,
-		       SCKBUFSIZE) < 0)
-      	 {
-     	     (void) fprintf(stderr,
-			    "setsockopt: SO_SNDBUF failed! errno = %d\n",
-			    errno);
-     	      exit(556);
-      	 }
-      	 getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF,
-     	 		 (char *) &send_size, (void *) &sizeofint);
-      	 fprintf(stderr, "Send buffer %d is %d bytes\n", i, send_size);
+	dsndbuf = malloc(SCKBUFSIZE);/* Note it may reallocate, which is ok */
+	if(dsndbuf == NULL){
+	  perror("Error creating buffer for input data socket");
+	  exit(1);
+	}
+	if(setsockopt(dataout[i], SOL_SOCKET, SO_SNDBUF, &dsndbuf,
+		      SCKBUFSIZE) < 0)
+	  {
+	    (void) fprintf(stderr,
+			   "setsockopt: SO_SNDBUF failed! errno = %d\n",
+			   errno);
+	    exit(556);
+	  }
+	getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF,
+		   (char *) &send_size, (void *) &sizeofint);
+	fprintf(stderr, "Send buffer %d is %d bytes\n", i, send_size);
       }
 
       /* Setup data port */
@@ -1605,7 +1605,7 @@ static void transmit(void)
     /* The server writes data as long has it can to the data stream.
        When there's nothing left, it writes the actual number of bytes
        to the control stream (as long long int).
-     */
+    */
     if(meserver) {
       /*
        * Server part
@@ -1661,14 +1661,14 @@ static void transmit(void)
 	  }
 	  if(add_nr == 0) {
 	    for(i = 0; i < nr_childs; i++) {
-	     (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
-			   maxbytes);
+	      (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
+			    maxbytes);
 	      movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8);
 	      shutdown(dataout[i], 2);
 	    }
 	  } else {
-	   (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
-			 maxbytes);
+	    (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
+			  maxbytes);
 	    movebytes(ctrlout[0], WRITE, (char *)&maxbytes, 8);
 	    for(i = 0; i <= add_nr; i++) {
 	      shutdown(dataout[i], 2);
@@ -1733,8 +1733,8 @@ static void transmit(void)
 	    }
 	    if(ret == 0) {
 	      fprintf(stderr,
-		   "Got 0 from ctrlin, but there should be something there!\n"
-		   "Probably transmission interrupted, terminating.\n");
+		      "Got 0 from ctrlin, but there should be something there!\n"
+		      "Probably transmission interrupted, terminating.\n");
 	      exit(1);
 	    }
 	    if(ret != 8) {
@@ -1842,9 +1842,9 @@ static void transmit(void)
 	tv3=tv2;
 	gettimeofday(&tv2, NULL);
 	td = (tv2.tv_sec*1000000 + tv2.tv_usec)
-	   - (tv1.tv_sec*1000000 + tv1.tv_usec);
+	  - (tv1.tv_sec*1000000 + tv1.tv_usec);
 	tdlast = (tv2.tv_sec*1000000 + tv2.tv_usec)
-	   - (tv3.tv_sec*1000000 + tv3.tv_usec);
+	  - (tv3.tv_sec*1000000 + tv3.tv_usec);
 	fprintf(stdtty, "\rTransfered MB: %.0f, MB/s: %.3f, Current MB/s: %.3f      ", (float)transbytes/1000000, (float)transbytes/td,(float)(transbytes - lastout)/tdlast);
 	fflush(stdtty);
 	lastout = transbytes;
@@ -2185,9 +2185,9 @@ int main(int argc, char *argv[])
   /* if it fails, redirect stdtty to stderr */
   stdtty = fopen("/dev/tty","a");
   if (stdtty == NULL)
-  {
-    stdtty = stderr;
-  }
+    {
+      stdtty = stderr;
+    }
 
   do {
     if(flag_v) {
