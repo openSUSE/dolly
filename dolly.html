@@ -5,8 +5,8 @@
 
 <h1>Dolly &mdash; A program to clone disks / partitions</h1>
 
-Version 0.58C<br>
-24 March 2005<br>
+Version 0.59<br>
+09 April 2019<br>
 Felix Rauch &lt;<a href="mailto:rauch@inf.ethz.ch">rauch@inf.ethz.ch</a>&gt;
 
 <p>
@@ -207,6 +207,13 @@ Again, thanks to David Mathog, dolly can now be run without explicit
 cloning smaller files, but there is no garantuee that the data
 actually made it to the disk if there is e.g. a power loss right after
 dolly finished.
+</p>
+
+<h2>Change in version 0.59</h2>
+        <p>
+Some output improvments and add some options to deal with socket and
+buffer size to experiment some parameter on the fly. Done some cleanup
+in the C code to get less warning in building with recent GCC7.
 </p>
 
 
@@ -467,6 +474,16 @@ Dolly has a few options which are explained here:
     may not make it to disk if power fails soon after dolly exits.
 <br><br>
 </li>
+<li>-u <em>size</em><br>
+    Specify the size of buffers for TCP sockets. Should be a Multiple
+    of 4K.
+<br><br>
+</li>
+<li>-b<em>size</em><br>
+    option to specify the TRANSFER_BLOCK_SIZE. Should be a multiple of
+    the size of buffers for TCP sockets.
+<br><br>
+</li>
 </ul>
 
 <h2>Starting the process</h2>
@@ -538,6 +555,6 @@ Computersystems], <A HREF="http://www.inf.ethz.ch/">DINFK</A>
 <address>
 Maintained by <a href="http://www.cs.inf.ethz.ch/~rauch/">Felix Rauch</a>.
 </address>
-Last changed: 24-Mar-2005
+Last changed: 09-Apr-2019
 </body>
 </html>
