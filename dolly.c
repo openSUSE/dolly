@@ -1224,7 +1224,7 @@ static int open_infile(int try_hard)
 static int open_outfile(int try_hard)
 {
   char name[256+16];
-
+  int is_device = 0;
   /* Close old output file, if there is one. */
   if(output != -1) {
     if(close(output) == -1) {
@@ -1237,10 +1237,14 @@ static int open_outfile(int try_hard)
   } else {
     strcpy(name, outfile);
   }
+  /* check if file is under /dev, if not open even if the file does not exist. */
+  if (strncmp("/dev/",name,6) != 0 ) {
+    is_device = 1;
+  }
   /* Setup the output files/pipes. */
   if(!compressed_in) {
     /* Output is to a file */
-    if(!compressed_out && (output_split == 0)) {
+    if(!compressed_out && (output_split == 0) && is_device) {
       /* E.g. partition-to-partition cloning */
       output = open(name, O_WRONLY);
     } else {
@@ -1252,7 +1256,6 @@ static int open_outfile(int try_hard)
 	sprintf(str, "open outputfile '%s'", name);
 	perror(str);
 	exit(1);
-      }
     }
   } else { /* Compressed_In */
     if(access(name, W_OK) == -1) {
