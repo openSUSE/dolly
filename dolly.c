@@ -173,7 +173,7 @@ static int dummy_time = 0;              /* Time for run in dummy-mode */
 static int dummysize = 0;
 static int exitloop = 0;
 static int timeout = 0;                 /* Timeout for startup */
-static int hyphennormal = 0;      /* '-' normal or interf. sep. in hostnames */
+static int hyphennormal = 1;      /* '-' normal or interf. sep. in hostnames */
 static int verbignoresignals = 1;       /* warn on ignore signal errors */
 
 /* Number of extra links for data transfers */
@@ -482,6 +482,13 @@ static void parse_dollytab(FILE *df)
     hyphennormal = 1;
     if(fgets(str, 256, df) == NULL) {
       perror("fgets after hyphennormal");
+      exit(1);
+    }
+  }
+  if(strncmp("hypheninterface", str, 12) == 0) {
+    hyphennormal = 1;
+    if(fgets(str, 256, df) == NULL) {
+      perror("fgets after hypheninterface");
       exit(1);
     }
   }
@@ -1241,13 +1248,10 @@ static int open_outfile(int try_hard)
       output = open(name, O_WRONLY | O_CREAT | O_EXCL, 0644);
     }
     if(output == -1) {
-      if(try_hard == 1) {
 	char str[strlen(name)];
 	sprintf(str, "open outputfile '%s'", name);
 	perror(str);
 	exit(1);
-      } else {
-	return -1;
       }
     }
   } else { /* Compressed_In */
