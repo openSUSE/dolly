@@ -1238,7 +1238,7 @@ static int open_outfile(int try_hard)
     strcpy(name, outfile);
   }
   /* check if file is under /dev, if not open even if the file does not exist. */
-  if (strncmp("/dev/",name,6) != 0 ) {
+  if (strcmp("/dev/",name) > 0 ) {
     is_device = 1;
   }
   /* Setup the output files/pipes. */
