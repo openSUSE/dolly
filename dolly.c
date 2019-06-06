@@ -1946,11 +1946,13 @@ static void transmit(void)
     }
     buf[8] = 0;
     if(*(unsigned long long *)buf != maxbytes) {
-      fprintf(stderr, "*** ERROR *** Didn't get correct maxbytes back!\n"
+      fprintf(stderr, "*** ERROR *** Didn't get correct maxbytes back!\n");
+	      /* create unneeded error, so removing as only used for debugging 
 	      "Got %lld (0x%016llx) instead of %lld (0x%016llx)\n",
 	      *(unsigned long long *)&buf,
 	      *(unsigned long long *)&buf,
 	      maxbytes, maxbytes);
+	      */
     } else {
       fprintf(stderr, "Clients done.\n");
     }
