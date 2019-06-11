@@ -1247,25 +1247,28 @@ static int open_outfile(int try_hard)
     if(!compressed_out && (output_split == 0) && is_device) {
       /* E.g. partition-to-partition cloning */
       output = open(name, O_WRONLY);
+    } else if(!compressed_out && !is_device) {
+      /* E.g. file to file cloning */
+      output = open(name, O_WRONLY | O_CREAT, 0644);
     } else {
-      /* E.g. patition-to-compressed-archive cloning */
+      /* E.g. partition-to-compressed-archive cloning */
       output = open(name, O_WRONLY | O_CREAT | O_EXCL, 0644);
     }
     if(output == -1) {
-	char str[strlen(name)];
-	sprintf(str, "open outputfile '%s'", name);
-	perror(str);
-	exit(1);
+      char str[strlen(name)];
+      sprintf(str, "open outputfile '%s'", name);
+      perror(str);
+      exit(1);
     }
   } else { /* Compressed_In */
     if(access(name, W_OK) == -1) {
       if(try_hard == 1) {
-	char str[strlen(name)];
-	sprintf(str, "open outputfile '%s'", name);
-	perror(str);
-	exit(1);
+        char str[strlen(name)];
+        sprintf(str, "open outputfile '%s'", name);
+        perror(str);
+        exit(1);
       } else {
-	return -1;
+        return -1;
       }
     }
     /* Pipe to gunzip */
@@ -1282,19 +1285,19 @@ static int open_outfile(int try_hard)
       dup(pd[0]);    /* Duplicate pipe on stdin */
       close(pd[0]);  /* Close the unused end of the pipe */
       if((fd = open(name, O_WRONLY)) == -1) {
-	if(errno == ENOENT) {
-	  fprintf(stderr, "Outputfile in child does not exist.\n");
-	}
-	perror("open outfile in child");
-	exit(1);
+        if(errno == ENOENT) {
+          fprintf(stderr, "Outputfile in child does not exist.\n");
+        }
+        perror("open outfile in child");
+        exit(1);
       }
       close(1);
       dup(fd);
       close(fd);
       /* Now stdout is redirected to our file */
       if(execl("/usr/bin/gunzip", "gunzip", "-c", NULL) == -1) {
-	perror("execl for gunzip in child");
-	exit(1);
+        perror("execl for gunzip in child");
+        exit(1);
       }
     } else {
       /* Father */
