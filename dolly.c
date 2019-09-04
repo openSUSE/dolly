@@ -205,6 +205,8 @@ static size_t dollybufsize = 0;
 static int flag_log = 0;
 static char logfile[256] = "";
 
+const char* host_delim = ",";
+
 /* Pipe descriptor in case data must be uncompressed before write */
 static int pd[2];
 /* Pipe descriptor in case input data must be compressed */
@@ -354,7 +356,7 @@ static void parse_dollytab(FILE *df)
       }
       sp = strchr(str, ' ');
       if(sp == NULL) {
-	fprintf(stderr, "Error dummy line.\n");
+        fprintf(stderr, "Error dummy line.\n");
       }
       if(atoi(sp + 1) == 0) {
 	exitloop = 1;
@@ -2011,7 +2013,7 @@ static void usage(void)
 {
   fprintf(stderr, "\n");
   fprintf(stderr,
-	  "Usage: dolly [-h] [-V] [-v] [-s] [-n] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
+	  "Usage: dolly [-hVvsnC] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
 	  "[-o logfile] [-t time]\n");
   fprintf(stderr, "\t-s: this is the server, check hostname\n");
   fprintf(stderr, "\t-S: this is the server, do not check hostname\n");
@@ -2020,6 +2022,8 @@ static void usage(void)
   fprintf(stderr, "\t-u <size>, size of the buffer (multiple of 4K)\n");
   fprintf(stderr, "\t-c <size>, where size is uncompressed size of "
 	  "compressed inputfile\n\t\t(for statistics only)\n");
+
+  fprintf(stderr, "\t-C do not use a config file.");
   fprintf(stderr, "\t-f <configfile>, where <configfile> is the "
 	  "configuration file with all\n\t\tthe required information for "
 	  "this run. Required on server only.\n");
@@ -2036,6 +2040,7 @@ static void usage(void)
   fprintf(stderr, "\t-h: Print this help and exit\n");
   fprintf(stderr, "\t-q: Suppresss \"ignored signal\" messages\n");
   fprintf(stderr, "\t-V: Print version number and exit\n");
+  fprintf(stderr, "\t-H: comma seperated list of the hosts to send to\n");
   fprintf(stderr, "\nDolly is part of the Patagonia cluster project, ");
   fprintf(stderr, "see also\nhttp://www.cs.inf.ethz.ch/cops/patagonia/\n");
   fprintf(stderr, "\n");
@@ -2046,33 +2051,26 @@ int main(int argc, char *argv[])
 {
   int c, i;
   int flag_f = 0;
+  int flag_cargs = 0;
   FILE *df;
+  char *mnname = NULL, *tmp_str, *host_str, *a_str;
+  size_t nr_hosts = 0;
+
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "f:c:b:u:vqo:Sshndt:a:V");
+    c = getopt(argc, argv, "f:c:b:u:vqo:Sshndt:a:V:i:O:Y:H");
     if(c == -1) break;
     
     switch(c) {
     case 'f':
       /* Where to find the config-file. */
       if(strlen(optarg) > 255) {
-	fprintf(stderr, "Name of config-file too long.\n");
-	exit(1);
+        fprintf(stderr, "Name of config-file too long.\n");
+        exit(1);
       }
       strcpy(dollytab, optarg);
-      
-      /* Open the config-file */
-      df = fopen(optarg, "r");
-      if(df == NULL) {
-	char errstr[256];
-	sprintf(errstr, "fopen dollytab '%s'", optarg);
-	perror(errstr);
-	exit(1);
-      }
-      parse_dollytab(df);
       flag_f = 1;
-      fclose(df);
       break;
 
     case 'v':
@@ -2127,26 +2125,26 @@ int main(int argc, char *argv[])
     case 't':
       /* How long should dolly run in dummy mode? */
       if(atoi(optarg) < 0) {
-	fprintf(stderr,
-		"Time for -t parameter should be positive instead of %d.\n",
-		atoi(optarg));
-	exit(1);
+        fprintf(stderr,
+          "Time for -t parameter should be positive instead of %d.\n",
+        atoi(optarg));
+        exit(1);
       } else if(atoi(optarg) == 0) {
 
       } else {
-	dummy_time = atoi(optarg);
+        dummy_time = atoi(optarg);
       }
       break;
 
     case 'a':
       i = atoi(optarg);
       if(i <= 0) {
-	fprintf(stderr, "Timeout of %d doesn't make sense.\n", i);
-	exit(1);
+        fprintf(stderr, "Timeout of %d doesn't make sense.\n", i);
+        exit(1);
       }
       timeout = i;
       if(flag_v) {
-	fprintf(stderr, "Will set timeout to %d seconds.\n", timeout);
+        fprintf(stderr, "Will set timeout to %d seconds.\n", timeout);
       }
       signal(SIGALRM, alarm_handler);
       break;
@@ -2164,16 +2162,85 @@ int main(int argc, char *argv[])
       fprintf(stderr, "Dolly version %s\n", version_string);
       exit(0);
       break;
+    case 'C':
+      flag_cargs = 1;
+      break;
+
+    case 'i':
+      if(strlen(optarg) > 255) {
+        fprintf(stderr, "Name of input-file too long.\n");
+        exit(1);
+      }
+      strncpy(optarg,infile,strlen(optarg)); 
+      flag_cargs = 1;
+      break;
+
+    case 'O':
+      if(strlen(optarg) > 255) {
+        fprintf(stderr, "Name of output-file too long.\n");
+        exit(1);
+      }
+      strncpy(optarg,outfile,strlen(optarg)); 
+      flag_cargs = 1;
+      break;
+
+    case 'Y':
+      hyphennormal = 1;
+      break;
+
+    case 'H':
+      /* copying string as it is manipulatet */
+      a_str = strdup(optarg);
+      tmp_str = a_str;
+      while(*tmp_str) {
+        if(*host_delim == *tmp_str) {
+          nr_hosts++;
+        }
+        tmp_str++;
+      }
+      nr_hosts++;
+      hostring = (char**) malloc(nr_hosts * sizeof(char *));
+      /* now find the first host */
+      host_str = strtok(a_str,host_delim);
+      nr_hosts = 0;
+      while(host_str != NULL) {
+        hostring[nr_hosts] = (char *)malloc(strlen(host_str)+1);
+        strcpy(hostring[nr_hosts], host_str);
+        host_str = strtok(NULL,host_delim);
+        nr_hosts++;
+      }
+      free(a_str);
+      /* make sure that we are the server */
+      meserver = 1;
+      
+      break;
       
     default:
       fprintf(stderr, "Unknown option '%c'.\n", c);
       exit(1);
     }
+    if (flag_cargs) {
+      mnname = getenv("HOST");
+      (void)strcpy(myhostname, mnname);
+
+    }
+    if (flag_f && !flag_cargs) {
+      /* Open the config-file */
+      df = fopen(optarg, "r");
+      if(df == NULL) {
+        char errstr[256];
+        sprintf(errstr, "fopen dollytab '%s'", optarg);
+        perror(errstr);
+        exit(1);
+      }
+      parse_dollytab(df);
+      fclose(df);
+    }
   }
 
   /* Did we get the parameters we need? */
-  if(meserver && !flag_f) {
-    fprintf(stderr, "Missing parameter -f <configfile>.\n");
+  if(meserver && !flag_f && !flag_cargs) {
+    fprintf(stderr, "Missing parameter -f <configfile> or -C for commandline arguments.\n");
     exit(1);
   }
 
