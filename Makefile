@@ -1,6 +1,6 @@
 VERSION=0.59
 CC=gcc
-CFLAGS=-Wall -g -O3
+CFLAGS=-Wall -ggdb -O2
 
 all: dolly
 

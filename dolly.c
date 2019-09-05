@@ -199,6 +199,7 @@ static int nr_childs = 0;
 static char servername[256];
 static char dollytab[256];
 
+
 static char *dollybuf = NULL;
 static size_t dollybufsize = 0;
 
@@ -610,9 +611,9 @@ static void parse_dollytab(FILE *df)
     } else if(!hyphennormal) {
       /* Check if the hostname is correct, but a different interface is used */
       if((sp = strchr(hostring[i], '-')) != NULL) {
-	if(strncmp(hostring[i], myhostname, sp - hostring[i]) == 0) {
-	  me = i;
-	}
+        if(strncmp(hostring[i], myhostname, sp - hostring[i]) == 0) {
+          me = i;
+        }
       }
     }
   }
@@ -2062,16 +2063,16 @@ static void usage(void)
 int main(int argc, char *argv[])
 {
   int c, i;
-  int flag_f = 0;
-  int flag_cargs = 0;
+  int flag_f = 0, flag_cargs = 0, generated_dolly = 0, me = -2;
   FILE *df;
-  char *mnname = NULL, *tmp_str, *host_str, *a_str;
+  char *mnname = NULL, *tmp_str, *host_str, *a_str, *sp;
   size_t nr_hosts = 0;
+  int fd;
 
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "f:c:b:u:vqo:Sshndt:a:V:i:O:Y:H");
+    c = getopt(argc, argv, "f:c:b:u:vqo:Sshndt:a:V:i:O:Y:H:");
     if(c == -1) break;
     
     switch(c) {
@@ -2183,7 +2184,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Name of input-file too long.\n");
         exit(1);
       }
-      strncpy(optarg,infile,strlen(optarg)); 
+      strncpy(infile,optarg,strlen(optarg)); 
       flag_cargs = 1;
       break;
 
@@ -2192,7 +2193,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Name of output-file too long.\n");
         exit(1);
       }
-      strncpy(optarg,outfile,strlen(optarg)); 
+      strncpy(outfile,optarg,strlen(optarg)); 
       flag_cargs = 1;
       break;
 
@@ -2201,7 +2202,7 @@ int main(int argc, char *argv[])
       break;
 
     case 'H':
-      /* copying string as it is manipulatet */
+      /* copying string as it is modified*/
       a_str = strdup(optarg);
       tmp_str = a_str;
       while(*tmp_str) {
@@ -2211,6 +2212,7 @@ int main(int argc, char *argv[])
         tmp_str++;
       }
       nr_hosts++;
+      hostnr = nr_hosts;
       hostring = (char**) malloc(nr_hosts * sizeof(char *));
       /* now find the first host */
       host_str = strtok(a_str,host_delim);
@@ -2219,12 +2221,42 @@ int main(int argc, char *argv[])
         hostring[nr_hosts] = (char *)malloc(strlen(host_str)+1);
         strcpy(hostring[nr_hosts], host_str);
         host_str = strtok(NULL,host_delim);
+        if(strcmp(hostring[nr_hosts], myhostname) == 0) {
+          me = nr_hosts;
+        } else if(!hyphennormal) {
+          /* Check if the hostname is correct, but a different interface is used */
+          if((sp = strchr(hostring[nr_hosts], '-')) != NULL) {
+            if(strncmp(hostring[nr_hosts], myhostname, sp - hostring[nr_hosts]) == 0) {
+              me = nr_hosts;
+            }
+          }
+        }
         nr_hosts++;
       }
+      /* Build up topology */
+      nr_childs = 0;
+      for(i = 0; i < fanout; i++) {
+        if(meserver) {
+          if(i + 1 <= hostnr) {
+            nexthosts[i] = i;
+            nr_childs++;
+          }
+        } else {
+          if((me + 1) * fanout + 1 + i <= hostnr) {
+            nexthosts[i] = (me + 1) * fanout + i;
+            nr_childs++;
+          }
+        }
+      }
+      /* In a tree, we might have multiple last machines. */
+      if(nr_childs == 0) {
+        melast = 1;
+      }
+
       free(a_str);
       /* make sure that we are the server */
       meserver = 1;
-      
+      flag_cargs = 1;
       break;
       
     default:
@@ -2254,6 +2286,36 @@ int main(int argc, char *argv[])
   if(meserver && !flag_f && !flag_cargs) {
     fprintf(stderr, "Missing parameter -f <configfile> or -C for commandline arguments.\n");
     exit(1);
+  }
+  if(flag_cargs) {
+    if(strlen(outfile) == 0) {
+      fprintf(stderr,"outfile via '-o FILE' must be set\n");
+      exit(1);
+    }
+    if(strlen(infile) == 0) {
+      fprintf(stderr,"inputfile via '-i FILE' must be set\n");
+      exit(1);
+    }
+    if(strlen(dollytab) == 0) {
+      generated_dolly = 1;
+      strcpy(dollytab,"/tmp/dollygenXXXXXX");
+      fd = mkstemp(dollytab);
+      df = fdopen(fd,"w");
+      if(df == NULL) {
+        printf("Could not open temporary dollytab");
+      }
+      fprintf(df,"infile %s\n",infile);
+      fprintf(df,"outfile %s\n",outfile);
+      fprintf(df,"server %s\n",myhostname);
+      fprintf(df,"firstclient %s\n",hostring[0]);
+      fprintf(df,"lastclient %s\n",hostring[nr_hosts-1]);
+      fprintf(df,"clients %i\n",hostnr);
+      for(int i = 0; i < hostnr; i++) {
+        fprintf(df,"%s\n",hostring[i]);
+      }
+      fprintf(df,"endconfig\n");
+      fclose(df);
+    }
   }
 
   if(meserver && flag_v) {
@@ -2288,7 +2350,10 @@ int main(int argc, char *argv[])
     if(!exitloop) {
       transmit();
     }
-    
+    /* remove the generated dollytab */
+    if(generated_dolly) {
+      unlink(dollytab);
+    }
     close(datain[0]);
     close(ctrlin);
     close(datasock);
