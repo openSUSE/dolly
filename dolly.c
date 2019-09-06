@@ -1226,6 +1226,7 @@ static int open_outfile(int try_hard)
 {
   char name[256+16];
   int is_device = 0;
+  int is_pipe = 0;
   /* Close old output file, if there is one. */
   if(output != -1) {
     if(close(output) == -1) {
@@ -1239,18 +1240,23 @@ static int open_outfile(int try_hard)
     strcpy(name, outfile);
   }
   /* check if file is under /dev, if not open even if the file does not exist. */
-  if (strcmp("/dev/",name) > 0 ) {
+  if(strcmp("/dev/",name) > 0 ) {
     is_device = 1;
+  }
+  if(strcmp("-",name) == 0) {
+    is_pipe = 1;
   }
   /* Setup the output files/pipes. */
   if(!compressed_in) {
     /* Output is to a file */
-    if(!compressed_out && (output_split == 0) && is_device) {
+    if(!compressed_out && (output_split == 0) && is_device && !is_pipe) {
       /* E.g. partition-to-partition cloning */
       output = open(name, O_WRONLY);
-    } else if(!compressed_out && !is_device) {
+    } else if(!compressed_out && !is_device && !is_pipe) {
       /* E.g. file to file cloning */
       output = open(name, O_WRONLY | O_CREAT, 0644);
+    } else if(is_pipe) {
+      output = 1;
     } else {
       /* E.g. partition-to-compressed-archive cloning */
       output = open(name, O_WRONLY | O_CREAT | O_EXCL, 0644);
@@ -2053,7 +2059,10 @@ static void usage(void)
   fprintf(stderr, "\t-h: Print this help and exit\n");
   fprintf(stderr, "\t-q: Suppresss \"ignored signal\" messages\n");
   fprintf(stderr, "\t-V: Print version number and exit\n");
+  fprintf(stderr, "\tFollowing options can be used instead of a dollytab\n");
   fprintf(stderr, "\t-H: comma seperated list of the hosts to send to\n");
+  fprintf(stderr, "\t-i: input file\n");
+  fprintf(stderr, "\t-O: output file (just - for output to stdout)\n");
   fprintf(stderr, "\nDolly is part of the Patagonia cluster project, ");
   fprintf(stderr, "see also\nhttp://www.cs.inf.ethz.ch/cops/patagonia/\n");
   fprintf(stderr, "\n");
