@@ -87,11 +87,15 @@
 	  Change default output in non verbose mode (get some stats)
 	  Add -b option to specify the TRANSFER_BLOCK_SIZE
 	  Add -u to specify the size of buffers for TCP sockets
+
+  V 0.60 11-SEP-2019 Christian Goll <cgoll@suse.com>
+    Added pure commandline feature, so that there is no need for
+    a dolly configuration file.
 	  
    If you change the history, then please also change the version_string
    right below!  */
 
-static const char version_string[] = "0.59, 09-APR-2019";
+static const char version_string[] = "0.60, 11-SEPT-2019";
 
 #include <unistd.h>
 #include <stdio.h>
