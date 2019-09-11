@@ -1,4 +1,4 @@
-%DOLLY(1) Version 0.58c | Dolly file transfer
+%DOLLY(1) Version 0.60 | Dolly file transfer
 
 DOLLY
 =====
@@ -7,10 +7,12 @@ A program to clone disks / partitions
 SYNOPSIS
 ========
 
-|dolly | \[**-f** config\]
+|dolly| \[**-f** config\]
+  or
+|dolly| \[**-I** infile\] \[**-O** outfile\|-\] \[**-H** hostlist\] 
 
 
-24 March 2005
+11 Sept 2019
 
 
 DESCRIPTION
@@ -20,26 +22,118 @@ Dolly is used to clone the installation of one machine to (possibly
 many) other machines. It can distribute image-files (even gnu-zipped),
 partitions or whole hard disk drives to other partitions or hard disk
 drives. As it forms a "virtual TCP ring" to distribute data, it works
-best with fast switched networks (we were able to clone a 2 GB Windows
-NT partition to 15 machines in our cluster over Gigabit Ethernet in
-less than 4 minutes).
+best with fast switched networks.
 
 As dolly clones whole partitions block-wise it works for most
-filesystems. We used it to clone partitions of the following type:
-Linux, Windows NT, Oberon, Solaris (most of our machines have multi
-boot setups). We have a small (additional) Linux installation on all
-of our machines or use a small one-floppy-disk-linux (e.g. muLinux) to
-do the cloning. On newer machines we use PXE to boot a small system in
-a RAM disk. From that system we then clone the hard disks in the
-machines.
+boot setups).
+
+OPTIONS
+=======
+If used without a configuration file following three commanline options must be
+set:
+
+-I FILE : FILE is used as input file.
+
+-O FILE\|- : FILE will be used as output file, if '-' is used as FILE, the
+output will printed to stdout.
+
+-H HOSTLIST: A comma seperated hostlist, where then the first host of the list
+is used as firstclient and the last host  as lastclient, like in the
+configuration file.
+
+Following other options are:
+
+  -h
+ :   Prints a short help and exits.
+
+  -V
+ :   Prints the version number as well as the date of that version and exits.
+
+  -v
+ :  This switches to verbose mode in which dolly prints out a little
+    bit more information. This option is recommended if you want to
+    know what's going on during cloning and it might be helpful during
+    debugging.
+
+  -s
+ :  This option specifies the server machine and should only be used
+    on the master. Dolly will warn you if the config file specifies
+    another master than the machine on which this option is set.
+    This option must be secified before the "-f" option!
+
+  -S
+ :  Same as "-s", but dolly will not warn you if the server's hostname
+    and the name specified in the config file do not match.
+
+  -q
+ :  Usually dolly will print a warning when the select() system call
+    is interrupted by a signal. This option suppresses these warnings.
+
+  -c
+ :  With this option it is possible to specify the uncompressed size
+    of a compressed file. It's only needed for performance statistics
+    at the end of a cloning process and not important if you are not
+    interested in the statistics.
+
+  -d
+ :  The "Dummy" option disables all disk accesses. It can be used to
+    benchmark the throughput of your system (computers, network,
+    switches). This option must be specified before the "-f" option!
+
+  -t <seconds>
+ :  When in dummy mode, this option allows to specify how long the
+    testrun should approximately take. Since the dummy mode is mostly
+    used for benchmarking purposes and single runs might result in
+    different speeds (especially with many machines and bad switches
+    or with small TCP segment sizes), it's more convenient to specify
+    the run-lenght in seconds, as the benchmark-time becomes more
+    predictable.
+    
+  -f <config file>
+ :  This option is used to select the config file for this cloning
+    process. This option makes only sense on the master machine and
+    the configuration file must exist on the master.
+
+  -o <logfile>
+ :  This option specifies the logfile. Dolly will write some
+    statistical information into the logfile. it is mostly
+    used when benchmarking switches. The format of the lines in the
+    logfile is as follows:
+    Trans. data  Segsize Clients Time      Dataflow  Agg. dataflow
+    [MB]         [Byte]  [#]     [s]       [MB/s]    [MB/s]
+
+  -a <timeout>
+ :  Sometimes it might be useful if Dolly would terminate instead of
+    waiting indefinitely in case something goes wrong. This option
+    lets you specify this timeout. If dolly could not transfer any
+    data after <timeout> seconds, then it will simply print an error
+    message and terminate. This feature might be especially useful for
+    scripted and automatic installations (such as "CloneSys"), where
+    you don't want to have dolly-processes hang around if a machine
+    hangs.
+
+  -n
+ :  Do not sync() before exit. Thus, dolly will exit sooner, but data
+    may not make it to disk if power fails soon after dolly exits.
+
+  -u <size>
+ :  Specify the size of buffers for TCP sockets. Should be a Multiple
+    of 4K.
+
+  -b <size>
+ :  option to specify the TRANSFER_BLOCK_SIZE. Should be a multiple of
+    the size of buffers for TCP sockets.
+
+
+
 
 Configuration file
 ------------------
 
-You need a configuration file for the cloning process. Its format is
-strict, but easy. It contains the following entries (note that the
-order of the entries is fix):
-(The text after "Syntax:" explains the syntax of the entry, the lines
+One can use either us the appropriate commandline options (-i,-o and -H) or a
+configuration file for the cloning process is needed. Its format is strict, but
+easy. It contains the following entries (note that the order of the entries is
+fix): (The text after "Syntax:" explains the syntax of the entry, the lines
 following "EG:" are example lines)
 
 1. The file/partition you want to clone, preceeded by the keywords
@@ -194,94 +288,6 @@ you have that problem, you should make sure that the environment
 variables MYNODENAME or HOST are set accordingly. Dolly first tries to
 get the environment variable MYNODENAME, then HOST, then it tries
 gethostbyname(). This feature was introduced in dolly version 0.58.
-
-
-OPTIONS
-=============
-
-Dolly has a few options which are explained here:
-
-  -h
- :   Prints a short help and exits.
-
-  -V
- :   Prints the version number as well as the date of that version and exits.
-
-  -v
- :  This switches to verbose mode in which dolly prints out a little
-    bit more information. This option is recommended if you want to
-    know what's going on during cloning and it might be helpful during
-    debugging.
-
-  -s
- :  This option specifies the server machine and should only be used
-    on the master. Dolly will warn you if the config file specifies
-    another master than the machine on which this option is set.
-    This option must be secified before the "-f" option!
-
-  -S
- :  Same as "-s", but dolly will not warn you if the server's hostname
-    and the name specified in the config file do not match.
-
-  -q
- :  Usually dolly will print a warning when the select() system call
-    is interrupted by a signal. This option suppresses these warnings.
-
-  -c
- :  With this option it is possible to specify the uncompressed size
-    of a compressed file. It's only needed for performance statistics
-    at the end of a cloning process and not important if you are not
-    interested in the statistics.
-
-  -d
- :  The "Dummy" option disables all disk accesses. It can be used to
-    benchmark the throughput of your system (computers, network,
-    switches). This option must be specified before the "-f" option!
-
-  -t <seconds>
- :  When in dummy mode, this option allows to specify how long the
-    testrun should approximately take. Since the dummy mode is mostly
-    used for benchmarking purposes and single runs might result in
-    different speeds (especially with many machines and bad switches
-    or with small TCP segment sizes), it's more convenient to specify
-    the run-lenght in seconds, as the benchmark-time becomes more
-    predictable.
-    
-  -f <config file>
- :  This option is used to select the config file for this cloning
-    process. This option makes only sense on the master machine and
-    the configuration file must exist on the master.
-
-  -o <logfile>
- :  This option specifies the logfile. Dolly will write some
-    statistical information into the logfile. it is mostly
-    used when benchmarking switches. The format of the lines in the
-    logfile is as follows:
-    Trans. data  Segsize Clients Time      Dataflow  Agg. dataflow
-    [MB]         [Byte]  [#]     [s]       [MB/s]    [MB/s]
-
-  -a <timeout>
- :  Sometimes it might be useful if Dolly would terminate instead of
-    waiting indefinitely in case something goes wrong. This option
-    lets you specify this timeout. If dolly could not transfer any
-    data after <timeout> seconds, then it will simply print an error
-    message and terminate. This feature might be especially useful for
-    scripted and automatic installations (such as "CloneSys"), where
-    you don't want to have dolly-processes hang around if a machine
-    hangs.
-
-  -n
- :  Do not sync() before exit. Thus, dolly will exit sooner, but data
-    may not make it to disk if power fails soon after dolly exits.
-
-  -u <size>
- :  Specify the size of buffers for TCP sockets. Should be a Multiple
-    of 4K.
-
-  -b <size>
- :  option to specify the TRANSFER_BLOCK_SIZE. Should be a multiple of
-    the size of buffers for TCP sockets.
-
 
 
 How it works
@@ -466,6 +472,11 @@ Some output improvments and add some options to deal with socket and
 buffer size to experiment some parameter on the fly. Done some cleanup
 in the C code to get less warning in building with recent GCC7.
 
+version 0.60
+------------
+
+Added pure commandline feature, so that there is no need for
+a dolly configuration file. Also output to stdout is now possible.
 
 
 EXAMPLE

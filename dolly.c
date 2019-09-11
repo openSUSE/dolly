@@ -90,7 +90,7 @@
 
   V 0.60 11-SEP-2019 Christian Goll <cgoll@suse.com>
     Added pure commandline feature, so that there is no need for
-    a dolly configuration file.
+    a dolly configuration file. Also output to stdout is now possible.
 	  
    If you change the history, then please also change the version_string
    right below!  */
@@ -2067,8 +2067,8 @@ static void usage(void)
   fprintf(stderr, "\t-H: comma seperated list of the hosts to send to\n");
   fprintf(stderr, "\t-i: input file\n");
   fprintf(stderr, "\t-O: output file (just - for output to stdout)\n");
-  fprintf(stderr, "\nDolly is part of the Patagonia cluster project, ");
-  fprintf(stderr, "see also\nhttp://www.cs.inf.ethz.ch/cops/patagonia/\n");
+  fprintf(stderr, "version: %s\n",version_string);
+  fprintf(stderr, "\nDolly was part of the ETH Patagonia cluster project, ");
   fprintf(stderr, "\n");
   exit(1);
 }
@@ -2085,7 +2085,7 @@ int main(int argc, char *argv[])
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "f:c:b:u:vqo:Sshndt:a:V:i:O:Y:H:");
+    c = getopt(argc, argv, "f:c:b:u:vqo:Sshndt:a:V:I:O:Y:H:");
     if(c == -1) break;
     
     switch(c) {
@@ -2302,11 +2302,11 @@ int main(int argc, char *argv[])
   }
   if(flag_cargs) {
     if(strlen(outfile) == 0) {
-      fprintf(stderr,"outfile via '-o FILE' must be set\n");
+      fprintf(stderr,"outfile via '-O FILE' must be set\n");
       exit(1);
     }
     if(strlen(infile) == 0) {
-      fprintf(stderr,"inputfile via '-i FILE' must be set\n");
+      fprintf(stderr,"inputfile via '-I [FILE|-]' must be set\n");
       exit(1);
     }
     if(strlen(dollytab) == 0) {
