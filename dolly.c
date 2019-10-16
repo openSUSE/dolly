@@ -2191,7 +2191,7 @@ int main(int argc, char *argv[])
       flag_cargs = 1;
       break;
 
-    case 'i':
+    case 'I':
       if(strlen(optarg) > 255) {
         fprintf(stderr, "Name of input-file too long.\n");
         exit(1);
