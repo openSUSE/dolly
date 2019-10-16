@@ -2036,8 +2036,8 @@ static void usage(void)
 {
   fprintf(stderr, "\n");
   fprintf(stderr,
-	  "Usage: dolly [-hVvsnC] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
-	  "[-o logfile] [-t time]\n");
+	  "Usage: dolly [-hVvsnY] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
+	  "[-o logfile] [-t time] -I [inputfile] -O [outpufile] -H [hostnames]\n");
   fprintf(stderr, "\t-s: this is the server, check hostname\n");
   fprintf(stderr, "\t-S: this is the server, do not check hostname\n");
   fprintf(stderr, "\t-v: verbose\n");
@@ -2046,7 +2046,6 @@ static void usage(void)
   fprintf(stderr, "\t-c <size>, where size is uncompressed size of "
 	  "compressed inputfile\n\t\t(for statistics only)\n");
 
-  fprintf(stderr, "\t-C do not use a config file.");
   fprintf(stderr, "\t-f <configfile>, where <configfile> is the "
 	  "configuration file with all\n\t\tthe required information for "
 	  "this run. Required on server only.\n");
@@ -2065,7 +2064,7 @@ static void usage(void)
   fprintf(stderr, "\t-V: Print version number and exit\n");
   fprintf(stderr, "\tFollowing options can be used instead of a dollytab\n");
   fprintf(stderr, "\t-H: comma seperated list of the hosts to send to\n");
-  fprintf(stderr, "\t-i: input file\n");
+  fprintf(stderr, "\t-I: input file\n");
   fprintf(stderr, "\t-O: output file (just - for output to stdout)\n");
   fprintf(stderr, "version: %s\n",version_string);
   fprintf(stderr, "\nDolly was part of the ETH Patagonia cluster project, ");
