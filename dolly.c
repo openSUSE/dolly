@@ -2036,7 +2036,7 @@ static void usage(void)
 {
   fprintf(stderr, "\n");
   fprintf(stderr,
-	  "Usage: dolly [-hVvsnY] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
+	  "Usage: dolly [-hVvSsnY] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
 	  "[-o logfile] [-t time] -I [inputfile] -O [outpufile] -H [hostnames]\n");
   fprintf(stderr, "\t-s: this is the server, check hostname\n");
   fprintf(stderr, "\t-S: this is the server, do not check hostname\n");
@@ -2062,7 +2062,8 @@ static void usage(void)
   fprintf(stderr, "\t-h: Print this help and exit\n");
   fprintf(stderr, "\t-q: Suppresss \"ignored signal\" messages\n");
   fprintf(stderr, "\t-V: Print version number and exit\n");
-  fprintf(stderr, "\tFollowing options can be used instead of a dollytab\n");
+  fprintf(stderr, "\tFollowing options can be used instead of a dollytab and\n");
+  fprintf(stderr, "\timply the -S or -s option which must me prceeded.\n");
   fprintf(stderr, "\t-H: comma seperated list of the hosts to send to\n");
   fprintf(stderr, "\t-I: input file\n");
   fprintf(stderr, "\t-O: output file (just - for output to stdout)\n");
@@ -2196,6 +2197,10 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Name of input-file too long.\n");
         exit(1);
       }
+      if (meserver == 0) {
+        fprintf(stderr,"the -S/-s must preceed the -I option\n");
+        exit(1);
+      }
       strncpy(infile,optarg,strlen(optarg)); 
       flag_cargs = 1;
       break;
@@ -2203,6 +2208,10 @@ int main(int argc, char *argv[])
     case 'O':
       if(strlen(optarg) > 255) {
         fprintf(stderr, "Name of output-file too long.\n");
+        exit(1);
+      }
+      if (meserver == 0) {
+        fprintf(stderr,"the -S/-s must preceed the -O option\n");
         exit(1);
       }
       strncpy(outfile,optarg,strlen(optarg)); 
@@ -2214,6 +2223,10 @@ int main(int argc, char *argv[])
       break;
 
     case 'H':
+      if (meserver == 0) {
+        fprintf(stderr,"the -S/-s must preceed the -H option\n");
+        exit(1);
+      }
       /* copying string as it is modified*/
       a_str = strdup(optarg);
       tmp_str = a_str;
