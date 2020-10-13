@@ -87,11 +87,15 @@
 	  Change default output in non verbose mode (get some stats)
 	  Add -b option to specify the TRANSFER_BLOCK_SIZE
 	  Add -u to specify the size of buffers for TCP sockets
+
+  V 0.60 11-SEP-2019 Christian Goll <cgoll@suse.com>
+    Added pure commandline feature, so that there is no need for
+    a dolly configuration file. Also output to stdout is now possible.
 	  
    If you change the history, then please also change the version_string
    right below!  */
 
-static const char version_string[] = "0.59, 09-APR-2019";
+static const char version_string[] = "0.60, 11-SEPT-2019";
 
 #include <unistd.h>
 #include <stdio.h>
@@ -173,7 +177,7 @@ static int dummy_time = 0;              /* Time for run in dummy-mode */
 static int dummysize = 0;
 static int exitloop = 0;
 static int timeout = 0;                 /* Timeout for startup */
-static int hyphennormal = 0;      /* '-' normal or interf. sep. in hostnames */
+static int hyphennormal = 1;      /* '-' normal or interf. sep. in hostnames */
 static int verbignoresignals = 1;       /* warn on ignore signal errors */
 
 /* Number of extra links for data transfers */
@@ -199,11 +203,14 @@ static int nr_childs = 0;
 static char servername[256];
 static char dollytab[256];
 
+
 static char *dollybuf = NULL;
 static size_t dollybufsize = 0;
 
 static int flag_log = 0;
 static char logfile[256] = "";
+
+const char* host_delim = ",";
 
 /* Pipe descriptor in case data must be uncompressed before write */
 static int pd[2];
@@ -354,7 +361,7 @@ static void parse_dollytab(FILE *df)
       }
       sp = strchr(str, ' ');
       if(sp == NULL) {
-	fprintf(stderr, "Error dummy line.\n");
+        fprintf(stderr, "Error dummy line.\n");
       }
       if(atoi(sp + 1) == 0) {
 	exitloop = 1;
@@ -483,6 +490,13 @@ static void parse_dollytab(FILE *df)
       exit(1);
     }
   }
+  if(strncmp("hypheninterface", str, 12) == 0) {
+    hyphennormal = 1;
+    if(fgets(str, 256, df) == NULL) {
+      perror("fgets after hypheninterface");
+      exit(1);
+    }
+  }
   
   /* Get our own hostname */
   if(!hadmynodename){
@@ -601,9 +615,9 @@ static void parse_dollytab(FILE *df)
     } else if(!hyphennormal) {
       /* Check if the hostname is correct, but a different interface is used */
       if((sp = strchr(hostring[i], '-')) != NULL) {
-	if(strncmp(hostring[i], myhostname, sp - hostring[i]) == 0) {
-	  me = i;
-	}
+        if(strncmp(hostring[i], myhostname, sp - hostring[i]) == 0) {
+          me = i;
+        }
       }
     }
   }
@@ -1215,7 +1229,8 @@ static int open_infile(int try_hard)
 static int open_outfile(int try_hard)
 {
   char name[256+16];
-
+  int is_device = 0;
+  int is_pipe = 0;
   /* Close old output file, if there is one. */
   if(output != -1) {
     if(close(output) == -1) {
@@ -1228,35 +1243,43 @@ static int open_outfile(int try_hard)
   } else {
     strcpy(name, outfile);
   }
+  /* check if file is under /dev, if not open even if the file does not exist. */
+  if(strcmp("/dev/",name) > 0 ) {
+    is_device = 1;
+  }
+  if(strcmp("-",name) == 0) {
+    is_pipe = 1;
+  }
   /* Setup the output files/pipes. */
   if(!compressed_in) {
     /* Output is to a file */
-    if(!compressed_out && (output_split == 0)) {
+    if(!compressed_out && (output_split == 0) && is_device && !is_pipe) {
       /* E.g. partition-to-partition cloning */
       output = open(name, O_WRONLY);
+    } else if(!compressed_out && !is_device && !is_pipe) {
+      /* E.g. file to file cloning */
+      output = open(name, O_WRONLY | O_CREAT, 0644);
+    } else if(is_pipe) {
+      output = 1;
     } else {
-      /* E.g. patition-to-compressed-archive cloning */
+      /* E.g. partition-to-compressed-archive cloning */
       output = open(name, O_WRONLY | O_CREAT | O_EXCL, 0644);
     }
     if(output == -1) {
-      if(try_hard == 1) {
-	char str[strlen(name)];
-	sprintf(str, "open outputfile '%s'", name);
-	perror(str);
-	exit(1);
-      } else {
-	return -1;
-      }
+      char str[strlen(name)];
+      sprintf(str, "open outputfile '%s'", name);
+      perror(str);
+      exit(1);
     }
   } else { /* Compressed_In */
     if(access(name, W_OK) == -1) {
       if(try_hard == 1) {
-	char str[strlen(name)];
-	sprintf(str, "open outputfile '%s'", name);
-	perror(str);
-	exit(1);
+        char str[strlen(name)];
+        sprintf(str, "open outputfile '%s'", name);
+        perror(str);
+        exit(1);
       } else {
-	return -1;
+        return -1;
       }
     }
     /* Pipe to gunzip */
@@ -1273,19 +1296,19 @@ static int open_outfile(int try_hard)
       dup(pd[0]);    /* Duplicate pipe on stdin */
       close(pd[0]);  /* Close the unused end of the pipe */
       if((fd = open(name, O_WRONLY)) == -1) {
-	if(errno == ENOENT) {
-	  fprintf(stderr, "Outputfile in child does not exist.\n");
-	}
-	perror("open outfile in child");
-	exit(1);
+        if(errno == ENOENT) {
+          fprintf(stderr, "Outputfile in child does not exist.\n");
+        }
+        perror("open outfile in child");
+        exit(1);
       }
       close(1);
       dup(fd);
       close(fd);
       /* Now stdout is redirected to our file */
       if(execl("/usr/bin/gunzip", "gunzip", "-c", NULL) == -1) {
-	perror("execl for gunzip in child");
-	exit(1);
+        perror("execl for gunzip in child");
+        exit(1);
       }
     } else {
       /* Father */
@@ -1937,11 +1960,13 @@ static void transmit(void)
     }
     buf[8] = 0;
     if(*(unsigned long long *)buf != maxbytes) {
-      fprintf(stderr, "*** ERROR *** Didn't get correct maxbytes back!\n"
+      fprintf(stderr, "*** ERROR *** Didn't get correct maxbytes back!\n");
+	      /* create unneeded error, so removing as only used for debugging 
 	      "Got %lld (0x%016llx) instead of %lld (0x%016llx)\n",
 	      *(unsigned long long *)&buf,
 	      *(unsigned long long *)&buf,
 	      maxbytes, maxbytes);
+	      */
     } else {
       fprintf(stderr, "Clients done.\n");
     }
@@ -2011,8 +2036,8 @@ static void usage(void)
 {
   fprintf(stderr, "\n");
   fprintf(stderr,
-	  "Usage: dolly [-h] [-V] [-v] [-s] [-n] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
-	  "[-o logfile] [-t time]\n");
+	  "Usage: dolly [-hVvSsnY] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
+	  "[-o logfile] [-t time] -I [inputfile] -O [outpufile] -H [hostnames]\n");
   fprintf(stderr, "\t-s: this is the server, check hostname\n");
   fprintf(stderr, "\t-S: this is the server, do not check hostname\n");
   fprintf(stderr, "\t-v: verbose\n");
@@ -2020,6 +2045,7 @@ static void usage(void)
   fprintf(stderr, "\t-u <size>, size of the buffer (multiple of 4K)\n");
   fprintf(stderr, "\t-c <size>, where size is uncompressed size of "
 	  "compressed inputfile\n\t\t(for statistics only)\n");
+
   fprintf(stderr, "\t-f <configfile>, where <configfile> is the "
 	  "configuration file with all\n\t\tthe required information for "
 	  "this run. Required on server only.\n");
@@ -2036,8 +2062,13 @@ static void usage(void)
   fprintf(stderr, "\t-h: Print this help and exit\n");
   fprintf(stderr, "\t-q: Suppresss \"ignored signal\" messages\n");
   fprintf(stderr, "\t-V: Print version number and exit\n");
-  fprintf(stderr, "\nDolly is part of the Patagonia cluster project, ");
-  fprintf(stderr, "see also\nhttp://www.cs.inf.ethz.ch/cops/patagonia/\n");
+  fprintf(stderr, "\tFollowing options can be used instead of a dollytab and\n");
+  fprintf(stderr, "\timply the -S or -s option which must me prceeded.\n");
+  fprintf(stderr, "\t-H: comma seperated list of the hosts to send to\n");
+  fprintf(stderr, "\t-I: input file\n");
+  fprintf(stderr, "\t-O: output file (just - for output to stdout)\n");
+  fprintf(stderr, "version: %s\n",version_string);
+  fprintf(stderr, "\nDolly was part of the ETH Patagonia cluster project, ");
   fprintf(stderr, "\n");
   exit(1);
 }
@@ -2045,34 +2076,27 @@ static void usage(void)
 int main(int argc, char *argv[])
 {
   int c, i;
-  int flag_f = 0;
+  int flag_f = 0, flag_cargs = 0, generated_dolly = 0, me = -2;
   FILE *df;
+  char *mnname = NULL, *tmp_str, *host_str, *a_str, *sp;
+  size_t nr_hosts = 0;
+  int fd;
+
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "f:c:b:u:vqo:Sshndt:a:V");
+    c = getopt(argc, argv, "f:c:b:u:vqo:Sshndt:a:V:I:O:Y:H:");
     if(c == -1) break;
     
     switch(c) {
     case 'f':
       /* Where to find the config-file. */
       if(strlen(optarg) > 255) {
-	fprintf(stderr, "Name of config-file too long.\n");
-	exit(1);
+        fprintf(stderr, "Name of config-file too long.\n");
+        exit(1);
       }
       strcpy(dollytab, optarg);
-      
-      /* Open the config-file */
-      df = fopen(optarg, "r");
-      if(df == NULL) {
-	char errstr[256];
-	sprintf(errstr, "fopen dollytab '%s'", optarg);
-	perror(errstr);
-	exit(1);
-      }
-      parse_dollytab(df);
       flag_f = 1;
-      fclose(df);
       break;
 
     case 'v':
@@ -2127,26 +2151,26 @@ int main(int argc, char *argv[])
     case 't':
       /* How long should dolly run in dummy mode? */
       if(atoi(optarg) < 0) {
-	fprintf(stderr,
-		"Time for -t parameter should be positive instead of %d.\n",
-		atoi(optarg));
-	exit(1);
+        fprintf(stderr,
+          "Time for -t parameter should be positive instead of %d.\n",
+        atoi(optarg));
+        exit(1);
       } else if(atoi(optarg) == 0) {
 
       } else {
-	dummy_time = atoi(optarg);
+        dummy_time = atoi(optarg);
       }
       break;
 
     case 'a':
       i = atoi(optarg);
       if(i <= 0) {
-	fprintf(stderr, "Timeout of %d doesn't make sense.\n", i);
-	exit(1);
+        fprintf(stderr, "Timeout of %d doesn't make sense.\n", i);
+        exit(1);
       }
       timeout = i;
       if(flag_v) {
-	fprintf(stderr, "Will set timeout to %d seconds.\n", timeout);
+        fprintf(stderr, "Will set timeout to %d seconds.\n", timeout);
       }
       signal(SIGALRM, alarm_handler);
       break;
@@ -2164,17 +2188,159 @@ int main(int argc, char *argv[])
       fprintf(stderr, "Dolly version %s\n", version_string);
       exit(0);
       break;
+    case 'C':
+      flag_cargs = 1;
+      break;
+
+    case 'I':
+      if(strlen(optarg) > 255) {
+        fprintf(stderr, "Name of input-file too long.\n");
+        exit(1);
+      }
+      if (meserver == 0) {
+        fprintf(stderr,"the -S/-s must preceed the -I option\n");
+        exit(1);
+      }
+      strncpy(infile,optarg,strlen(optarg)); 
+      flag_cargs = 1;
+      break;
+
+    case 'O':
+      if(strlen(optarg) > 255) {
+        fprintf(stderr, "Name of output-file too long.\n");
+        exit(1);
+      }
+      if (meserver == 0) {
+        fprintf(stderr,"the -S/-s must preceed the -O option\n");
+        exit(1);
+      }
+      strncpy(outfile,optarg,strlen(optarg)); 
+      flag_cargs = 1;
+      break;
+
+    case 'Y':
+      hyphennormal = 1;
+      break;
+
+    case 'H':
+      if (meserver == 0) {
+        fprintf(stderr,"the -S/-s must preceed the -H option\n");
+        exit(1);
+      }
+      /* copying string as it is modified*/
+      a_str = strdup(optarg);
+      tmp_str = a_str;
+      while(*tmp_str) {
+        if(*host_delim == *tmp_str) {
+          nr_hosts++;
+        }
+        tmp_str++;
+      }
+      nr_hosts++;
+      hostnr = nr_hosts;
+      hostring = (char**) malloc(nr_hosts * sizeof(char *));
+      /* now find the first host */
+      host_str = strtok(a_str,host_delim);
+      nr_hosts = 0;
+      while(host_str != NULL) {
+        hostring[nr_hosts] = (char *)malloc(strlen(host_str)+1);
+        strcpy(hostring[nr_hosts], host_str);
+        host_str = strtok(NULL,host_delim);
+        if(strcmp(hostring[nr_hosts], myhostname) == 0) {
+          me = nr_hosts;
+        } else if(!hyphennormal) {
+          /* Check if the hostname is correct, but a different interface is used */
+          if((sp = strchr(hostring[nr_hosts], '-')) != NULL) {
+            if(strncmp(hostring[nr_hosts], myhostname, sp - hostring[nr_hosts]) == 0) {
+              me = nr_hosts;
+            }
+          }
+        }
+        nr_hosts++;
+      }
+      /* Build up topology */
+      nr_childs = 0;
+      for(i = 0; i < fanout; i++) {
+        if(meserver) {
+          if(i + 1 <= hostnr) {
+            nexthosts[i] = i;
+            nr_childs++;
+          }
+        } else {
+          if((me + 1) * fanout + 1 + i <= hostnr) {
+            nexthosts[i] = (me + 1) * fanout + i;
+            nr_childs++;
+          }
+        }
+      }
+      /* In a tree, we might have multiple last machines. */
+      if(nr_childs == 0) {
+        melast = 1;
+      }
+
+      free(a_str);
+      /* make sure that we are the server */
+      meserver = 1;
+      flag_cargs = 1;
+      break;
       
     default:
       fprintf(stderr, "Unknown option '%c'.\n", c);
       exit(1);
     }
+    if (flag_cargs) {
+      mnname = getenv("HOST");
+      (void)strcpy(myhostname, mnname);
+
+    }
+    if (flag_f && !flag_cargs) {
+      /* Open the config-file */
+      df = fopen(optarg, "r");
+      if(df == NULL) {
+        char errstr[256];
+        sprintf(errstr, "fopen dollytab '%s'", optarg);
+        perror(errstr);
+        exit(1);
+      }
+      parse_dollytab(df);
+      fclose(df);
+    }
   }
 
   /* Did we get the parameters we need? */
-  if(meserver && !flag_f) {
-    fprintf(stderr, "Missing parameter -f <configfile>.\n");
+  if(meserver && !flag_f && !flag_cargs) {
+    fprintf(stderr, "Missing parameter -f <configfile> or -C for commandline arguments.\n");
     exit(1);
+  }
+  if(flag_cargs) {
+    if(strlen(outfile) == 0) {
+      fprintf(stderr,"outfile via '-O FILE' must be set\n");
+      exit(1);
+    }
+    if(strlen(infile) == 0) {
+      fprintf(stderr,"inputfile via '-I [FILE|-]' must be set\n");
+      exit(1);
+    }
+    if(strlen(dollytab) == 0) {
+      generated_dolly = 1;
+      strcpy(dollytab,"/tmp/dollygenXXXXXX");
+      fd = mkstemp(dollytab);
+      df = fdopen(fd,"w");
+      if(df == NULL) {
+        printf("Could not open temporary dollytab");
+      }
+      fprintf(df,"infile %s\n",infile);
+      fprintf(df,"outfile %s\n",outfile);
+      fprintf(df,"server %s\n",myhostname);
+      fprintf(df,"firstclient %s\n",hostring[0]);
+      fprintf(df,"lastclient %s\n",hostring[nr_hosts-1]);
+      fprintf(df,"clients %i\n",hostnr);
+      for(int i = 0; i < hostnr; i++) {
+        fprintf(df,"%s\n",hostring[i]);
+      }
+      fprintf(df,"endconfig\n");
+      fclose(df);
+    }
   }
 
   if(meserver && flag_v) {
@@ -2209,7 +2375,10 @@ int main(int argc, char *argv[])
     if(!exitloop) {
       transmit();
     }
-    
+    /* remove the generated dollytab */
+    if(generated_dolly) {
+      unlink(dollytab);
+    }
     close(datain[0]);
     close(ctrlin);
     close(datasock);
