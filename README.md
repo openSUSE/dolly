@@ -529,5 +529,6 @@ Felix Rauch <rauch@inf.ethz.ch>
 
 AUTHORS
 =======
-Antione Agienies <agienes@suse.com>
+Felix Rauch <rauch@inf.ethz.ch>
+Antoine Aginies <agienes@suse.com>
 Christian Goll <cgoll@suse.com>
