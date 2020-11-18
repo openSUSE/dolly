@@ -200,6 +200,7 @@ static unsigned int hostnr = 0;
 static char **hostring = NULL;
 static int nexthosts[MAXFANOUT];
 static int nr_childs = 0;
+static int max_retries = 10;
 static char servername[256];
 static char dollytab[256];
 
@@ -932,7 +933,7 @@ static void open_outsocks(void)
   struct hostent *hent;
   struct sockaddr_in addrdata, addrctrl;
   int ret;
-  int dataok = 0, ctrlok = 0;
+  int dataok = 0, ctrlok = 0, retry_count = 0;
   int i;
   int optval;
   int max;
@@ -1082,45 +1083,53 @@ static void open_outsocks(void)
       bcopy(hent->h_addr, &addrdata.sin_addr, hent->h_length);
 
       if((nr_childs > 1) || (i == 0)) {
-	/* Setup control port */
-	addrctrl.sin_family = hent->h_addrtype;
-	addrctrl.sin_port = htons(ctrlport);
-	bcopy(hent->h_addr, &addrctrl.sin_addr, hent->h_length);
+        /* Setup control port */
+        addrctrl.sin_family = hent->h_addrtype;
+        addrctrl.sin_port = htons(ctrlport);
+        bcopy(hent->h_addr, &addrctrl.sin_addr, hent->h_length);
       }
       
       if(!dataok) {
-	ret = connect(dataout[i],
-		      (struct sockaddr *)&addrdata, sizeof(addrdata));
-	if((ret == -1) && (errno == ECONNREFUSED)) {
-	  close(dataout[i]);
-	} else if(ret == -1) {
-	  perror("connect");
-	  exit(1);
-	} else {
-	  dataok = 1;
+        retry_count = 0;
+        do {
+          ret = connect(dataout[i],
+                  (struct sockaddr *)&addrdata, sizeof(addrdata));
+          retry_count++;
+        } while(retry_count < max_retries && ret == -1 && errno != ECONNREFUSED);
+        if((ret == -1) && (errno == ECONNREFUSED)) {
+          close(dataout[i]);
+        } else if(ret == -1) {
+          perror("connect");
+          exit(1);
+        } else {
+          dataok = 1;
 #ifdef DOLLY_NONBLOCK
-	  ret = fcntl(dataout[i], F_SETFL, O_NONBLOCK);
-	  if(ret == -1) {
-	    perror("fcntl");
-	  }
+          ret = fcntl(dataout[i], F_SETFL, O_NONBLOCK);
+          if(ret == -1) {
+            perror("fcntl");
+          }
 #endif /* DOLLY_NONBLOCK */
-	  if(add_nr > 0) {
-	    ret = write(dataout[i], &i, sizeof(i));
-	    if(ret == -1) {
-	      perror("Write fd-nr in open_outsocks()");
-	      exit(1);
-	    }
-	  }
-	  if(flag_v) {
-	    fprintf(stderr, "data ");
-	    fflush(stderr);
-	  }
-	}
+          if(add_nr > 0) {
+            ret = write(dataout[i], &i, sizeof(i));
+            if(ret == -1) {
+              perror("Write fd-nr in open_outsocks()");
+              exit(1);
+            }
+          }
+          if(flag_v) {
+            fprintf(stderr, "data ");
+            fflush(stderr);
+          }
+        }
       }
       if(!ctrlok) {
 	if((nr_childs > 1) || (i == 0)) {
-	  ret = connect(ctrlout[i],
-			(struct sockaddr *)&addrctrl, sizeof(addrctrl));
+    retry_count = 0;
+    do {
+      ret = connect(ctrlout[i],
+        (struct sockaddr *)&addrctrl, sizeof(addrctrl));
+      retry_count++;
+    } while(retry_count < max_retries && ret == -1 && errno != ECONNREFUSED);
 	  if((ret == -1) && (errno == ECONNREFUSED)) {
 	    close(ctrlout[i]);
 	  } else if(ret == -1) {
@@ -2054,8 +2063,8 @@ static void usage(void)
 	  "disk accesses. This ist mostly used to test switches.\n");
   fprintf(stderr, "\t-o <logfile>: Write some statistical information  "
 	  "in <logfile>\n");
-  fprintf(stderr, "\t-t <time>, where <time> is the run-time in seconds of this "
-	  "dummy-mode\n");
+  fprintf(stderr, "\t-t <time>, where <time> is the run-time in seconds of this dummy-mode\n");
+  fprintf(stderr, "\t-r <n>: Retry to connect to mode n times\n");
   fprintf(stderr, "\t-a <timeout>: Lets dolly terminate if it could not transfer\n\t\tany data after <timeout> seconds.\n");
   fprintf(stderr, "\t-n: Do not sync before exit. Dolly exits sooner.\n");
   fprintf(stderr, "\t    Data may not make it to disk if power fails soon after dolly exits.\n");
@@ -2085,7 +2094,7 @@ int main(int argc, char *argv[])
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "f:c:b:u:vqo:Sshndt:a:V:I:O:Y:H:");
+    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:Sshndt:V:I:O:Y:H:");
     if(c == -1) break;
     
     switch(c) {
@@ -2107,8 +2116,8 @@ int main(int argc, char *argv[])
     case 'o':
       /* log filename */
       if(strlen(optarg) > 255) {
-	fprintf(stderr, "Name of log-file too long.\n");
-	exit(1);
+        fprintf(stderr, "Name of log-file too long.\n");
+        exit(1);
       }
       strcpy(logfile, optarg);
       flag_log = 1;
@@ -2173,6 +2182,10 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Will set timeout to %d seconds.\n", timeout);
       }
       signal(SIGALRM, alarm_handler);
+      break;
+
+    case  'r':
+      max_retries = atoi(optarg);
       break;
 
     case 'h':
