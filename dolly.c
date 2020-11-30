@@ -624,7 +624,7 @@ static void parse_dollytab(FILE *df)
   }
 
   if(!meserver && (me == -2)) {
-    fprintf(stderr, "Couldn't find myself in hostlist.\n");
+    fprintf(stderr, "Couldn't find myself '%s' in hostlist.\n",myhostname);
     exit(1);
   }
   
