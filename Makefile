@@ -1,15 +1,30 @@
-VERSION=0.59
-CC=gcc
-CFLAGS=-Wall -ggdb -O2
+CXX = g++
+CC = gcc
+CFLAGS = -std=gnu11 -s -O
+WARNINGS = -Werror -Wall -Wextra -pedantic-errors 
+LDFLAGS =
+LIBRARIES =
+SOURCES = $(wildcard *.c)
+OBJECTS = $(SOURCES:.c=.o)
+DEPS = $(SOURCES:.c=.d)
 
-all: dolly
+EXECUTABLE = dolly
 
-dolly: dolly.c
+%.d: %.c
+	$(CC) $< -o $@ -MM $(CFLAGS)
 
+%.o: %.c
+	$(CC) $< -o $@ -c $(CFLAGS) $(WARNINGS)
+
+
+$(EXECUTABLE): $(OBJECTS)
+	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ $(LIBRARIES)
+
+all: $(EXECUTABLE)
+
+-include $(DEPS)
+
+.PHONY: clean       
 clean:
-	rm -f dolly *.o
+	rm -rf $(EXECUTABLE) $(OBJECTS) $(DEPS)
 
-tarball:
-	mkdir -p ../dolly-${VERSION}
-	cp -a * ../dolly-${VERSION}
-	cd .. && tar cvfj dolly-${VERSION}.tar.bz2 dolly-${VERSION}

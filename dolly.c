@@ -1,228 +1,11 @@
 /*
-   Dolly: A programm to distribute partition-images and whole disks
-   over a fast, switched network.
-
-   Copyright: Felix Rauch <rauch@inf.ethz.ch> and ETH Zurich.
-   
-   License: GNU General Public License.
-   
-   History:
-   V 0.1  xy-MAR-1999 Felix Rauch <rauch@inf.ethz.ch>
-          First version for benchmarks required. Presented results
-	  at Cluster Computing 99, Karlsruhe, Germany
-   V 0.2  02-JUL-1999 Felix Rauch <rauch@inf.ethz.ch>
-          Some improvements...
-   V 0.21 31-JAN-2000 Felix Rauch <rauch@inf.ethz.ch>
-          Status information backflow, no longer a ring topology.
-   V 0.3  01-FEB-2000 Felix Rauch <rauch@inf.ethz.ch>
-          Dolly now supports tree topologies with any number of fanouts.
-	  (Trees are usually slower, so this change won't speed up dolly.
-	  I just implemented it to proove that it's really slower.
-	  See our Paper for EuroPar 2000 on our publications site
-	  http://www.cs.inf.ethz.ch/CoPs/publications/)
-   V 0.4  25-11-2000 Felix Rauch <rauch@inf.ethz.ch>
-          Started to include the possibility to write compressed outfiles.
-   V 0.5  March-2001 Christian Kurmann <kurmann@inf.ethz.ch>
-          Started extensions to dolly for switch-benchmark.
-   V 0.51 21-MAR-2001 Felix Rauch <rauch@inf.ethz.ch>
-          Extended dummy-mode with time limit
-	  Integrated use of extra network interfaces
-   V 0.52 25-MAI-2001 Christian Kurmann <kurmann@inf.ethz.ch>
-          Integrated primary network hostname add to change primary device
-   V 0.53 25-MAI-2001 Felix Rauch <rauch@inf.ethz.ch>
-          Allowed empty "dummy" parameter
-   V 0.54 30-MAY-2001 Felix Rauch <rauch@inf.ethz.ch>
-          Fixed a bug with config-files larger than 1448 bytes.
-   V 0.55 25-JUL-2001 Felix Rauch <rauch@inf.ethz.ch>
-          Added parameter for timeout (-a) and version (-V).
-   V 0.56 15-JAN-2003 David Mathog <mathog@mendel.bio.caltech.edu>
-          Added parameter -S. Acts like -s except it doesn't
-          check the hostname. Handy when multiple interfaces
-          are present.
-   V 0.57 8-MAY-2003 Felix Rauch <rauch@inf.ethz.ch>
-          Splitted infiles and outfiles are now possible.
-	  Parameter 'hyphennormal' treats '-' as normal character in hostnames.
-   V 0.58 2-NOV-2004 David Mathog <mathog@caltech.edu>
-          (plus some minor cleanups by Felix Rauch)
-          Added changes to allow "/dev/stdin", "/dev/stdout" processing for
-	  input file and output file. "-" would have been used but
-	  that already has some other meanings in this program.
-	  This makes it easy to use dolly in a pipe
-	  like this:
-	  
-	  master:  tar cf - /tree_to_send | dolly -s -f config
-	  clients: dolly | tar xpf -
-	  
-	  In this mode compression should be disabled. That allows
-	  compression option to be used on each machines' pipe.
-	  
-	  Redirected messages which used to be to stdout to stderr.
-	  Also, since in some modes the main node knows the slave node
-	  names, but they don't, this information is put into the
-	  environment variable MYNODENAME and retrieved via
-	  getenv("MYNODENAME") in the program. If this succeeds the
-	  node will not even try gethostbyname(). For compatibility
-	  with other systems, dolly also checks the "HOST" environment
-	  variable.
-	  
-	  Default to TCP_NODELAY. Set large input/output buffers.
-	  Ignore errno EINTR on select on client. Option to suppress
-	  the warning (there can be a lot of them!).
-
-   V 0.58C 23-MAR-2005 David Mathog <mathog@caltech.edu>
-          Changed TRANSFER_BLOCK_SIZE to T_B_SIZE and replaced all
-          explicit 4096 with this define.  Similarly, replaced all
-          4095 with T_B_SIZEM1.  This allows a test to see if increasing
-          this from 4096 to 8192 speeds anything up.  Netpipe suggests
-          it should.
-          
-          Added a flag -n = 'no sync'.  When dolly waits for sync
-          on an 80 Mb file it can take twice as long for the transfer
-          to finish.  When dolly exits the disk light does come on, so
-          it appears that the data flushes to disk asynchronously anyway
-          when sync() is omitted.  
-
-   V 0.59 09-APR-2019 Antoine Ginies <aginies@suse.com>
-          Cleanup warning building
-	  Change default output in non verbose mode (get some stats)
-	  Add -b option to specify the TRANSFER_BLOCK_SIZE
-	  Add -u to specify the size of buffers for TCP sockets
-
-  V 0.60 11-SEP-2019 Christian Goll <cgoll@suse.com>
-    Added pure commandline feature, so that there is no need for
-    a dolly configuration file. Also output to stdout is now possible.
-	  
    If you change the history, then please also change the version_string
    right below!  */
 
-static const char version_string[] = "0.60, 11-SEPT-2019";
-
-#include <unistd.h>
-#include <stdio.h>
-#include <errno.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <sys/poll.h>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/time.h>
-#include <sys/mman.h>
-#include <netinet/tcp.h>
-#include <assert.h>
-#include <ctype.h>
-#include <signal.h>
-
-#define MAXFANOUT 8
-
-/* Size of blocks transf. to/from net/disk and one less than that */
-static int t_b_size = 4096;
-#define T_B_SIZE   t_b_size
-#define T_B_SIZEM1 (T_B_SIZE - 1)
-
-
-#define DOLLY_NONBLOCK 1                 /* Use nonblocking network sockets */
-
-static FILE *stdtty;           /* file pointer to the standard terminal tty */
-
-static int meserver = 0;                    /* This machine sends the data. */
-static int melast = 0;   /* This machine doesn't have children to send data */
-static char myhostname[256] = "";
-
-/* Clients need the ports before they can listen, so we use defaults. */
-static unsigned int dataport = 9998;
-static unsigned int ctrlport = 9997;
-
-/* File descriptors for file I/O */
-static int input = -1, output = -1;
-
-/* Sizes for splitted input/output files. 0 means "don't split" (default) */
-static unsigned long long input_split = 0;
-static unsigned long long output_split = 0;
-
-/* Numbers for splitted input/output files */
-static unsigned int input_nr = 0, output_nr = 0;
-
-/* TCP Segment Size (useful for benchmarking only) */
-static int segsize = 0;
-
-/* size of buffers for TCP sockets (approx. 100KB, multiple of 4 KB) */
-static int buffer_size = 98304;
-#define SCKBUFSIZE buffer_size
-
-/* Describes the tree-structure */
-static int fanout = 1;   /* default is linear list */
-
-/* Normal sockets for data transfer */
-static int datain[MAXFANOUT], dataout[MAXFANOUT];
-static int datasock = -1;
-
-/* Special sockets for control information */
-static int ctrlin = -1, ctrlout[MAXFANOUT];
-static int ctrlsock = -1;
-
-static unsigned long long maxbytes = 0; /* max bytes to transfer */
-static unsigned long long maxcbytes = 0;/*     --  "  --  in compressed mode */
-static int compressed_in = 0;           /* compressed transfer or not? */
-static int compressed_out = 0;          /* write results compressed? */
-static char flag_v = 0;                 /* verbose */
-static char dummy_mode = 0;             /* No disk accesses */
-static int dosync = 1;                  /* sync() after transfer */
-static int dummy_time = 0;              /* Time for run in dummy-mode */
-static int dummysize = 0;
-static int exitloop = 0;
-static int timeout = 0;                 /* Timeout for startup */
-static int hyphennormal = 1;      /* '-' normal or interf. sep. in hostnames */
-static int verbignoresignals = 1;       /* warn on ignore signal errors */
-
-/* Number of extra links for data transfers */
-static unsigned char add_nr = 0;
-static int add_primary = 0;  /* Addition Post- or Midfix for primary interf. */
-
-/* Postfix of extra network interface names */
-static char add_name[MAXFANOUT][32];
-/* Postfix or midfix? */
-/* 0 = undefined, 1 = postfix, 2 = midfix */
-/* Some explanations about the meanings of postfix and midfix:
-   postfix ex.: hostname = "cops1", postfix = "-giga" -> "cops1-giga"
-   midfix ex.: hostname = "xibalba101", midfix = "-fast" -> "xibalba-fast101"
-*/
-static unsigned short add_mode = 0;
-
-static char infile[256] = "";
-static char outfile[256] = "";
-static unsigned int hostnr = 0;
-static char **hostring = NULL;
-static int nexthosts[MAXFANOUT];
-static int nr_childs = 0;
-static int max_retries = 10;
-static char servername[256];
-static char dollytab[256];
-
-
-static char *dollybuf = NULL;
-static size_t dollybufsize = 0;
-
-static int flag_log = 0;
-static char logfile[256] = "";
-
-const char* host_delim = ",";
-
-/* Pipe descriptor in case data must be uncompressed before write */
-static int pd[2];
-/* Pipe descriptor in case input data must be compressed */
-static int id[2]; 
-
-/* PIDs of child processes */
-static int in_child_pid = 0, out_child_pid = 0;
+#include "dolly.h"
 
 /* Handles timeouts by terminating the program. */
-static void alarm_handler(int arg)
+static void alarm_handler()
 {
   fprintf(stderr, "Timeout reached (was set to %d seconds).\nTerminating.\n",
 	  timeout);
@@ -339,9 +122,9 @@ static void parse_dollytab(FILE *df)
 	s++;
       }
       switch(*s) {
-      case 'T': size *= 1024LL;
-      case 'G': size *= 1024LL;
-      case 'M': size *= 1024LL;
+      case 'T': size *= 1024LL*1024LL*1024LL*1024LL; break;
+      case 'G': size *= 1024LL*1024LL*1024LL; break;
+      case 'M': size *= 1024LL*1024LL; break;
       case 'k': size *= 1024LL; break;
       default:
 	fprintf(stderr, "Unknown multiplier '%c' for split size.\n", *s);
@@ -634,13 +417,13 @@ static void parse_dollytab(FILE *df)
   for(i = 0; i < fanout; i++) {
     if(meserver) {
       if(i + 1 <= hostnr) {
-	nexthosts[i] = i;
-	nr_childs++;
+        nexthosts[i] = i;
+        nr_childs++;
       }
     } else {
       if((me + 1) * fanout + 1 + i <= hostnr) {
-	nexthosts[i] = (me + 1) * fanout + i;
-	nr_childs++;
+        nexthosts[i] = (me + 1) * fanout + i;
+        nr_childs++;
       }
     }
   }
@@ -680,7 +463,8 @@ static void parse_dollytab(FILE *df)
  */
 static void getparams(int f)
 {
-  size_t readsize, writesize;
+  size_t readsize;
+  ssize_t writesize;
   int fd, ret;
   FILE *dolly_df = NULL;
   char tmpfile[32] = "/tmp/dollytmpXXXXXX";
@@ -701,7 +485,7 @@ static void getparams(int f)
     if(ret == -1) {
       perror("read in getparams while");
       exit(1);
-    } else if(ret == T_B_SIZE) {  /* This will probably not happen... */
+    } else if((unsigned int) ret == T_B_SIZE) {  /* This will probably not happen... */
       fprintf(stderr, "Ups, the transmitted config-file seems to long.\n"
 	      "Please rewrite dolly.\n");
       exit(1);
@@ -1348,26 +1132,26 @@ static int movebytes(int fd, int dir, char *addr, unsigned int n)
     } else if(dir == READ) {
       fflush(stderr);
       ret = read(fd, addr, n);
-      if((ret < n) && compressed_out && meserver) {
-	int wret, status;
-	sleep(1);
-	wret = waitpid(in_child_pid, &status, WNOHANG);
-	if(wret == -1) {
-	  perror("waitpid");
-	} else if(wret == 0) {
-	  fprintf(stderr, "waitpid returned 0\n");
-	} else {
-	  if(WIFEXITED(status)) {
-	    if(WEXITSTATUS(status) == 0) {
-	      child_done++;
-	      return ret;
-	    } else {
-	      fprintf(stderr, "Child terminated with return value %d\n",
-		      WEXITSTATUS(status));
-	    }
-	  }
-	}
-	(void) fprintf(stderr,"read returned %d\n", ret);
+      if(((unsigned int)ret < n) && compressed_out && meserver) {
+        int wret, status;
+        sleep(1);
+        wret = waitpid(in_child_pid, &status, WNOHANG);
+        if(wret == -1) {
+          perror("waitpid");
+        } else if(wret == 0) {
+          fprintf(stderr, "waitpid returned 0\n");
+        } else {
+          if(WIFEXITED(status)) {
+            if(WEXITSTATUS(status) == 0) {
+              child_done++;
+              return ret;
+            } else {
+              fprintf(stderr, "Child terminated with return value %d\n",
+                WEXITSTATUS(status));
+            }
+          }
+        }
+        (void) fprintf(stderr,"read returned %d\n", ret);
       }
     } else {
       fprintf(stderr, "Bad direction in movebytes!\n");
@@ -1396,8 +1180,9 @@ static int movebytes(int fd, int dir, char *addr, unsigned int n)
 static void buildring(void)
 {
   socklen_t size;
-  int ret, i, nr;
-  int ready_mach = 0;  /* Number of ready machines */
+  int ret;
+  unsigned int i, nr;
+  unsigned int ready_mach = 0;  /* Number of ready machines */
   char msg[128];
   char info_buf[1024];
 
@@ -1434,8 +1219,8 @@ static void buildring(void)
     if(add_nr > 0) {
       ret = read(datain[0], &nr, sizeof(nr));
       if(ret == -1) {
-	perror("First read for nr in buildring");
-	exit(1);
+        perror("First read for nr in buildring");
+        exit(1);
       }
       assert(nr == 0);
       for(i = 0; i < add_nr; i++) {
@@ -1460,7 +1245,7 @@ static void buildring(void)
     /* Give information back to server */
     sprintf(msg, "Host got parameters '%s'.\n", myhostname);
     ret = movebytes(ctrlin, WRITE, msg, strlen(msg));
-    if(ret != strlen(msg)) {
+    if((unsigned int) ret != strlen(msg)) {
       fprintf(stderr,
 	      "Couldn't write got-parameters-message back to server "
 	      "(sent %d instead of %zu bytes).\n",
@@ -1484,7 +1269,7 @@ static void buildring(void)
   /* Finally, the first machine also accepts a connection */
   if(meserver) {
     char buf[T_B_SIZE];
-    size_t readsize;
+    ssize_t readsize;
     int fd, ret, maxsetnr = -1;
     fd_set real_set, cur_set;
     
@@ -1567,14 +1352,14 @@ static void buildring(void)
     /* Send it further */
     if(!melast) {
       for(i = 0; i < nr_childs; i++) {
-	movebytes(ctrlout[i], WRITE, dollybuf, dollybufsize);
+        movebytes(ctrlout[i], WRITE, dollybuf, dollybufsize);
       }
     }
     
     /* Give information back to server */
     sprintf(msg, "Host ready '%s'.\n", myhostname);
     ret = movebytes(ctrlin, WRITE, msg, strlen(msg));
-    if(ret != strlen(msg)) {
+    if((unsigned int) ret != strlen(msg)) {
       fprintf(stderr,
 	      "Couldn't write ready-message back to server "
 	      "(sent %d instead of %zu bytes).\n",
@@ -1584,14 +1369,13 @@ static void buildring(void)
 }
 
 /* The main transmitting function */
-static void transmit(void)
-{
+static void transmit(void) {
   char *buf_addr, *buf;
   unsigned long long t, transbytes = 0, lastout = 0;
   unsigned int bytes = T_B_SIZE;
   int ret = 1, maxsetnr = 0;
   unsigned long td = 0, tdlast = 0;
-  int i, a;
+  unsigned int i = 0, a = 0;
   FILE *logfd = NULL;
   struct timeval tv1, tv2, tv3;
   fd_set real_set, cur_set;
@@ -1615,8 +1399,8 @@ static void transmit(void)
     ADJ_MAXSET(ctrlin);
     if(!melast) {
       for(i = 0; i < nr_childs; i++) {
-	FD_SET(ctrlout[i], &real_set);  /* Check ctrlout too for backflow */
-	ADJ_MAXSET(ctrlout[i]);
+        FD_SET(ctrlout[i], &real_set);  /* Check ctrlout too for backflow */
+        ADJ_MAXSET(ctrlout[i]);
       }
     }
     maxsetnr++;
@@ -1643,7 +1427,7 @@ static void transmit(void)
        * Server part
        */
       if(!dummy_mode) {
-	ret = movebytes(input, READ, buf, bytes);
+        ret = movebytes(input, READ, buf, bytes);
       } else {
 	if((dummysize > 0) && ((maxbytes + bytes) > dummysize)) {
 	  ret = dummysize - maxbytes;
@@ -1669,49 +1453,49 @@ static void transmit(void)
       }
       maxbytes += ret;
       if(ret > 0) {
-	if(add_nr == 0) {
-	  for(i = 0; i < nr_childs; i++) {
-	    movebytes(dataout[i], WRITE, buf, ret);
-	  }
-	} else {
-	  static int cur_out = 0;
-	  movebytes(dataout[cur_out], WRITE, buf, ret);
-	  cur_out++;
-	  if(cur_out > add_nr) {
-	    cur_out = 0;
-	  }
-	}
+        if(add_nr == 0) {
+          for(i = 0; i < nr_childs; i++) {
+            movebytes(dataout[i], WRITE, buf, ret);
+          }
+        } else {
+          static unsigned int cur_out = 0;
+          movebytes(dataout[cur_out], WRITE, buf, ret);
+          cur_out++;
+          if(cur_out > add_nr) {
+            cur_out = 0;
+          }
+        }
       } else {
-	/* Here: ret <= 0 */
-	int res = -1;
-	if(input_split) {
-	  res = open_infile(0);
-	}
-	if(!input_split || (res < 0)) {
-	  if(flag_v) {
-	    fprintf(stderr, "\nRead %llu bytes from file(s).\n", maxbytes);
-	  }
-	  if(add_nr == 0) {
-	    for(i = 0; i < nr_childs; i++) {
-	      (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
-			    maxbytes);
-	      movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8);
-	      shutdown(dataout[i], 2);
-	    }
-	  } else {
-	    (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
-			  maxbytes);
-	    movebytes(ctrlout[0], WRITE, (char *)&maxbytes, 8);
-	    for(i = 0; i <= add_nr; i++) {
-	      shutdown(dataout[i], 2);
-	    }
-	  }
-	} else {
-	  /* Next input file opened */
-	  ret = 100000;
-	  continue;
-	} /* end input_split */
-      }
+        /* Here: ret <= 0 */
+        int res = -1;
+        if(input_split) {
+          res = open_infile(0);
+        }
+        if(!input_split || (res < 0)) {
+          if(flag_v) {
+            fprintf(stderr, "\nRead %llu bytes from file(s).\n", maxbytes);
+          }
+          if(add_nr == 0) {
+            for(i = 0; i < nr_childs; i++) {
+              (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
+                maxbytes);
+              movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8);
+              shutdown(dataout[i], 2);
+            }
+          } else {
+            (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
+              maxbytes);
+            movebytes(ctrlout[0], WRITE, (char *)&maxbytes, 8);
+            for(i = 0; i <= add_nr; i++) {
+              shutdown(dataout[i], 2);
+            }
+          }
+      } else {
+        /* Next input file opened */
+        ret = 100000;
+        continue;
+      } /* end input_split */
+    }
       //if(flag_v && (maxbytes - lastout >= 10000000)) {
       if(maxbytes - lastout >= 10000000) {
 	tv3=tv2;
@@ -1809,7 +1593,7 @@ static void transmit(void)
 	    }
 	    if(!melast) {
 	      for(i = 0; i < nr_childs; i++) {
-		movebytes(dataout[i], WRITE, buf, ret);
+          movebytes(dataout[i], WRITE, buf, ret);
 	      }
 	    }
 	    transbytes += ret;
@@ -1820,10 +1604,10 @@ static void transmit(void)
 	      bytes = (t >= T_B_SIZE ? T_B_SIZE : t);
 	      ret = movebytes(datain[a], READ, buf, bytes);
 	      if(!dummy_mode) {
-		movebytes(output, WRITE, buf, ret);
+          movebytes(output, WRITE, buf, ret);
 	      }
 	      if(!melast) {
-		movebytes(dataout[a], WRITE, buf, bytes);
+          movebytes(dataout[a], WRITE, buf, bytes);
 	      }
 	      transbytes += ret;
 	      t -= ret;
@@ -1849,9 +1633,9 @@ static void transmit(void)
 	      fprintf(stderr,
 		      "select returned without any ready fd, ret = %d.\n",
 		      ret);
-	      for(i = 0; i < maxsetnr; i++) {
+	      for(i = 0;(int) i < maxsetnr; i++) {
 		if(FD_ISSET(i, &cur_set)) {
-		  int j;
+		  unsigned int j;
 		  fprintf(stderr, "  file descriptor %d is set.\n", i);
 		  for(j = 0; j < nr_childs; j++) {
 		    if(FD_ISSET(ctrlout[j], &cur_set)) {
@@ -1910,7 +1694,7 @@ static void transmit(void)
 	  fprintf(logfd, "Transfered block : %d MB\n", dummysize/1024/1024);
 	} else {
 	  fprintf(logfd, " %8d",
-		  dummysize > 0 ? (dummysize/1024/1024) : (int)(maxbytes/1024LL/1024LL));
+		  (unsigned int) dummysize > 0 ?(unsigned int) (dummysize/1024/1024) : (unsigned int)(maxbytes/1024LL/1024LL));
 	}
       }
       if(flag_v) {
@@ -2084,7 +1868,8 @@ static void usage(void)
 
 int main(int argc, char *argv[])
 {
-  int c, i;
+  int c;
+  unsigned int i;
   int flag_f = 0, flag_cargs = 0, generated_dolly = 0, me = -2;
   FILE *df;
   char *mnname = NULL, *tmp_str, *host_str, *a_str, *sp;
@@ -2348,7 +2133,7 @@ int main(int argc, char *argv[])
       fprintf(df,"firstclient %s\n",hostring[0]);
       fprintf(df,"lastclient %s\n",hostring[nr_hosts-1]);
       fprintf(df,"clients %i\n",hostnr);
-      for(int i = 0; i < hostnr; i++) {
+      for(i = 0; i < hostnr; i++) {
         fprintf(df,"%s\n",hostring[i]);
       }
       fprintf(df,"endconfig\n");
