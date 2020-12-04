@@ -4,16 +4,19 @@ CFLAGS = -std=gnu11 -s -O
 WARNINGS = -Werror -Wall -Wextra -pedantic-errors 
 LDFLAGS =
 LIBRARIES =
+BUILD_DIR = ./build
 SOURCES = $(wildcard *.c)
-OBJECTS = $(SOURCES:.c=.o)
+OBJECTS = $(SOURCES:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(SOURCES:.c=.d)
 
 EXECUTABLE = dolly
 
-%.d: %.c
+%$(BUILD_DIR)/.d: %.c
+	mkdir -p $(dir $@)
 	$(CC) $< -o $@ -MM $(CFLAGS)
 
-%.o: %.c
+$(BUILD_DIR)/%.o: %.c
+	mkdir -p $(dir $@)
 	$(CC) $< -o $@ -c $(CFLAGS) $(WARNINGS)
 
 
