@@ -14,7 +14,6 @@ static unsigned int t_b_size = 4096;
 #define T_B_SIZE   t_b_size
 #define T_B_SIZEM1 (T_B_SIZE - 1)
 
-static char myhostname[256] = "";
 static char servername[256] = "";
 static int meserver = 0; /* This machine sends the data. */
 static int melast = 0;   /* This machine doesn't have children to send data */
@@ -60,13 +59,16 @@ static unsigned long long output_split = 0;
 
 static unsigned int fanout = 1;   /* default is linear list */
 
+struct dollytab {
+  char myhostname[256];
+};
 /* Parses the config-file. The path to the file is given in dollytab */
-void parse_dollytab(FILE *df);
+void parse_dollytab(FILE *df,struct dollytab*);
 
 /*
  * Clients read the parameters from the control-socket.
  * As they are already parsed from the config-file by the server,
  * we don't do much error-checking here.
  */
-void getparams(int f);
+void getparams(int f,struct dollytab*);
 #endif

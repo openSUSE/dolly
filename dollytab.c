@@ -1,7 +1,7 @@
 #include "dollytab.h"
 
 /* Parses the config-file. The path to the file is given in dollytab */
-void parse_dollytab(FILE *df) {
+void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   char str[256];
   char *sp, *sp2;
   unsigned int i;
@@ -17,18 +17,18 @@ void parse_dollytab(FILE *df) {
   */
   mnname = getenv("MYNODENAME");
   if(mnname != NULL) {
-    (void)strcpy(myhostname, mnname);
+    (void)strcpy(mydollytab->myhostname, mnname);
     (void)fprintf(stderr,
 		  "\nAssigned nodename %s from MYNODENAME environment variable\n",
-		  myhostname);
+		  mydollytab->myhostname);
     hadmynodename = 1;
   }
   mnname = getenv("HOST");
   if(mnname != NULL) {
-    (void)strcpy(myhostname, mnname);
+    (void)strcpy(mydollytab->myhostname, mnname);
     (void)fprintf(stderr,
 		  "\nAssigned nodename %s from HOST environment variable\n",
-		  myhostname);
+		  mydollytab->myhostname);
     hadmynodename = 1;
   }
   
@@ -62,64 +62,64 @@ void parse_dollytab(FILE *df) {
       fprintf(stderr,
 	      "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
 	      tmp_str);
-    }
-    strncpy(infile, sp2, sp - sp2);
-    sp++;
-    if(strcmp(sp, "split") == 0) {
-      input_split = 1;
-    }
-    
-    /* Then we want to know the output filename */
-    if(fgets(str, 256, df) == NULL) {
-      perror("fgets for outfile");
-      exit(1);
-    }
-    sp2 = str;
-    if(strncmp("compressed ", sp2, 11) == 0) {
-      compressed_out = 1;
-      sp2 += 11;
-    }
-    if(strncmp("outfile ", sp2, 8) != 0) {
-      fprintf(stderr, "Missing 'outfile ' in config-file.\n");
-      exit(1);
-    }
-    sp2 += 8;
-    if(sp2[strlen(sp2)-1] == '\n') {
-      sp2[strlen(sp2)-1] = '\0';
-    }
-    if((sp = strchr(sp2, ' ')) == NULL) {
-      sp = sp2 + strlen(sp2);
-    }
-    if(compressed_out && (strncmp(&sp2[sp - sp2 - 3], ".gz", 3) != 0)) {
-      char tmp_str[256];
-      strncpy(tmp_str, sp2, sp - sp2);
-      tmp_str[sp - sp2] = '\0';
-      fprintf(stderr,
-	      "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
-	      tmp_str);
-    }
-    strncpy(outfile, sp2, sp - sp2);
-    sp++;
-    if(strncmp(sp, "split ", 6) == 0) {
-      unsigned long long size = 0;
-      char *s = sp+6;
-      while(isdigit(*s)) {
-	size *= 10LL;
-	size += (unsigned long long)(*s - '0');
-	s++;
       }
-      switch(*s) {
-      case 'T': size *= 1024LL*1024LL*1024LL*1024LL; break;
-      case 'G': size *= 1024LL*1024LL*1024LL; break;
-      case 'M': size *= 1024LL*1024LL; break;
-      case 'k': size *= 1024LL; break;
-      default:
-	fprintf(stderr, "Unknown multiplier '%c' for split size.\n", *s);
-	break;
+      strncpy(infile, sp2, sp - sp2);
+      sp++;
+      if(strcmp(sp, "split") == 0) {
+        input_split = 1;
       }
-      output_split = size;
-      str[sp - str - 1] = '\0';
-    }
+      
+      /* Then we want to know the output filename */
+      if(fgets(str, 256, df) == NULL) {
+        perror("fgets for outfile");
+        exit(1);
+      }
+      sp2 = str;
+      if(strncmp("compressed ", sp2, 11) == 0) {
+        compressed_out = 1;
+        sp2 += 11;
+      }
+      if(strncmp("outfile ", sp2, 8) != 0) {
+        fprintf(stderr, "Missing 'outfile ' in config-file.\n");
+        exit(1);
+      }
+      sp2 += 8;
+      if(sp2[strlen(sp2)-1] == '\n') {
+        sp2[strlen(sp2)-1] = '\0';
+      }
+      if((sp = strchr(sp2, ' ')) == NULL) {
+        sp = sp2 + strlen(sp2);
+      }
+      if(compressed_out && (strncmp(&sp2[sp - sp2 - 3], ".gz", 3) != 0)) {
+        char tmp_str[256];
+        strncpy(tmp_str, sp2, sp - sp2);
+        tmp_str[sp - sp2] = '\0';
+        fprintf(stderr,
+          "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
+          tmp_str);
+      }
+      strncpy(outfile, sp2, sp - sp2);
+      sp++;
+      if(strncmp(sp, "split ", 6) == 0) {
+        unsigned long long size = 0;
+        char *s = sp+6;
+        while(isdigit(*s)) {
+          size *= 10LL;
+          size += (unsigned long long)(*s - '0');
+          s++;
+        }
+        switch(*s) {
+          case 'T': size *= 1024LL*1024LL*1024LL*1024LL; break;
+          case 'G': size *= 1024LL*1024LL*1024LL; break;
+          case 'M': size *= 1024LL*1024LL; break;
+          case 'k': size *= 1024LL; break;
+          default:
+            fprintf(stderr, "Unknown multiplier '%c' for split size.\n", *s);
+            break;
+        }
+        output_split = size;
+        str[sp - str - 1] = '\0';
+      }
   } else {
     /* Dummy Mode: Get the size of to transfer data */ 
     if(fgets(str, 256, df) == NULL) {
@@ -271,7 +271,7 @@ void parse_dollytab(FILE *df) {
   
   /* Get our own hostname */
   if(!hadmynodename){
-    if(gethostname(myhostname, 63) == -1) {
+    if(gethostname(mydollytab->myhostname, 63) == -1) {
       perror("gethostname");
     }
   }
@@ -296,14 +296,14 @@ void parse_dollytab(FILE *df) {
   */
   
   if(meserver == 2){
-    (void) strcpy(myhostname,servername);
+    (void) strcpy(mydollytab->myhostname,servername);
     meserver = 1;
   }
 
-  if(!(meserver ^ (strcmp(servername, myhostname) != 0))) {
+  if(!(meserver ^ (strcmp(servername, mydollytab->myhostname) != 0))) {
     fprintf(stderr,
 	    "Commandline parameter -s and config-file disagree on server!\n");
-    fprintf(stderr, "  My name is '%s'.\n", myhostname);
+    fprintf(stderr, "  My name is '%s'.\n", mydollytab->myhostname);
     fprintf(stderr, "  The config-file specifies '%s'.\n", servername);
     exit(1);
   }
@@ -344,7 +344,7 @@ void parse_dollytab(FILE *df) {
     fprintf(stderr, "Error in lastclient line.\n");
     exit(1);
   }
-  if(strcmp(myhostname, sp+1) == 0) {
+  if(strcmp(mydollytab->myhostname, sp+1) == 0) {
     melast = 1;
   } else {
     melast = 0;
@@ -380,13 +380,13 @@ void parse_dollytab(FILE *df) {
     strcpy(hostring[i], str);
 
     /* Try to find next host in ring */
-    /* if(strncmp(hostring[i], myhostname, strlen(myhostname)) == 0) { */
-    if(strcmp(hostring[i], myhostname) == 0) {
+    /* if(strncmp(hostring[i], mydollytab->myhostname, strlen(mydollytab->myhostname)) == 0) { */
+    if(strcmp(hostring[i], mydollytab->myhostname) == 0) {
       me = i;
     } else if(!hyphennormal) {
       /* Check if the hostname is correct, but a different interface is used */
       if((sp = strchr(hostring[i], '-')) != NULL) {
-        if(strncmp(hostring[i], myhostname, sp - hostring[i]) == 0) {
+        if(strncmp(hostring[i], mydollytab->myhostname, sp - hostring[i]) == 0) {
           me = i;
         }
       }
@@ -394,7 +394,7 @@ void parse_dollytab(FILE *df) {
   }
 
   if(!meserver && (me == -2)) {
-    fprintf(stderr, "Couldn't find myself '%s' in hostlist.\n",myhostname);
+    fprintf(stderr, "Couldn't find myself '%s' in hostlist.\n",mydollytab->myhostname);
     exit(1);
   }
   
@@ -448,7 +448,7 @@ void parse_dollytab(FILE *df) {
  * As they are already parsed from the config-file by the server,
  * we don't do much error-checking here.
  */
-void getparams(int f) {
+void getparams(int f,struct dollytab * mydollytab) {
   size_t readsize;
   ssize_t writesize;
   int fd, ret;
@@ -509,7 +509,7 @@ void getparams(int f) {
     fprintf(stderr, "Parsing parameters...");
     fflush(stderr);
   }
-  parse_dollytab(dolly_df); 
+  parse_dollytab(dolly_df,mydollytab); 
   fclose(dolly_df);
   close(fd);
   unlink(tmpfile);
