@@ -25,7 +25,6 @@ static int nexthosts[MAXFANOUT];
 static char flag_v = 0;                 /* verbose */
 
 static char dummy_mode = 0; /* No disk accesses */
-static unsigned int dummysize = 0;
 static int segsize = 0; /* TCP Segment Size (useful for benchmarking only) */
 
 static int compressed_out = 0;          /* write results compressed? */
@@ -51,7 +50,6 @@ static int hyphennormal = 1;      /* '-' normal or interf. sep. in hostnames */
 
 /* Sizes for splitted input/output files. 0 means "don't split" (default) */
 static unsigned long long input_split = 0;
-static unsigned long long output_split = 0;
 
 /* Describes the tree-structure */
 
@@ -61,6 +59,8 @@ struct dollytab {
   char myhostname[256];
   char infile[256];
   int compressed_in;           /* compressed transfer or not? */
+  unsigned long long output_split;
+  unsigned int dummysize;
 };
 
 void init_dollytab(struct dollytab *);

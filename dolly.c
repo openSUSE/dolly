@@ -26,13 +26,13 @@ static void print_params(struct dollytab* mydollytab) {
       fprintf(stderr, "compressed ");
     }
     fprintf(stderr, "outfile = '%s'", outfile);
-    if(output_split != 0) {
-      fprintf(stderr, ", splitted in %llu byte parts.\n", output_split);
+    if(mydollytab->output_split != 0) {
+      fprintf(stderr, ", splitted in %llu byte parts.\n", mydollytab->output_split);
     } else {
       fprintf(stderr, "\n");
     }
   } else {
-    fprintf(stderr, "dummy filesize = %d MB\n", dummysize/1024/1024);
+    fprintf(stderr, "dummy filesize = %d MB\n", mydollytab->dummysize/1024/1024);
   }
   fprintf(stderr, "using data port %u\n", dataport);
   fprintf(stderr, "using ctrl port %u\n", ctrlport);
@@ -507,7 +507,7 @@ static int open_outfile(int try_hard,struct dollytab * mydollytab)
       exit(1);
     }
   }
-  if(output_split != 0) {
+  if(mydollytab->output_split != 0) {
     sprintf(name, "%s_%d", outfile, output_nr);
   } else {
     strcpy(name, outfile);
@@ -522,7 +522,7 @@ static int open_outfile(int try_hard,struct dollytab * mydollytab)
   /* Setup the output files/pipes. */
   if(!mydollytab->compressed_in) {
     /* Output is to a file */
-    if(!compressed_out && (output_split == 0) && is_device && !is_pipe) {
+    if(!compressed_out && (mydollytab->output_split == 0) && is_device && !is_pipe) {
       /* E.g. partition-to-partition cloning */
       output = open(name, O_WRONLY);
     } else if(!compressed_out && !is_device && !is_pipe) {
@@ -904,8 +904,8 @@ static void transmit(struct dollytab * mydollytab) {
       if(!dummy_mode) {
         ret = movebytes(input, READ, buf, bytes);
       } else {
-	if((dummysize > 0) && ((maxbytes + bytes) > dummysize)) {
-	  ret = dummysize - maxbytes;
+	if((mydollytab->dummysize > 0) && ((maxbytes + bytes) > mydollytab->dummysize)) {
+	  ret = mydollytab->dummysize - maxbytes;
 	} else if(dummy_time > 0) {
 	  /* Check if the dummy transmission time is reached. */
 	  struct timeval tvt;
@@ -1049,14 +1049,14 @@ static void transmit(struct dollytab * mydollytab) {
 	    bytes = (t >= T_B_SIZE ? T_B_SIZE : t);
 	    ret = movebytes(datain[0], READ, buf, bytes);
 	    if(!dummy_mode) {
-	      if(!output_split) {
+	      if(!mydollytab->output_split) {
 		movebytes(output, WRITE, buf, ret);
 	      } else {
 		/* Check if output file needs to be split. */
-		if((transbytes / output_split)
-		   != ((transbytes + ret) / output_split)) {
+		if((transbytes / mydollytab->output_split)
+		   != ((transbytes + ret) / mydollytab->output_split)) {
 		  size_t old_part, new_part;
-		  old_part = ret - (transbytes + ret) % output_split;
+		  old_part = ret - (transbytes + ret) % mydollytab->output_split;
 		  new_part = ret - old_part;
 		  movebytes(output, WRITE, buf, old_part);
 		  open_outfile(1,mydollytab);
@@ -1166,10 +1166,10 @@ static void transmit(struct dollytab * mydollytab) {
 	fprintf(logfd, "outfile = '%s'\n", outfile);
       } else {
 	if(flag_v) {
-	  fprintf(logfd, "Transfered block : %d MB\n", dummysize/1024/1024);
+	  fprintf(logfd, "Transfered block : %d MB\n", mydollytab->dummysize/1024/1024);
 	} else {
 	  fprintf(logfd, " %8d",
-		  (unsigned int) dummysize > 0 ?(unsigned int) (dummysize/1024/1024) : (unsigned int)(maxbytes/1024LL/1024LL));
+		  (unsigned int) mydollytab->dummysize > 0 ?(unsigned int) (mydollytab->dummysize/1024/1024) : (unsigned int)(maxbytes/1024LL/1024LL));
 	}
       }
       if(flag_v) {

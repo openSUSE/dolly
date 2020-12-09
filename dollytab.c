@@ -4,6 +4,8 @@ void init_dollytab(struct dollytab * mdt) {
   memset(mdt->myhostname,'\0',sizeof(mdt->myhostname));
   memset(mdt->infile,'\0',sizeof(mdt->infile));
   mdt->compressed_in = 0;
+  mdt->output_split = 0;
+  mdt->dummysize = 0;
 }
 
 /* Parses the config-file. The path to the file is given in dollytab */
@@ -125,7 +127,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
             fprintf(stderr, "Unknown multiplier '%c' for split size.\n", *s);
             break;
         }
-        output_split = size;
+        mydollytab->output_split = size;
         str[sp - str - 1] = '\0';
       }
   } else {
@@ -143,12 +145,12 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
         fprintf(stderr, "Error dummy line.\n");
       }
       if(atoi(sp + 1) == 0) {
-	exitloop = 1;
+        exitloop = 1;
       }
-      dummysize = atoi(sp + 1);
-      dummysize = 1024*1024*dummysize;
+      mydollytab->dummysize = atoi(sp + 1);
+      mydollytab->dummysize = 1024*1024*mydollytab->dummysize;
     } else if(strcmp("dummy\n", str) == 0) {
-      dummysize = 0;
+      mydollytab->dummysize = 0;
     }
   }
   
