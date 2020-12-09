@@ -28,11 +28,9 @@ static char dummy_mode = 0; /* No disk accesses */
 static unsigned int dummysize = 0;
 static int segsize = 0; /* TCP Segment Size (useful for benchmarking only) */
 
-static int compressed_in = 0;           /* compressed transfer or not? */
 static int compressed_out = 0;          /* write results compressed? */
 static int exitloop = 0;
 
-static char infile[256] = "";
 static char outfile[256] = "";
 
 static char *dollybuf = NULL;
@@ -61,7 +59,11 @@ static unsigned int fanout = 1;   /* default is linear list */
 
 struct dollytab {
   char myhostname[256];
+  char infile[256];
+  int compressed_in;           /* compressed transfer or not? */
 };
+
+void init_dollytab(struct dollytab *);
 /* Parses the config-file. The path to the file is given in dollytab */
 void parse_dollytab(FILE *df,struct dollytab*);
 

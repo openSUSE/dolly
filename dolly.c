@@ -1,8 +1,7 @@
 #include "dolly.h"
 
 /* Handles timeouts by terminating the program. */
-static void alarm_handler()
-{
+static void alarm_handler() {
   fprintf(stderr, "Timeout reached (was set to %d seconds).\nTerminating.\n",
 	  timeout);
   exit(1);
@@ -14,10 +13,10 @@ static void print_params(struct dollytab* mydollytab) {
   unsigned int i;
   fprintf(stderr, "Parameter file: \n");
   if(!dummy_mode) {
-    if(compressed_in) {
+    if(mydollytab->compressed_in) {
       fprintf(stderr, "compressed ");
     }
-    fprintf(stderr, "infile = '%s'", infile);
+    fprintf(stderr, "infile = '%s'", mydollytab->infile);
     if(input_split != 0) {
       fprintf(stderr, ", splitted in parts.\n");
     } else {
@@ -82,10 +81,10 @@ static void print_params(struct dollytab* mydollytab) {
     }
   }
   fprintf(stderr, "All parameters read successfully.\n");
-  if(compressed_in && !meserver) {
+  if(mydollytab->compressed_in && !meserver) {
     fprintf(stderr,
 	    "Will use gzip to uncompress data before writing.\n");
-  } else if(compressed_in && meserver) {
+  } else if(mydollytab->compressed_in && meserver) {
     fprintf(stderr,
 	    "Clients will have to use gzip to uncompress data before writing.\n");
   } else {
@@ -94,8 +93,7 @@ static void print_params(struct dollytab* mydollytab) {
   fprintf(stderr, "Using transfer size %d bytes.\n", T_B_SIZE);
 }
 
-static void open_insocks(void)
-{
+static void open_insocks(void) {
   struct sockaddr_in addr;
   int optval;
   char *drcvbuf = NULL;
@@ -423,7 +421,7 @@ static void open_outsocks(void)
  * If try_hard is 1 and an input file can't be opened, the program terminates.
  * If try_hard is not 1 and an input file can't be opened, -1 is returend.
  */
-static int open_infile(int try_hard)
+static int open_infile(int try_hard,struct dollytab * mydollytab)
 {
   char name[256+16];
 
@@ -435,9 +433,9 @@ static int open_infile(int try_hard)
     }
   }
   if(input_split != 0) {
-    sprintf(name, "%s_%d", infile, input_nr);
+    sprintf(name, "%s_%d", mydollytab->infile, input_nr);
   } else {
-    strcpy(name, infile);
+    strcpy(name, mydollytab->infile);
   }
   
   /* Files for input/output */
@@ -446,24 +444,24 @@ static int open_infile(int try_hard)
     input = open(name, O_RDONLY);
     if(input == -1) {
       if(try_hard == 1) {
-	char str[strlen(name)];
-	sprintf(str, "open inputfile '%s'", name);
-	perror(str);
-	exit(1);
+        char str[strlen(name)];
+        sprintf(str, "open inputfile '%s'", name);
+        perror(str);
+        exit(1);
       } else {
-	return -1;
+        return -1;
       }
     }
   } else {
     /* Input should be compressed first. */
     if(access(name, R_OK) == -1) {
       if(try_hard == 1) {
-	char str[strlen(name)];
-	sprintf(str, "open inputfile '%s'", name);
-	perror(str);
-	exit(1);
+        char str[strlen(name)];
+        sprintf(str, "open inputfile '%s'", name);
+        perror(str);
+        exit(1);
       } else {
-	return -1;
+        return -1;
       }
     }
     if(pipe(id) == -1) {
@@ -479,14 +477,14 @@ static int open_infile(int try_hard)
       dup(id[1]);
       close(id[1]);
       if((fd = open(name, O_RDONLY)) == -1) {
-	exit(1);
+        exit(1);
       }
       close(0);
       dup(fd);
       close(fd);
       if(execl("/usr/bin/gzip", "gzip", "-cf", NULL) == -1) {
-	perror("execl for gzip in child");
-	exit(1);
+        perror("execl for gzip in child");
+        exit(1);
       }
     } else {
       /* Father */
@@ -497,7 +495,7 @@ static int open_infile(int try_hard)
   return 0;
 }
 
-static int open_outfile(int try_hard)
+static int open_outfile(int try_hard,struct dollytab * mydollytab)
 {
   char name[256+16];
   int is_device = 0;
@@ -522,7 +520,7 @@ static int open_outfile(int try_hard)
     is_pipe = 1;
   }
   /* Setup the output files/pipes. */
-  if(!compressed_in) {
+  if(!mydollytab->compressed_in) {
     /* Output is to a file */
     if(!compressed_out && (output_split == 0) && is_device && !is_pipe) {
       /* E.g. partition-to-partition cloning */
@@ -732,9 +730,9 @@ static void buildring(struct dollytab * mydollytab) {
 
   if(!dummy_mode) {
     if(meserver) {
-      open_infile(1);
+      open_infile(1,mydollytab);
     } else {
-      open_outfile(1);
+      open_outfile(1,mydollytab);
     }
   }
 
@@ -946,7 +944,7 @@ static void transmit(struct dollytab * mydollytab) {
         /* Here: ret <= 0 */
         int res = -1;
         if(input_split) {
-          res = open_infile(0);
+          res = open_infile(0,mydollytab);
         }
         if(!input_split || (res < 0)) {
           if(flag_v) {
@@ -1061,7 +1059,7 @@ static void transmit(struct dollytab * mydollytab) {
 		  old_part = ret - (transbytes + ret) % output_split;
 		  new_part = ret - old_part;
 		  movebytes(output, WRITE, buf, old_part);
-		  open_outfile(1);
+		  open_outfile(1,mydollytab);
 		  movebytes(output, WRITE, buf + old_part, new_part);
 		} else {
 		  movebytes(output, WRITE, buf, ret);
@@ -1158,10 +1156,10 @@ static void transmit(struct dollytab * mydollytab) {
 	exit(1);
       }
       if(!dummy_mode) {
-	if(compressed_in) {
+	if(mydollytab->compressed_in) {
 	  fprintf(logfd, "compressed ");
 	}
-	fprintf(logfd, "infile = '%s'\n", infile);
+	fprintf(logfd, "infile = '%s'\n", mydollytab->infile);
 	if(compressed_out) {
 	  fprintf(logfd, "compressed ");
 	}
@@ -1352,6 +1350,7 @@ int main(int argc, char *argv[]) {
   size_t nr_hosts = 0;
   int fd;
   struct dollytab* mydollytab = (struct dollytab*)malloc(sizeof(struct dollytab));
+  init_dollytab(mydollytab);
 
 
   /* Parse arguments */
@@ -1387,7 +1386,7 @@ int main(int argc, char *argv[]) {
 
       /* This is now in the config file. */
     case 'c':
-      compressed_in = 1;
+      mydollytab->compressed_in = 1;
       maxcbytes = atoi(optarg);
       break;
       
@@ -1476,7 +1475,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr,"the -S/-s must preceed the -I option\n");
         exit(1);
       }
-      strncpy(infile,optarg,strlen(optarg)); 
+      strncpy(mydollytab->infile,optarg,strlen(optarg)); 
       flag_cargs = 1;
       break;
 
@@ -1592,7 +1591,7 @@ int main(int argc, char *argv[]) {
       fprintf(stderr,"outfile via '-O FILE' must be set\n");
       exit(1);
     }
-    if(strlen(infile) == 0) {
+    if(strlen(mydollytab->infile) == 0) {
       fprintf(stderr,"inputfile via '-I [FILE|-]' must be set\n");
       exit(1);
     }
@@ -1604,7 +1603,7 @@ int main(int argc, char *argv[]) {
       if(df == NULL) {
         printf("Could not open temporary dollytab");
       }
-      fprintf(df,"infile %s\n",infile);
+      fprintf(df,"infile %s\n",mydollytab->infile);
       fprintf(df,"outfile %s\n",outfile);
       fprintf(df,"server %s\n",mydollytab->myhostname);
       fprintf(df,"firstclient %s\n",hostring[0]);

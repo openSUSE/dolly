@@ -7,27 +7,28 @@ LIBRARIES =
 BUILD_DIR = ./build
 SOURCES = $(wildcard *.c)
 OBJECTS = $(SOURCES:%.c=$(BUILD_DIR)/%.o)
-DEPS = $(SOURCES:.c=.d)
+DEPS = $(SOURCES:%.c=$(BUILD_DIR)/%.d)
+
 
 EXECUTABLE = dolly
 
-%$(BUILD_DIR)/.d: %.c
-	mkdir -p $(dir $@)
-	$(CC) $< -o $@ -MM $(CFLAGS)
+all: $(EXECUTABLE)
+
+$(BUILD_DIR)/%.d: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $< -MT $(BUILD_DIR)/$*.o -MM -MF $(BUILD_DIR)/$*.d
 
 $(BUILD_DIR)/%.o: %.c
-	mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	$(CC) $< -o $@ -c $(CFLAGS) $(WARNINGS)
 
 
 $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ $(LIBRARIES)
 
-all: $(EXECUTABLE)
-
--include $(DEPS)
-
 .PHONY: clean       
+
 clean:
 	rm -rf $(EXECUTABLE) $(OBJECTS) $(DEPS)
 
+-include $(DEPS)

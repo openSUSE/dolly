@@ -1,4 +1,10 @@
 #include "dollytab.h"
+/* init the dollytab struct */
+void init_dollytab(struct dollytab * mdt) {
+  memset(mdt->myhostname,'\0',sizeof(mdt->myhostname));
+  memset(mdt->infile,'\0',sizeof(mdt->infile));
+  mdt->compressed_in = 0;
+}
 
 /* Parses the config-file. The path to the file is given in dollytab */
 void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
@@ -41,8 +47,10 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     }
     sp2 = str;
     if(strncmp("compressed ", sp2, 11) == 0) {
-      compressed_in = 1;
+      mydollytab->compressed_in = 1;
       sp2 += 11;
+    } else {
+      mydollytab->compressed_in = 0;
     }
     if(strncmp("infile ", sp2, 7) != 0) {
       fprintf(stderr, "Missing 'infile ' in config-file.\n");
@@ -55,7 +63,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     if((sp = strchr(sp2, ' ')) == NULL) {
       sp = sp2 + strlen(sp2);
     }
-    if(compressed_in && (strncmp(&sp2[sp - sp2 - 3], ".gz", 3) != 0)) {
+    if(mydollytab->compressed_in && (strncmp(&sp2[sp - sp2 - 3], ".gz", 3) != 0)) {
       char tmp_str[256];
       strncpy(tmp_str, sp2, sp - sp2);
       tmp_str[sp - sp2] = '\0';
@@ -63,7 +71,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
 	      "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
 	      tmp_str);
       }
-      strncpy(infile, sp2, sp - sp2);
+      strncpy(mydollytab->infile, sp2, sp - sp2);
       sp++;
       if(strcmp(sp, "split") == 0) {
         input_split = 1;
