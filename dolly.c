@@ -42,30 +42,30 @@ static void print_params(struct dollytab* mydollytab) {
   }
   if(mydollytab->add_nr > 0) {
     fprintf(stderr, "add_nr (extra network interfaces) = %d\n", mydollytab->add_nr);
-    if(add_mode == 1) {
+    if(mydollytab->add_mode == 1) {
       fprintf(stderr, "Postfixes: ");
-    } else if(add_mode == 2) {
+    } else if(mydollytab->add_mode == 2) {
       fprintf(stderr, "Midfixes: ");
     } else {
-      fprintf(stderr, "Undefined value fuer add_mode: %d\n", add_mode);
+      fprintf(stderr, "Undefined value fuer add_mode: %d\n", mydollytab->add_mode);
       exit(1);
     }
     for(i = 0; i < mydollytab->add_nr; i++) {
-      fprintf(stderr, "%s", add_name[i]);
+      fprintf(stderr, "%s", mydollytab->add_name[i]);
       if(i < mydollytab->add_nr - 1) fprintf(stderr, ":");
     }
     fprintf(stderr, "\n");
   }
   if (mydollytab->add_primary == 1) {
     fprintf(stderr, "add to primary hostname = ");
-    fprintf(stderr, "%s", add_name[0]);
+    fprintf(stderr, "%s", mydollytab->add_name[0]);
     fprintf(stderr, "\n");
   }
-  fprintf(stderr, "fanout = %d\n", fanout);
+  fprintf(stderr, "fanout = %d\n", mydollytab->fanout);
   fprintf(stderr, "nr_childs = %d\n", mydollytab->nr_childs);
-  fprintf(stderr, "server = '%s'\n", servername);
-  fprintf(stderr, "I'm %sthe server.\n", (meserver ? "" : "not "));
-  fprintf(stderr, "I'm %sthe last host.\n", (melast ? "" : "not "));
+  fprintf(stderr, "server = '%s'\n", mydollytab->servername);
+  fprintf(stderr, "I'm %sthe server.\n", (mydollytab->meserver ? "" : "not "));
+  fprintf(stderr, "I'm %sthe last host.\n", (mydollytab->melast ? "" : "not "));
   fprintf(stderr, "There are %d hosts in the ring (excluding server):\n",
 	  mydollytab->hostnr);
   for(i = 0; i < mydollytab->hostnr; i++) {
@@ -81,10 +81,10 @@ static void print_params(struct dollytab* mydollytab) {
     }
   }
   fprintf(stderr, "All parameters read successfully.\n");
-  if(mydollytab->compressed_in && !meserver) {
+  if(mydollytab->compressed_in && !mydollytab->meserver) {
     fprintf(stderr,
 	    "Will use gzip to uncompress data before writing.\n");
-  } else if(mydollytab->compressed_in && meserver) {
+  } else if(mydollytab->compressed_in && mydollytab->meserver) {
     fprintf(stderr,
 	    "Clients will have to use gzip to uncompress data before writing.\n");
   } else {
@@ -93,7 +93,7 @@ static void print_params(struct dollytab* mydollytab) {
   fprintf(stderr, "Using transfer size %d bytes.\n", T_B_SIZE);
 }
 
-static void open_insocks(void) {
+static void open_insocks(struct dollytab * mydollytab) {
   struct sockaddr_in addr;
   int optval;
   char *drcvbuf = NULL;
@@ -134,7 +134,7 @@ static void open_insocks(void) {
   /* MATHOG, set a large buffer for the data socket, this section is
      taken from NETPIPE. */
   /* Attempt to set input BUFFER sizes */
-  if(flag_v) { fprintf(stderr, "Buffer size: %d\n", SCKBUFSIZE); }
+  if(mydollytab->flag_v) { fprintf(stderr, "Buffer size: %d\n", SCKBUFSIZE); }
   drcvbuf = malloc(SCKBUFSIZE);
   if(drcvbuf == NULL) {
     perror("Error creating buffer for input data socket");
@@ -147,7 +147,7 @@ static void open_insocks(void) {
   }
   getsockopt(datasock, SOL_SOCKET, SO_RCVBUF,
 	     (char *) &recv_size, (void *) &sizeofint);
-  if(flag_v) {
+  if(mydollytab->flag_v) {
     (void)fprintf(stderr, "Receive buffer is %d bytes\n", recv_size);
   }
   
@@ -212,12 +212,12 @@ static void open_outsocks(struct dollytab * mydollytab)
     if(mydollytab->nr_childs > 1) {
       strcpy(hn, hostring[mydollytab->nexthosts[i]]);
     } else if(mydollytab->add_nr > 0) {
-      if(add_mode == 1) {
+      if(mydollytab->add_mode == 1) {
 	strcpy(hn, hostring[mydollytab->nexthosts[0]]);
 	if(i > 0) {
-	  strcat(hn, add_name[i - 1]);
+	  strcat(hn, mydollytab->add_name[i - 1]);
 	}
-      } else if(add_mode == 2) {
+      } else if(mydollytab->add_mode == 2) {
 	if(i == 0) {
 	  strcpy(hn, hostring[mydollytab->nexthosts[0]]);
 	} else {
@@ -227,31 +227,31 @@ static void open_outsocks(struct dollytab * mydollytab)
 	    j++;
 	  }
 	  hn[j] = 0;
-	  strcat(hn, add_name[i - 1]);
+	  strcat(hn, mydollytab->add_name[i - 1]);
 	  strcat(hn, &hostring[mydollytab->nexthosts[0]][j]);
 	}
       } else {
-	fprintf(stderr, "Undefined add_mode %d!\n", add_mode);
+	fprintf(stderr, "Undefined add_mode %d!\n", mydollytab->add_mode);
 	exit(1);
       }
     } else if (mydollytab->add_primary) {
       assert(i < 1);
       
-      if(add_mode == 1) {
+      if(mydollytab->add_mode == 1) {
 	strcpy(hn, hostring[mydollytab->nexthosts[0]]);
-	strcat(hn, add_name[0]);
-      } else if(add_mode == 2) {
+	strcat(hn, mydollytab->add_name[0]);
+      } else if(mydollytab->add_mode == 2) {
 	int j = 0;
 	while(!isdigit(hostring[mydollytab->nexthosts[0]][j])) {
 	  hn[j] = hostring[mydollytab->nexthosts[0]][j];
 	  j++;
 	}
 	hn[j] = 0;
-	strcat(hn, add_name[0]);
+	strcat(hn, mydollytab->add_name[0]);
 	strcat(hn, &hostring[mydollytab->nexthosts[0]][j]);
       } else {
-	fprintf(stderr, "Undefined add_mode %d!\n", add_mode);
-	exit(1);
+        fprintf(stderr, "Undefined add_mode %d!\n", mydollytab->add_mode);
+        exit(1);
       }
     } else {
       assert(i < 1);
@@ -272,7 +272,7 @@ static void open_outsocks(struct dollytab * mydollytab)
 	      hent->h_addrtype);
     }
     
-    if(flag_v) {
+    if(mydollytab->flag_v) {
       fprintf(stderr, "Connecting to host %s... ", hn);
       fflush(stderr);
     }
@@ -376,7 +376,7 @@ static void open_outsocks(struct dollytab * mydollytab)
               exit(1);
             }
           }
-          if(flag_v) {
+          if(mydollytab->flag_v) {
             fprintf(stderr, "data ");
             fflush(stderr);
           }
@@ -397,7 +397,7 @@ static void open_outsocks(struct dollytab * mydollytab)
 	    exit(1);
 	  } else {
 	    ctrlok = 1;
-	    if(flag_v) {
+	    if(mydollytab->flag_v) {
 	      fprintf(stderr, "control ");
 	      fflush(stderr);
 	    }
@@ -410,7 +410,7 @@ static void open_outsocks(struct dollytab * mydollytab)
 	sleep(1);
       }
     } while(dataok + ctrlok != 2);
-    if(flag_v) {
+    if(mydollytab->flag_v) {
       fprintf(stderr, "\b.\n");
     }
   }
@@ -607,7 +607,7 @@ static int movebytes(int fd, int dir, char *addr, unsigned int n,struct dollytab
     } else if(dir == READ) {
       fflush(stderr);
       ret = read(fd, addr, n);
-      if(((unsigned int)ret < n) && mydollytab->compressed_out && meserver) {
+      if(((unsigned int)ret < n) && mydollytab->compressed_out && mydollytab->meserver) {
         int wret, status;
         sleep(1);
         wret = waitpid(in_child_pid, &status, WNOHANG);
@@ -660,10 +660,10 @@ static void buildring(struct dollytab * mydollytab) {
   char msg[1024];
   char info_buf[1024];
 
-  if(!meserver) {
+  if(!mydollytab->meserver) {
     /* Open the input sockets and wait for connections... */
-    open_insocks();
-    if(flag_v) {
+    open_insocks(mydollytab);
+    if(mydollytab->flag_v) {
       fprintf(stderr, "Accepting...");
       fflush(stderr);
     }
@@ -674,14 +674,14 @@ static void buildring(struct dollytab * mydollytab) {
       perror("accept input control socket");
       exit(1);
     }
-    if(flag_v) {
+    if(mydollytab->flag_v) {
       fprintf(stderr, "control...\n");
       fflush(stderr);
     }
     
     /* Clients should now read everything from the ctrl-socket. */
     getparams(ctrlin,mydollytab);
-    if(flag_v) {
+    if(mydollytab->flag_v) {
       print_params(mydollytab);
     }
 
@@ -711,7 +711,7 @@ static void buildring(struct dollytab * mydollytab) {
 	assert(nr == (1 + i));
       }
     }
-    if(flag_v) {
+    if(mydollytab->flag_v) {
       fprintf(stderr, "Connected data...done.\n");
     }
     /* The input sockets are now connected. */
@@ -728,7 +728,7 @@ static void buildring(struct dollytab * mydollytab) {
   }
 
   if(!dummy_mode) {
-    if(meserver) {
+    if(mydollytab->meserver) {
       open_infile(1,mydollytab);
     } else {
       open_outfile(1,mydollytab);
@@ -736,12 +736,12 @@ static void buildring(struct dollytab * mydollytab) {
   }
 
   /* All the machines except the leaf(s) need to open output sockets */
-  if(!melast) {
+  if(!mydollytab->melast) {
     open_outsocks(mydollytab);
   }
   
   /* Finally, the first machine also accepts a connection */
-  if(meserver) {
+  if(mydollytab->meserver) {
     char buf[T_B_SIZE];
     ssize_t readsize;
     int fd, ret, maxsetnr = -1;
@@ -803,7 +803,7 @@ static void buildring(struct dollytab * mydollytab) {
             
             p = info_buf;
             info_buf[ret] = 0;	
-            if(flag_v) {
+            if(mydollytab->flag_v) {
               fprintf(stderr, info_buf);
             }
             while((p = strstr(p, "ready")) != NULL) {
@@ -818,13 +818,13 @@ static void buildring(struct dollytab * mydollytab) {
     } while(ready_mach < mydollytab->hostnr);
   }
 
-  if(flag_v) {
+  if(mydollytab->flag_v) {
     fprintf(stderr, "Accepted.\n");
   }
   
-  if(!meserver) {
+  if(!mydollytab->meserver) {
     /* Send it further */
-    if(!melast) {
+    if(!mydollytab->melast) {
       for(i = 0; i < mydollytab->nr_childs; i++) {
         movebytes(ctrlout[i], WRITE, dollybuf, dollybufsize,mydollytab);
       }
@@ -865,13 +865,13 @@ static void transmit(struct dollytab * mydollytab) {
   t |= 0xffffffff;
   maxbytes = 0;
 #define ADJ_MAXSET(a) if((a)>maxsetnr){maxsetnr=(a);}
-  if(!meserver) {
+  if(!mydollytab->meserver) {
     FD_ZERO(&real_set);
     FD_SET(datain[0], &real_set);
     FD_SET(ctrlin, &real_set);
     ADJ_MAXSET(datain[0]);
     ADJ_MAXSET(ctrlin);
-    if(!melast) {
+    if(!mydollytab->melast) {
       for(i = 0; i < mydollytab->nr_childs; i++) {
         FD_SET(ctrlout[i], &real_set);  /* Check ctrlout too for backflow */
         ADJ_MAXSET(ctrlout[i]);
@@ -891,12 +891,12 @@ static void transmit(struct dollytab * mydollytab) {
   gettimeofday(&tv1, NULL);
   tv2 = tv1;
   
-  while((meserver && (ret > 0)) || (!meserver && (t > 0))) {
+  while((mydollytab->meserver && (ret > 0)) || (!mydollytab->meserver && (t > 0))) {
     /* The server writes data as long has it can to the data stream.
        When there's nothing left, it writes the actual number of bytes
        to the control stream (as long long int).
     */
-    if(meserver) {
+    if(mydollytab->meserver) {
       /*
        * Server part
        */
@@ -946,7 +946,7 @@ static void transmit(struct dollytab * mydollytab) {
           res = open_infile(0,mydollytab);
         }
         if(!mydollytab->input_split || (res < 0)) {
-          if(flag_v) {
+          if(mydollytab->flag_v) {
             fprintf(stderr, "\nRead %llu bytes from file(s).\n", maxbytes);
           }
           if(mydollytab->add_nr == 0) {
@@ -970,7 +970,7 @@ static void transmit(struct dollytab * mydollytab) {
         continue;
       } /* end mydollytab->input_split */
     }
-      //if(flag_v && (maxbytes - lastout >= 10000000)) {
+      //if(mydollytab->flag_v && (maxbytes - lastout >= 10000000)) {
       if(maxbytes - lastout >= 10000000) {
 	tv3=tv2;
 	gettimeofday(&tv2, NULL);
@@ -1032,13 +1032,13 @@ static void transmit(struct dollytab * mydollytab) {
 		      "expected 8.\n", ret);
 	    }
 	    maxbytes = *(unsigned long long *)&mybuf;
-	    if(!melast) {
+	    if(!mydollytab->melast) {
 	      for(i = 0; i < mydollytab->nr_childs; i++) {
 		movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8,mydollytab);
 	      }
 	    }
 	    t = maxbytes - transbytes;
-	    if(flag_v) {
+	    if(mydollytab->flag_v) {
 	      fprintf(stderr,"\nMax. bytes will be %llu bytes. %llu bytes left.\n", maxbytes, t);
 	    }
 	    FD_CLR(ctrlin, &real_set);
@@ -1065,7 +1065,7 @@ static void transmit(struct dollytab * mydollytab) {
 		}
 	      } /* end input_split */
 	    }
-	    if(!melast) {
+	    if(!mydollytab->melast) {
 	      for(i = 0; i < mydollytab->nr_childs; i++) {
           movebytes(dataout[i], WRITE, buf, ret,mydollytab);
 	      }
@@ -1080,7 +1080,7 @@ static void transmit(struct dollytab * mydollytab) {
 	      if(!dummy_mode) {
           movebytes(output, WRITE, buf, ret,mydollytab);
 	      }
-	      if(!melast) {
+	      if(!mydollytab->melast) {
           movebytes(dataout[a], WRITE, buf, bytes,mydollytab);
 	      }
 	      transbytes += ret;
@@ -1128,7 +1128,7 @@ static void transmit(struct dollytab * mydollytab) {
 	  }
 	}
       }
-      if(flag_v && (transbytes - lastout >= 10000000)) {
+      if(mydollytab->flag_v && (transbytes - lastout >= 10000000)) {
 	tv3=tv2;
 	gettimeofday(&tv2, NULL);
 	td = (tv2.tv_sec*1000000 + tv2.tv_usec)
@@ -1145,7 +1145,7 @@ static void transmit(struct dollytab * mydollytab) {
   gettimeofday(&tv2, NULL);
   td = (tv2.tv_sec*1000000 + tv2.tv_usec) - (tv1.tv_sec*1000000 + tv1.tv_usec);
   
-  if(meserver) {
+  if(mydollytab->meserver) {
     fprintf(stdtty, "\rSent MB: %.0f.       \n", (float)maxbytes/1000000);
  
     if(flag_log){
@@ -1164,14 +1164,14 @@ static void transmit(struct dollytab * mydollytab) {
 	}
 	fprintf(logfd, "outfile = '%s'\n", mydollytab->outfile);
       } else {
-	if(flag_v) {
+	if(mydollytab->flag_v) {
 	  fprintf(logfd, "Transfered block : %d MB\n", mydollytab->dummysize/1024/1024);
 	} else {
 	  fprintf(logfd, " %8d",
 		  (unsigned int) mydollytab->dummysize > 0 ?(unsigned int) (mydollytab->dummysize/1024/1024) : (unsigned int)(maxbytes/1024LL/1024LL));
 	}
       }
-      if(flag_v) {
+      if(mydollytab->flag_v) {
         if(segsize > 0) {
           fprintf(logfd, "TCP segment size : %d Byte (%d Byte eth)\n", 
             segsize,segsize+54);
@@ -1187,18 +1187,14 @@ static void transmit(struct dollytab * mydollytab) {
         }
       }
       
-      if(flag_v) {
+      if(mydollytab->flag_v) {
         fprintf(logfd, "Server : '%s'\n", mydollytab->myhostname);
-        fprintf(logfd, "Fanout = %d\n", fanout);
+        fprintf(logfd, "Fanout = %d\n", mydollytab->fanout);
         fprintf(logfd, "Nr of childs = %d\n", mydollytab->nr_childs);
         fprintf(logfd, "Nr of hosts = %d\n", mydollytab->hostnr);
       } else {
         fprintf(logfd, " %8d", mydollytab->hostnr);
       }
-      //fprintf(logfd, "server = '%s'\n", servername);
-      //fprintf(logfd, "I'm %sthe server.\n", (meserver ? "" : "not "));
-      //fprintf(logfd, "I'm %sthe last host.\n", (melast ? "" : "not "));
-      //fprintf(logfd, "There are %d hosts in the ring (excluding server):\n", mydollytab->hostnr);
     }
   } else {
     fprintf(stderr, "Transfered MB: %.0f, MB/s: %.3f \n\n",
@@ -1209,13 +1205,13 @@ static void transmit(struct dollytab * mydollytab) {
   close(output);
   if(dosync){
     sync();
-    if(flag_v) {
+    if(mydollytab->flag_v) {
       fprintf(stderr, "Synced.\n");
     }
   }
-  if(meserver) {
+  if(mydollytab->meserver) {
     for(i = 0; i < mydollytab->nr_childs; i++) {
-      if(flag_v) {
+      if(mydollytab->flag_v) {
         fprintf(stderr, "Waiting for child %d.\n",i);
       }
       ret = movebytes(ctrlout[i], READ, buf, 8,mydollytab);
@@ -1250,7 +1246,7 @@ static void transmit(struct dollytab * mydollytab) {
 	      (double)maxcbytes * mydollytab->hostnr / td);
     }
     if(flag_log) {
-      if(flag_v) {
+      if(mydollytab->flag_v) {
 	fprintf(logfd, "Time: %lu.%03lu\n", td / 1000000, td % 1000000);
 	fprintf(logfd, "MBytes/s: %0.3f\n", (double)maxbytes / td);
 	fprintf(logfd, "Aggregate MBytes/s: %0.3f\n",
@@ -1279,17 +1275,17 @@ static void transmit(struct dollytab * mydollytab) {
       fclose(logfd);
     }
     
-  } else if(!melast) {
+  } else if(!mydollytab->melast) {
     /* All clients except the last just transfer 8 bytes in the backflow */
     unsigned long long ll;
     for(i = 0; i < mydollytab->nr_childs; i++) {
       movebytes(ctrlout[i], READ, (char *)&ll, 8,mydollytab);
     }
     movebytes(ctrlin, WRITE, (char *)&ll, 8,mydollytab);
-  } else if(melast) {
+  } else if(mydollytab->melast) {
     movebytes(ctrlin, WRITE, (char *)&maxbytes, 8,mydollytab);
   }
-  if(flag_v) {
+  if(mydollytab->flag_v) {
     fprintf(stderr, "Transmitted.\n");
   }
   free(buf_addr);
@@ -1370,7 +1366,7 @@ int main(int argc, char *argv[]) {
 
     case 'v':
       /* Verbose */
-      flag_v = 1;
+      mydollytab->flag_v = 1;
       break;
 
     case 'o':
@@ -1404,12 +1400,12 @@ int main(int argc, char *argv[]) {
       
     case 's':
       /* This machine is the server. */
-      meserver = 1;
+      mydollytab->meserver = 1;
       break;
 
     case 'S':
       /* This machine is the server - don't check hostname. */
-      meserver = 2;
+      mydollytab->meserver = 2;
       break;
       
     case 'd':
@@ -1438,7 +1434,7 @@ int main(int argc, char *argv[]) {
         exit(1);
       }
       timeout = i;
-      if(flag_v) {
+      if(mydollytab->flag_v) {
         fprintf(stderr, "Will set timeout to %d seconds.\n", timeout);
       }
       signal(SIGALRM, alarm_handler);
@@ -1470,7 +1466,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Name of input-file too long.\n");
         exit(1);
       }
-      if (meserver == 0) {
+      if (mydollytab->meserver == 0) {
         fprintf(stderr,"the -S/-s must preceed the -I option\n");
         exit(1);
       }
@@ -1483,7 +1479,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Name of output-file too long.\n");
         exit(1);
       }
-      if (meserver == 0) {
+      if (mydollytab->meserver == 0) {
         fprintf(stderr,"the -S/-s must preceed the -O option\n");
         exit(1);
       }
@@ -1492,11 +1488,11 @@ int main(int argc, char *argv[]) {
       break;
 
     case 'Y':
-      hyphennormal = 1;
+      mydollytab->hyphennormal = 1;
       break;
 
     case 'H':
-      if (meserver == 0) {
+      if (mydollytab->meserver == 0) {
         fprintf(stderr,"the -S/-s must preceed the -H option\n");
         exit(1);
       }
@@ -1521,7 +1517,7 @@ int main(int argc, char *argv[]) {
         host_str = strtok(NULL,host_delim);
         if(strcmp(hostring[nr_hosts], mydollytab->myhostname) == 0) {
           me = nr_hosts;
-        } else if(!hyphennormal) {
+        } else if(!mydollytab->hyphennormal) {
           /* Check if the hostname is correct, but a different interface is used */
           if((sp = strchr(hostring[nr_hosts], '-')) != NULL) {
             if(strncmp(hostring[nr_hosts], mydollytab->myhostname, sp - hostring[nr_hosts]) == 0) {
@@ -1533,27 +1529,27 @@ int main(int argc, char *argv[]) {
       }
       /* Build up topology */
       mydollytab->nr_childs = 0;
-      for(i = 0; i < fanout; i++) {
-        if(meserver) {
+      for(i = 0; i < mydollytab->fanout; i++) {
+        if(mydollytab->meserver) {
           if(i + 1 <= mydollytab->hostnr) {
             mydollytab->nexthosts[i] = i;
             mydollytab->nr_childs++;
           }
         } else {
-          if((me + 1) * fanout + 1 + i <= mydollytab->hostnr) {
-            mydollytab->nexthosts[i] = (me + 1) * fanout + i;
+          if((me + 1) * mydollytab->fanout + 1 + i <= mydollytab->hostnr) {
+            mydollytab->nexthosts[i] = (me + 1) * mydollytab->fanout + i;
             mydollytab->nr_childs++;
           }
         }
       }
       /* In a tree, we might have multiple last machines. */
       if(mydollytab->nr_childs == 0) {
-        melast = 1;
+        mydollytab->melast = 1;
       }
 
       free(a_str);
       /* make sure that we are the server */
-      meserver = 1;
+      mydollytab->meserver = 1;
       flag_cargs = 1;
       break;
       
@@ -1581,7 +1577,7 @@ int main(int argc, char *argv[]) {
   }
 
   /* Did we get the parameters we need? */
-  if(meserver && !flag_f && !flag_cargs) {
+  if(mydollytab->meserver && !flag_f && !flag_cargs) {
     fprintf(stderr, "Missing parameter -f <configfile> or -C for commandline arguments.\n");
     exit(1);
   }
@@ -1616,7 +1612,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  if(meserver && flag_v) {
+  if(mydollytab->meserver && mydollytab->flag_v) {
     print_params(mydollytab);
   }
 
@@ -1628,7 +1624,7 @@ int main(int argc, char *argv[]) {
     }
 
   do {
-    if(flag_v) {
+    if(mydollytab->flag_v) {
       fprintf(stderr, "\nTrying to build ring...\n");
     }
     
@@ -1636,10 +1632,10 @@ int main(int argc, char *argv[]) {
 
     buildring(mydollytab);
     
-    if(meserver) {
+    if(mydollytab->meserver) {
       fprintf(stdtty, "Server: Sending data...\n");
     } else {    
-      if(flag_v) {
+      if(mydollytab->flag_v) {
         fprintf(stdtty, "Receiving...\n");
       }
     }
@@ -1659,10 +1655,10 @@ int main(int argc, char *argv[]) {
       close(ctrlout[i]);
       close(dataout[i]);
     }
-    if(flag_v) {
+    if(mydollytab->flag_v) {
       fprintf(stderr, "\n");
     }
-  } while (!meserver && dummy_mode && !exitloop);
+  } while (!mydollytab->meserver && dummy_mode && !exitloop);
  
   fclose(stdtty);
   free(mydollytab);

@@ -1,10 +1,14 @@
 #include "dollytab.h"
 /* init the dollytab struct */
 void init_dollytab(struct dollytab * mdt) {
+  mdt->flag_v = 0;
   memset(mdt->myhostname,'\0',sizeof(mdt->myhostname));
+  memset(mdt->servername,'\0',sizeof(mdt->servername));
   memset(mdt->infile,'\0',sizeof(mdt->infile));
   memset(mdt->outfile,'\0',sizeof(mdt->infile));
   memset(mdt->nexthosts,0,sizeof(mdt->nexthosts));
+  memset(mdt->add_name,'\0',sizeof(mdt->add_name));
+  mdt->meserver = 0;
   mdt->compressed_in = 0;
   mdt->compressed_out = 0;
   mdt->output_split = 0;
@@ -12,8 +16,11 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->dummysize = 0;
   mdt->add_nr = 0;
   mdt->add_primary = 0;
+  mdt->add_mode = 0;
   mdt->nr_childs = 0;
   mdt->hostnr = 0;
+  mdt->melast = 0;
+  mdt->hyphennormal = 0;
 }
 
 /* Parses the config-file. The path to the file is given in dollytab */
@@ -190,12 +197,12 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     int max = 0, i;
 
     if(strncmp("add ", str, 4) == 0) {
-      add_mode = 1;
+      mydollytab->add_mode = 1;
     }
     if(strncmp("add2 ", str, 5) == 0) {
-      add_mode = 2;
+      mydollytab->add_mode = 2;
     }
-    if(add_mode == 0) {
+    if(mydollytab->add_mode == 0) {
       fprintf(stderr,
 	      "Bad add_mode: Choose 'add' or 'add2' in config-file.\n");
       exit(1);
@@ -229,7 +236,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
         exit(1);
       }
       *s2 = 0;
-      strcpy(add_name[0], s1);
+      strcpy(mydollytab->add_name[0], s1);
     } else {
       for(i = 0; i < max; i++) {
 	s1 = s2 + 1;
@@ -240,7 +247,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
 	  exit(1);
 	}
 	*s2 = 0;
-	strcpy(add_name[i], s1);
+	strcpy(mydollytab->add_name[i], s1);
       }
     }
     mydollytab->add_nr = max;
@@ -260,7 +267,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
       fprintf(stderr, "Error in fanout line.\n");
       exit(1);
     }
-    fanout = atoi(sp + 1);
+    mydollytab->fanout = atoi(sp + 1);
     if(fgets(str, 256, df) == NULL) {
       perror("fgets after fanout");
       exit(1);
@@ -273,14 +280,14 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
    * between base hostname and the number of the node.
    */
   if(strncmp("hyphennormal", str, 12) == 0) {
-    hyphennormal = 1;
+    mydollytab->hyphennormal = 1;
     if(fgets(str, 256, df) == NULL) {
       perror("fgets after hyphennormal");
       exit(1);
     }
   }
   if(strncmp("hypheninterface", str, 12) == 0) {
-    hyphennormal = 1;
+    mydollytab->hyphennormal = 1;
     if(fgets(str, 256, df) == NULL) {
       perror("fgets after hypheninterface");
       exit(1);
@@ -306,23 +313,23 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     fprintf(stderr, "Error in firstclient line.\n");
     exit(1);
   }
-  strncpy(servername, sp+1, strlen(sp));
+  strncpy(mydollytab->servername, sp+1, strlen(sp));
 
   /* 
      disgusting hack to make -S work.  If the server name
      specified in the file is wrong bad things will probably happen!
   */
   
-  if(meserver == 2){
-    (void) strcpy(mydollytab->myhostname,servername);
-    meserver = 1;
+  if(mydollytab->meserver == 2){
+    (void) strcpy(mydollytab->myhostname,mydollytab->servername);
+    mydollytab->meserver = 1;
   }
 
-  if(!(meserver ^ (strcmp(servername, mydollytab->myhostname) != 0))) {
+  if(!(mydollytab->meserver ^ (strcmp(mydollytab->servername, mydollytab->myhostname) != 0))) {
     fprintf(stderr,
 	    "Commandline parameter -s and config-file disagree on server!\n");
     fprintf(stderr, "  My name is '%s'.\n", mydollytab->myhostname);
-    fprintf(stderr, "  The config-file specifies '%s'.\n", servername);
+    fprintf(stderr, "  The config-file specifies '%s'.\n", mydollytab->servername);
     exit(1);
   }
   
@@ -363,9 +370,9 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     exit(1);
   }
   if(strcmp(mydollytab->myhostname, sp+1) == 0) {
-    melast = 1;
+    mydollytab->melast = 1;
   } else {
-    melast = 0;
+    mydollytab->melast = 0;
   }
 
   /* Read in all the participating hosts. */
@@ -401,7 +408,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     /* if(strncmp(hostring[i], mydollytab->myhostname, strlen(mydollytab->myhostname)) == 0) { */
     if(strcmp(hostring[i], mydollytab->myhostname) == 0) {
       me = i;
-    } else if(!hyphennormal) {
+    } else if(!mydollytab->hyphennormal) {
       /* Check if the hostname is correct, but a different interface is used */
       if((sp = strchr(hostring[i], '-')) != NULL) {
         if(strncmp(hostring[i], mydollytab->myhostname, sp - hostring[i]) == 0) {
@@ -411,7 +418,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     }
   }
 
-  if(!meserver && (me == -2)) {
+  if(!mydollytab->meserver && (me == -2)) {
     fprintf(stderr, "Couldn't find myself '%s' in hostlist.\n",mydollytab->myhostname);
     exit(1);
   }
@@ -419,22 +426,22 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   /* Build up topology */
   mydollytab->nr_childs = 0;
   
-  for(i = 0; i < fanout; i++) {
-    if(meserver) {
+  for(i = 0; i < mydollytab->fanout; i++) {
+    if(mydollytab->meserver) {
       if(i + 1 <= mydollytab->hostnr) {
         mydollytab->nexthosts[i] = i;
         mydollytab->nr_childs++;
       }
     } else {
-      if((me + 1) * fanout + 1 + i <= mydollytab->hostnr) {
-        mydollytab->nexthosts[i] = (me + 1) * fanout + i;
+      if((me + 1) * mydollytab->fanout + 1 + i <= mydollytab->hostnr) {
+        mydollytab->nexthosts[i] = (me + 1) * mydollytab->fanout + i;
         mydollytab->nr_childs++;
       }
     }
   }
   /* In a tree, we might have multiple last machines. */
   if(mydollytab->nr_childs == 0) {
-    melast = 1;
+    mydollytab->melast = 1;
   }
 
   /* Did we reach the end? */
@@ -451,11 +458,11 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
 	    "OR the use of extra network links, but not both.\n");
     exit(1);
   }
-  if(flag_v) {
+  if(mydollytab->flag_v) {
     fprintf(stderr, "done.\n");
   }
-  if(flag_v) {
-    if(!meserver) {
+  if(mydollytab->flag_v) {
+    if(!mydollytab->meserver) {
       fprintf(stderr, "I'm number %d\n", me);
     }
   }
@@ -473,7 +480,7 @@ void getparams(int f,struct dollytab * mydollytab) {
   FILE *dolly_df = NULL;
   char tmpfile[32] = "/tmp/dollytmpXXXXXX";
 
-  if(flag_v) {
+  if(mydollytab->flag_v) {
     fprintf(stderr, "Trying to read parameters...");
     fflush(stderr);
   }
@@ -520,10 +527,10 @@ void getparams(int f,struct dollytab * mydollytab) {
     exit(1);
   }
   rewind(dolly_df);
-  if(flag_v) {
+  if(mydollytab->flag_v) {
     fprintf(stderr, "done.\n");
   }
-  if(flag_v) {
+  if(mydollytab->flag_v) {
     fprintf(stderr, "Parsing parameters...");
     fflush(stderr);
   }
