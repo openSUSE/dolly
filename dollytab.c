@@ -21,6 +21,7 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->hostnr = 0;
   mdt->melast = 0;
   mdt->hyphennormal = 0;
+  mdt->fanout = 1;
 }
 
 /* Parses the config-file. The path to the file is given in dollytab */
