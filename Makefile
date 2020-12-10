@@ -8,6 +8,8 @@ BUILD_DIR = ./build
 SOURCES = $(wildcard *.c)
 OBJECTS = $(SOURCES:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(SOURCES:%.c=$(BUILD_DIR)/%.d)
+# Can 
+DEBUGFLAGS=
 
 
 EXECUTABLE = dolly
