@@ -13,5 +13,5 @@
 #include<errno.h> //For errno - the error number
 #include<netdb.h>	//hostent
 #include<arpa/inet.h>
-int resolve_host(char*, char*, int);
+int resolve_host(char *hostname , char *ip, int mode);
 #endif
