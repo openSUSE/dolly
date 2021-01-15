@@ -1,3 +1,4 @@
+#include "resolve.h"
 /* resolves the given hostname to ip address 
  * following conditions are met
  * dollytab.resolve = 1 -> use the first resolved ip address
@@ -5,7 +6,6 @@
  * dollytab.resolve = 6 -> force ipv6
  */
 int resolve_host(char *hostname , char *ip, int mode) {
-	int sockfd;  
 	struct addrinfo hints, *servinfo, *p;
 	struct sockaddr_in *h;
 	int rv;
