@@ -22,6 +22,7 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->melast = 0;
   mdt->hyphennormal = 0;
   mdt->fanout = 1;
+  mdt->resolve = 0;
 }
 
 /* Parses the config-file. The path to the file is given in dollytab */
@@ -54,6 +55,9 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
 		  "\nAssigned nodename %s from HOST environment variable\n",
 		  mydollytab->myhostname);
     hadmynodename = 1;
+  }
+  if(mydollytab->resolve != 0 && hadmynodename) {
+    resolve_host_replace(mydollytab->myhostname,mydollytab->resolve);
   }
   
   /* First we want to know the input filename */
@@ -296,9 +300,13 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
   
   /* Get our own hostname */
-  if(!hadmynodename){
+  if(!hadmynodename && mydollytab->resolve == 0){
     if(gethostname(mydollytab->myhostname, 63) == -1) {
       perror("gethostname");
+    }
+  } else {
+    if(get_default_ip(mydollytab->myhostname,mydollytab->resolve) != 0) {
+      perror("could not get own ip address");
     }
   }
   /* Get the server's name. */

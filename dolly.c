@@ -188,8 +188,7 @@ static void open_insocks(struct dollytab * mydollytab) {
   }
 }
 
-static void open_outsocks(struct dollytab * mydollytab)
-{
+static void open_outsocks(struct dollytab * mydollytab) {
   struct hostent *hent;
   struct sockaddr_in addrdata, addrctrl;
   int ret;
@@ -407,7 +406,7 @@ static void open_outsocks(struct dollytab * mydollytab)
 	}
       }
       if(dataok + ctrlok != 2) {
-	sleep(1);
+        sleep(1);
       }
     } while(dataok + ctrlok != 2);
     if(mydollytab->flag_v) {
@@ -421,8 +420,7 @@ static void open_outsocks(struct dollytab * mydollytab)
  * If try_hard is 1 and an input file can't be opened, the program terminates.
  * If try_hard is not 1 and an input file can't be opened, -1 is returend.
  */
-static int open_infile(int try_hard,struct dollytab * mydollytab)
-{
+static int open_infile(int try_hard,struct dollytab * mydollytab) {
   char name[256+16];
 
   /* Close old input file if there is one */
@@ -495,8 +493,7 @@ static int open_infile(int try_hard,struct dollytab * mydollytab)
   return 0;
 }
 
-static int open_outfile(int try_hard,struct dollytab * mydollytab)
-{
+static int open_outfile(int try_hard,struct dollytab * mydollytab) {
   char name[256+16];
   int is_device = 0;
   int is_pipe = 0;
@@ -1295,14 +1292,15 @@ static void transmit(struct dollytab * mydollytab) {
   
 }
 
-static void usage(void)
-{
+static void usage(void) {
   fprintf(stderr, "\n");
   fprintf(stderr,
-	  "Usage: dolly [-hVvSsnY] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
+	  "Usage: dolly [-hVvSsnYR] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
 	  "[-o logfile] [-t time] -I [inputfile] -O [outpufile] -H [hostnames]\n");
   fprintf(stderr, "\t-s: this is the server, check hostname\n");
   fprintf(stderr, "\t-S: this is the server, do not check hostname\n");
+  fprintf(stderr, "\t-R: resolve the hostnames to ipv4 addresses\n");
+  fprintf(stderr, "\t-6: resolve the hostnames to ipv6 addresses\n");
   fprintf(stderr, "\t-v: verbose\n");
   fprintf(stderr, "\t-b <size>, where size is the size of block to transfer (default 4096)\n");
   fprintf(stderr, "\t-u <size>, size of the buffer (multiple of 4K)\n");
@@ -1341,7 +1339,7 @@ int main(int argc, char *argv[]) {
   unsigned int i;
   int flag_f = 0, flag_cargs = 0, generated_dolly = 0, me = -2;
   FILE *df;
-  char *mnname = NULL, *tmp_str, *host_str, *a_str, *sp;
+  char *mnname = NULL, *tmp_str, *host_str, *a_str, *sp, *ip_addr;
   size_t nr_hosts = 0;
   int fd;
   struct dollytab* mydollytab = (struct dollytab*)malloc(sizeof(struct dollytab));
@@ -1350,7 +1348,7 @@ int main(int argc, char *argv[]) {
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:Sshndt:V:I:O:Y:H:");
+    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:SshndtR6:V:I:O:Y:H:");
     if(c == -1) break;
     
     switch(c) {
@@ -1363,6 +1361,18 @@ int main(int argc, char *argv[]) {
       strcpy(dollytab, optarg);
       flag_f = 1;
       break;
+    case 'A':
+      if(mydollytab->resolve != 6 || mydollytab->resolve != 4) {
+        mydollytab->resolve = 1;
+      }
+      break;
+    case '6':
+      mydollytab->resolve = 6;
+      break;
+    case '4':
+      mydollytab->resolve = 4;
+      break;
+        
 
     case 'v':
       /* Verbose */
@@ -1512,8 +1522,17 @@ int main(int argc, char *argv[]) {
       host_str = strtok(a_str,host_delim);
       nr_hosts = 0;
       while(host_str != NULL) {
-        hostring[nr_hosts] = (char *)malloc(strlen(host_str)+1);
-        strcpy(hostring[nr_hosts], host_str);
+        if(mydollytab->resolve != 0) {
+          hostring[nr_hosts] = (char *)malloc(strlen(host_str)+1);
+          strcpy(hostring[nr_hosts], host_str);
+        } else { 
+          /* get memory for ip address */
+          ip_addr = (char*)malloc(sizeof(char)*256);
+          resolve_host(host_str,ip_addr,mydollytab->resolve);
+          hostring[nr_hosts] = (char *)malloc(strlen(ip_addr)+1);
+          strcpy(hostring[nr_hosts], ip_addr);
+          free(ip_addr);
+        }
         host_str = strtok(NULL,host_delim);
         if(strcmp(hostring[nr_hosts], mydollytab->myhostname) == 0) {
           me = nr_hosts;

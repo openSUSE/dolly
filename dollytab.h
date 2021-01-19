@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "resolve.h"
 
 #define MAXFANOUT 8
 
@@ -60,6 +61,8 @@ struct dollytab {
   unsigned int melast;   /* This machine doesn't have children to send data */
   /* Postfix of extra network interface names */
   int hyphennormal;      /* '-' normal or interf. sep. in hostnames */
+/* when 4 resolve hostanme to ipv4 addresses, when 6 try ipv6 addresse, do not resolve if anything else */
+  unsigned int resolve;
 };
 
 void init_dollytab(struct dollytab *);
