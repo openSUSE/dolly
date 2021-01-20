@@ -1521,8 +1521,9 @@ int main(int argc, char *argv[]) {
       /* now find the first host */
       host_str = strtok(a_str,host_delim);
       nr_hosts = 0;
+      /* check if have to resolve the hostnames */
       while(host_str != NULL) {
-        if(mydollytab->resolve != 0) {
+        if(mydollytab->resolve == 0) {
           hostring[nr_hosts] = (char *)malloc(strlen(host_str)+1);
           strcpy(hostring[nr_hosts], host_str);
         } else { 
