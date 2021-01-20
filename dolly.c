@@ -1298,7 +1298,7 @@ static void usage(void) {
 	  "Usage: dolly [-hVvSsnYR] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
 	  "[-o logfile] [-t time] -I [inputfile] -O [outpufile] -H [hostnames]\n");
   fprintf(stderr, "\t-s: this is the server, check hostname\n");
-  fprintf(stderr, "\t-S: this is the server, do not check hostname\n");
+  fprintf(stderr, "\t-S <hostname>: use hostname as server\n");
   fprintf(stderr, "\t-R: resolve the hostnames to ipv4 addresses\n");
   fprintf(stderr, "\t-6: resolve the hostnames to ipv6 addresses\n");
   fprintf(stderr, "\t-v: verbose\n");
@@ -1343,12 +1343,13 @@ int main(int argc, char *argv[]) {
   size_t nr_hosts = 0;
   int fd;
   struct dollytab* mydollytab = (struct dollytab*)malloc(sizeof(struct dollytab));
+  struct sockaddr_in sock_address;
   init_dollytab(mydollytab);
 
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:SshndtR46:V:I:O:Y:H:");
+    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:S:shndtR46:V:I:O:Y:H:");
     if(c == -1) break;
     
     switch(c) {
@@ -1372,13 +1373,10 @@ int main(int argc, char *argv[]) {
     case '4':
       mydollytab->resolve = 4;
       break;
-        
-
     case 'v':
       /* Verbose */
       mydollytab->flag_v = 1;
       break;
-
     case 'o':
       /* log filename */
       if(strlen(optarg) > 255) {
@@ -1394,35 +1392,28 @@ int main(int argc, char *argv[]) {
       mydollytab->compressed_in = 1;
       maxcbytes = atoi(optarg);
       break;
-      
     case 'b':
       t_b_size = atoi(optarg);
       break;
-
     case 'u':
       buffer_size = atoi(optarg);
       break;
-
     case 'n':
       dosync = 0;
       break;
-      
-      
     case 's':
       /* This machine is the server. */
       mydollytab->meserver = 1;
       break;
-
     case 'S':
       /* This machine is the server - don't check hostname. */
-      mydollytab->meserver = 2;
+      mydollytab->meserver = 1;
+      strncpy(mydollytab->servername,optarg,strlen(optarg));
       break;
-      
     case 'd':
       /* Dummy mode. Just transfer data without disk accesses. */
       dummy_mode = 1;
       break;
-
     case 't':
       /* How long should dolly run in dummy mode? */
       if(atoi(optarg) < 0) {
@@ -1436,7 +1427,6 @@ int main(int argc, char *argv[]) {
         dummy_time = atoi(optarg);
       }
       break;
-
     case 'a':
       i = atoi(optarg);
       if(i <= 0) {
@@ -1449,28 +1439,20 @@ int main(int argc, char *argv[]) {
       }
       signal(SIGALRM, alarm_handler);
       break;
-
     case  'r':
       max_retries = atoi(optarg);
       break;
-
     case 'h':
       /* Give a little help */
       usage();
       break;
-      
     case 'q':
       verbignoresignals = 0;
       break;
-
     case 'V':
       fprintf(stderr, "Dolly version %s\n", version_string);
       exit(0);
       break;
-    case 'C':
-      flag_cargs = 1;
-      break;
-
     case 'I':
       if(strlen(optarg) > 255) {
         fprintf(stderr, "Name of input-file too long.\n");
@@ -1523,15 +1505,17 @@ int main(int argc, char *argv[]) {
       nr_hosts = 0;
       /* check if have to resolve the hostnames */
       while(host_str != NULL) {
-        if(mydollytab->resolve == 0) {
+        if(mydollytab->resolve == 0 && 
+           !inet_pton(AF_INET,host_str,&(sock_address.sin_addr)) &&
+           !inet_pton(AF_INET6,host_str,&(sock_address.sin_addr))) {
           hostring[nr_hosts] = (char *)malloc(strlen(host_str)+1);
-          strcpy(hostring[nr_hosts], host_str);
+          strncpy(hostring[nr_hosts], host_str,strlen(host_str));
         } else { 
           /* get memory for ip address */
           ip_addr = (char*)malloc(sizeof(char)*256);
           resolve_host(host_str,ip_addr,mydollytab->resolve);
           hostring[nr_hosts] = (char *)malloc(strlen(ip_addr)+1);
-          strcpy(hostring[nr_hosts], ip_addr);
+          strncpy(hostring[nr_hosts], ip_addr,strlen(ip_addr));
           free(ip_addr);
         }
         host_str = strtok(NULL,host_delim);
@@ -1577,12 +1561,25 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Unknown option '%c'.\n", c);
       exit(1);
     }
-    if (flag_cargs) {
-      mnname = getenv("HOST");
-      (void)strcpy(mydollytab->myhostname, mnname);
+    if(flag_cargs) {
+      /* only use HOST when servername or ip is not explictly set */
+      if(mydollytab->servername != NULL) {
+        mnname = getenv("HOST");
+        (void)strncpy(mydollytab->myhostname,mnname,strlen(mnname));
+      } else {
+        /* check if we allready have a valid ip address */
+        if(!inet_pton(AF_INET,mydollytab->servername,&(sock_address.sin_addr)) &&
+           !inet_pton(AF_INET6,mydollytab->servername,&(sock_address.sin_addr))) {
+          ip_addr = (char*)malloc(sizeof(char)*256);
+          resolve_host(mydollytab->servername,ip_addr,mydollytab->resolve);
+          strncpy(mydollytab->servername,ip_addr,strlen(ip_addr));
+          strncpy(mydollytab->myhostname,ip_addr,strlen(ip_addr));
+          free(ip_addr);
+        }
+      }
 
     }
-    if (flag_f && !flag_cargs) {
+    if(flag_f && !flag_cargs) {
       /* Open the config-file */
       df = fopen(optarg, "r");
       if(df == NULL) {
@@ -1598,7 +1595,7 @@ int main(int argc, char *argv[]) {
 
   /* Did we get the parameters we need? */
   if(mydollytab->meserver && !flag_f && !flag_cargs) {
-    fprintf(stderr, "Missing parameter -f <configfile> or -C for commandline arguments.\n");
+    fprintf(stderr, "Missing parameter -f <configfile>\n");
     exit(1);
   }
   if(flag_cargs) {
