@@ -1348,7 +1348,7 @@ int main(int argc, char *argv[]) {
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:SshndtR6:V:I:O:Y:H:");
+    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:SshndtR46:V:I:O:Y:H:");
     if(c == -1) break;
     
     switch(c) {
@@ -1361,7 +1361,7 @@ int main(int argc, char *argv[]) {
       strcpy(dollytab, optarg);
       flag_f = 1;
       break;
-    case 'A':
+    case 'R':
       if(mydollytab->resolve != 6 || mydollytab->resolve != 4) {
         mydollytab->resolve = 1;
       }
