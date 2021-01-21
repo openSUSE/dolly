@@ -9,7 +9,7 @@ SOURCES = $(wildcard *.c)
 OBJECTS = $(SOURCES:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(SOURCES:%.c=$(BUILD_DIR)/%.d)
 # Can 
-DEBUGFLAGS=
+DEBUGFLAGS=-ggdb
 
 
 EXECUTABLE = dolly
@@ -22,7 +22,7 @@ $(BUILD_DIR)/%.d: %.c
 
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $< -o $@ -c $(CFLAGS) $(WARNINGS)
+	$(CC) $< -o $@ -c $(CFLAGS) $(DEBUGFLAGS) $(WARNINGS)
 
 
 $(EXECUTABLE): $(OBJECTS)

@@ -1408,6 +1408,10 @@ int main(int argc, char *argv[]) {
     case 'S':
       /* This machine is the server - don't check hostname. */
       mydollytab->meserver = 1;
+      if(strcmp(optarg,"-") < 0) {
+        fprintf(stderr,"'%s' is not a valid servername\n",optarg);
+        exit(1);
+      }
       strncpy(mydollytab->servername,optarg,strlen(optarg));
       break;
     case 'd':
@@ -1506,14 +1510,17 @@ int main(int argc, char *argv[]) {
       /* check if have to resolve the hostnames */
       while(host_str != NULL) {
         if(mydollytab->resolve == 0 && 
-           !inet_pton(AF_INET,host_str,&(sock_address.sin_addr)) &&
-           !inet_pton(AF_INET6,host_str,&(sock_address.sin_addr))) {
+           inet_pton(AF_INET,host_str,&(sock_address.sin_addr)) == 0 &&
+           inet_pton(AF_INET6,host_str,&(sock_address.sin_addr)) == 0) {
           hostring[nr_hosts] = (char *)malloc(strlen(host_str)+1);
           strncpy(hostring[nr_hosts], host_str,strlen(host_str));
         } else { 
           /* get memory for ip address */
           ip_addr = (char*)malloc(sizeof(char)*256);
-          resolve_host(host_str,ip_addr,mydollytab->resolve);
+          if(resolve_host(host_str,ip_addr,mydollytab->resolve)) {
+            fprintf(stderr,"Could not resolve the host '%s'\n",host_str);
+            exit(1);
+          }
           hostring[nr_hosts] = (char *)malloc(strlen(ip_addr)+1);
           strncpy(hostring[nr_hosts], ip_addr,strlen(ip_addr));
           free(ip_addr);
@@ -1563,18 +1570,36 @@ int main(int argc, char *argv[]) {
     }
     if(flag_cargs) {
       /* only use HOST when servername or ip is not explictly set */
-      if(mydollytab->servername != NULL) {
+      if(strcmp(mydollytab->servername,"") == 0) {
         mnname = getenv("HOST");
-        (void)strncpy(mydollytab->myhostname,mnname,strlen(mnname));
+        if(mydollytab->resolve != 0) {
+          ip_addr = (char*)malloc(sizeof(char)*256);
+          if(resolve_host(mnname,ip_addr,mydollytab->resolve)) {
+            fprintf(stderr,"Could resolve the server address '%s'\n",mydollytab->servername);
+            exit(1);
+          }
+          strncpy(mydollytab->myhostname,ip_addr,strlen(ip_addr));
+          strncpy(mydollytab->servername,ip_addr,strlen(ip_addr));
+          free(ip_addr);
+        } else {
+          strncpy(mydollytab->myhostname,mnname,strlen(mnname));
+          strncpy(mydollytab->servername,mnname,strlen(mnname));
+        }
       } else {
         /* check if we allready have a valid ip address */
-        if(!inet_pton(AF_INET,mydollytab->servername,&(sock_address.sin_addr)) &&
-           !inet_pton(AF_INET6,mydollytab->servername,&(sock_address.sin_addr))) {
+        if(inet_pton(AF_INET,mydollytab->servername,&(sock_address.sin_addr)) == 0 &&
+           inet_pton(AF_INET6,mydollytab->servername,&(sock_address.sin_addr)) == 0 &&
+           mydollytab->resolve != 0) {
           ip_addr = (char*)malloc(sizeof(char)*256);
-          resolve_host(mydollytab->servername,ip_addr,mydollytab->resolve);
+          if(resolve_host(mydollytab->servername,ip_addr,mydollytab->resolve)) {
+            fprintf(stderr,"Could resolve the server address '%s'\n",mydollytab->servername);
+            exit(1);
+          }
           strncpy(mydollytab->servername,ip_addr,strlen(ip_addr));
           strncpy(mydollytab->myhostname,ip_addr,strlen(ip_addr));
           free(ip_addr);
+        } else {
+          strncpy(mydollytab->myhostname,mydollytab->servername,strlen(mydollytab->servername));
         }
       }
 
