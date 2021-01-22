@@ -95,7 +95,7 @@ int get_default_ip(char *hostname , int mode)  {
 					printf("getnameinfo() failed: %s\n", gai_strerror(s));
 					exit(EXIT_FAILURE);
 				}
-				strncpy(hostname,host,sizeof(host));
+				strncpy(hostname,host,strlen(host));
 			}
 		}
 	}
