@@ -58,6 +58,9 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
   if(mydollytab->resolve != 0 && hadmynodename) {
     resolve_host_replace(mydollytab->myhostname,mydollytab->resolve);
+    (void)fprintf(stderr,
+		  "\nResolved hostname to %s\n",
+		  mydollytab->myhostname);
   }
   
   /* First we want to know the input filename */
