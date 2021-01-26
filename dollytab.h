@@ -6,16 +6,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <ifaddrs.h>
+
 #include "resolve.h"
 
 #define MAXFANOUT 8
+#define MAXHOSTS 65536
 
 /* Size of blocks transf. to/from net/disk and one less than that */
 static unsigned int t_b_size = 4096;
 #define T_B_SIZE   t_b_size
 #define T_B_SIZEM1 (T_B_SIZE - 1)
 
-static char **hostring = NULL;
 
 
 static char dummy_mode = 0; /* No disk accesses */
@@ -63,6 +67,7 @@ struct dollytab {
   int hyphennormal;      /* '-' normal or interf. sep. in hostnames */
 /* when 4 resolve hostanme to ipv4 addresses, when 6 try ipv6 addresse, do not resolve if anything else */
   unsigned int resolve;
+  char **hostring;
 };
 
 void init_dollytab(struct dollytab *);

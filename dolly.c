@@ -69,7 +69,7 @@ static void print_params(struct dollytab* mydollytab) {
   fprintf(stderr, "There are %d hosts in the ring (excluding server):\n",
 	  mydollytab->hostnr);
   for(i = 0; i < mydollytab->hostnr; i++) {
-    fprintf(stderr, "\t'%s'\n", hostring[i]);
+    fprintf(stderr, "\t'%s'\n", mydollytab->hostring[i]);
   }
   fprintf(stderr, "Next hosts in ring:\n");
   if(mydollytab->nr_childs == 0) {
@@ -77,7 +77,7 @@ static void print_params(struct dollytab* mydollytab) {
   } else {
     for(i = 0; i < mydollytab->nr_childs; i++) {
       fprintf(stderr, "\t%s (%d)\n",
-	      hostring[mydollytab->nexthosts[i]], mydollytab->nexthosts[i]);
+	      mydollytab->hostring[mydollytab->nexthosts[i]], mydollytab->nexthosts[i]);
     }
   }
   fprintf(stderr, "All parameters read successfully.\n");
@@ -209,25 +209,25 @@ static void open_outsocks(struct dollytab * mydollytab) {
   }
   for(i = 0; i < max; i++) {  /* For all childs we have */
     if(mydollytab->nr_childs > 1) {
-      strcpy(hn, hostring[mydollytab->nexthosts[i]]);
+      strcpy(hn, mydollytab->hostring[mydollytab->nexthosts[i]]);
     } else if(mydollytab->add_nr > 0) {
       if(mydollytab->add_mode == 1) {
-	strcpy(hn, hostring[mydollytab->nexthosts[0]]);
+	strcpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]]);
 	if(i > 0) {
 	  strcat(hn, mydollytab->add_name[i - 1]);
 	}
       } else if(mydollytab->add_mode == 2) {
 	if(i == 0) {
-	  strcpy(hn, hostring[mydollytab->nexthosts[0]]);
+	  strcpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]]);
 	} else {
 	  int j = 0;
-	  while(!isdigit(hostring[mydollytab->nexthosts[0]][j])) {
-	    hn[j] = hostring[mydollytab->nexthosts[0]][j];
+	  while(!isdigit(mydollytab->hostring[mydollytab->nexthosts[0]][j])) {
+	    hn[j] = mydollytab->hostring[mydollytab->nexthosts[0]][j];
 	    j++;
 	  }
 	  hn[j] = 0;
 	  strcat(hn, mydollytab->add_name[i - 1]);
-	  strcat(hn, &hostring[mydollytab->nexthosts[0]][j]);
+	  strcat(hn, &mydollytab->hostring[mydollytab->nexthosts[0]][j]);
 	}
       } else {
 	fprintf(stderr, "Undefined add_mode %d!\n", mydollytab->add_mode);
@@ -237,24 +237,24 @@ static void open_outsocks(struct dollytab * mydollytab) {
       assert(i < 1);
       
       if(mydollytab->add_mode == 1) {
-	strcpy(hn, hostring[mydollytab->nexthosts[0]]);
+	strcpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]]);
 	strcat(hn, mydollytab->add_name[0]);
       } else if(mydollytab->add_mode == 2) {
 	int j = 0;
-	while(!isdigit(hostring[mydollytab->nexthosts[0]][j])) {
-	  hn[j] = hostring[mydollytab->nexthosts[0]][j];
+	while(!isdigit(mydollytab->hostring[mydollytab->nexthosts[0]][j])) {
+	  hn[j] = mydollytab->hostring[mydollytab->nexthosts[0]][j];
 	  j++;
 	}
 	hn[j] = 0;
 	strcat(hn, mydollytab->add_name[0]);
-	strcat(hn, &hostring[mydollytab->nexthosts[0]][j]);
+	strcat(hn, &mydollytab->hostring[mydollytab->nexthosts[0]][j]);
       } else {
         fprintf(stderr, "Undefined add_mode %d!\n", mydollytab->add_mode);
         exit(1);
       }
     } else {
       assert(i < 1);
-      strcpy(hn, hostring[mydollytab->nexthosts[i]]);
+      strcpy(hn, mydollytab->hostring[mydollytab->nexthosts[i]]);
     }
     
     hent = gethostbyname(hn);
@@ -1503,7 +1503,8 @@ int main(int argc, char *argv[]) {
       }
       nr_hosts++;
       mydollytab->hostnr = nr_hosts;
-      hostring = (char**) malloc(nr_hosts * sizeof(char *));
+      fprintf(stderr,"getting memory for hostring\n");
+      mydollytab->hostring = (char**) malloc(nr_hosts * sizeof(char *));
       /* now find the first host */
       host_str = strtok(a_str,host_delim);
       nr_hosts = 0;
@@ -1512,8 +1513,8 @@ int main(int argc, char *argv[]) {
         if(mydollytab->resolve == 0 && 
            inet_pton(AF_INET,host_str,&(sock_address.sin_addr)) == 0 &&
            inet_pton(AF_INET6,host_str,&(sock_address.sin_addr)) == 0) {
-          hostring[nr_hosts] = (char *)malloc(strlen(host_str)+1);
-          strncpy(hostring[nr_hosts], host_str,strlen(host_str));
+          mydollytab->hostring[nr_hosts] = (char *)malloc(strlen(host_str)+1);
+          strncpy(mydollytab->hostring[nr_hosts], host_str,strlen(host_str));
         } else { 
           /* get memory for ip address */
           ip_addr = (char*)malloc(sizeof(char)*256);
@@ -1521,17 +1522,17 @@ int main(int argc, char *argv[]) {
             fprintf(stderr,"Could not resolve the host '%s'\n",host_str);
             exit(1);
           }
-          hostring[nr_hosts] = (char *)malloc(strlen(ip_addr)+1);
-          strncpy(hostring[nr_hosts], ip_addr,strlen(ip_addr));
+          mydollytab->hostring[nr_hosts] = (char *)malloc(strlen(ip_addr)+1);
+          strncpy(mydollytab->hostring[nr_hosts], ip_addr,strlen(ip_addr));
           free(ip_addr);
         }
         host_str = strtok(NULL,host_delim);
-        if(strcmp(hostring[nr_hosts], mydollytab->myhostname) == 0) {
+        if(strcmp(mydollytab->hostring[nr_hosts], mydollytab->myhostname) == 0) {
           me = nr_hosts;
         } else if(!mydollytab->hyphennormal) {
           /* Check if the hostname is correct, but a different interface is used */
-          if((sp = strchr(hostring[nr_hosts], '-')) != NULL) {
-            if(strncmp(hostring[nr_hosts], mydollytab->myhostname, sp - hostring[nr_hosts]) == 0) {
+          if((sp = strchr(mydollytab->hostring[nr_hosts], '-')) != NULL) {
+            if(strncmp(mydollytab->hostring[nr_hosts], mydollytab->myhostname, sp - mydollytab->hostring[nr_hosts]) == 0) {
               me = nr_hosts;
             }
           }
@@ -1643,11 +1644,11 @@ int main(int argc, char *argv[]) {
       fprintf(df,"infile %s\n",mydollytab->infile);
       fprintf(df,"outfile %s\n",mydollytab->outfile);
       fprintf(df,"server %s\n",mydollytab->myhostname);
-      fprintf(df,"firstclient %s\n",hostring[0]);
-      fprintf(df,"lastclient %s\n",hostring[nr_hosts-1]);
+      fprintf(df,"firstclient %s\n",mydollytab->hostring[0]);
+      fprintf(df,"lastclient %s\n",mydollytab->hostring[nr_hosts-1]);
       fprintf(df,"clients %i\n",mydollytab->hostnr);
       for(i = 0; i < mydollytab->hostnr; i++) {
-        fprintf(df,"%s\n",hostring[i]);
+        fprintf(df,"%s\n",mydollytab->hostring[i]);
       }
       fprintf(df,"endconfig\n");
       fclose(df);

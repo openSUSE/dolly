@@ -23,6 +23,7 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->hyphennormal = 0;
   mdt->fanout = 1;
   mdt->resolve = 0;
+  mdt->hostring = NULL;
 }
 
 /* Parses the config-file. The path to the file is given in dollytab */
@@ -31,38 +32,11 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   char *sp, *sp2;
   unsigned int i;
   int me = -2;
-  int hadmynodename = 0; /* Did this node already get its node name? */
-  char *mnname = NULL;
-
+	int family, name_status;
+  int fm = AF_INET;
+	char host[NI_MAXHOST];
+  struct ifaddrs *ifaddr, *ifa;
   /* Read the parameters... */
-  
-  /* Is there a MYNODENAME? If so, use that for the nodename. There
-     won't be a line like this on the server node, but there should always
-     be a first line of some kind
-  */
-  mnname = getenv("MYNODENAME");
-  if(mnname != NULL) {
-    (void)strcpy(mydollytab->myhostname, mnname);
-    (void)fprintf(stderr,
-		  "\nAssigned nodename %s from MYNODENAME environment variable\n",
-		  mydollytab->myhostname);
-    hadmynodename = 1;
-  }
-  mnname = getenv("HOST");
-  if(mnname != NULL) {
-    (void)strcpy(mydollytab->myhostname, mnname);
-    (void)fprintf(stderr,
-		  "\nAssigned nodename %s from HOST environment variable\n",
-		  mydollytab->myhostname);
-    hadmynodename = 1;
-  }
-  if(mydollytab->resolve != 0 && hadmynodename) {
-    resolve_host_replace(mydollytab->myhostname,mydollytab->resolve);
-    (void)fprintf(stderr,
-		  "\nResolved hostname to %s\n",
-		  mydollytab->myhostname);
-  }
-  
   /* First we want to know the input filename */
   if(!dummy_mode) {
     if(fgets(str, 256, df) == NULL) {
@@ -302,16 +276,6 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     }
   }
   
-  /* Get our own hostname */
-  if(!hadmynodename && mydollytab->resolve == 0){
-    if(gethostname(mydollytab->myhostname, 63) == -1) {
-      perror("gethostname");
-    }
-  } else {
-    if(get_default_ip(mydollytab->myhostname,mydollytab->resolve) != 0) {
-      perror("could not get own ip address");
-    }
-  }
   /* Get the server's name. */
   if(strncmp("server ", str, 7) != 0) {
     fprintf(stderr, "Missing 'server' in config-file.\n");
@@ -397,12 +361,17 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     exit(1);
   }
   mydollytab->hostnr = atoi(str+8);
-  if((mydollytab->hostnr < 1) || (mydollytab->hostnr > 10000)) {
+  if((mydollytab->hostnr < 1) || (mydollytab->hostnr > MAXHOSTS)) {
     fprintf(stderr, "I think %d numbers of hosts doesn't make much sense.\n",
 	    mydollytab->hostnr);
     exit(1);
   }
-  hostring = (char **)malloc(mydollytab->hostnr * sizeof(char *));
+  /* get a list to all availabel interfaces */
+	if (getifaddrs(&ifaddr) == -1) {
+		perror("getifaddrs");
+		exit(EXIT_FAILURE);
+	}
+  mydollytab->hostring = (char **)malloc(mydollytab->hostnr * sizeof(char *));
   for(i = 0; i < mydollytab->hostnr; i++) {
     if(fgets(str, 256, df) == NULL) {
       char errstr[256];
@@ -413,26 +382,43 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     if(str[strlen(str)-1] == '\n') {
       str[strlen(str)-1] = '\0';
     }
-    hostring[i] = (char *)malloc(strlen(str)+1);
-    strcpy(hostring[i], str);
+    mydollytab->hostring[i] = (char *)malloc(strlen(str)+1);
+    strncpy(mydollytab->hostring[i], str,strlen(str));
 
     /* Try to find next host in ring */
-    /* if(strncmp(hostring[i], mydollytab->myhostname, strlen(mydollytab->myhostname)) == 0) { */
-    if(strcmp(hostring[i], mydollytab->myhostname) == 0) {
-      me = i;
-    } else if(!mydollytab->hyphennormal) {
-      /* Check if the hostname is correct, but a different interface is used */
-      if((sp = strchr(hostring[i], '-')) != NULL) {
-        if(strncmp(hostring[i], mydollytab->myhostname, sp - hostring[i]) == 0) {
+    /* if(strncmp(mydollytab->hostring[i], mydollytab->myhostname, strlen(mydollytab->myhostname)) == 0) { */
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+      if (ifa->ifa_addr == NULL) {
+        continue;
+      }
+      family = ifa->ifa_addr->sa_family;
+      if (family == fm) {
+        name_status = getnameinfo( ifa->ifa_addr, (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6) , host , NI_MAXHOST , NULL , 0 , NI_NUMERICHOST);
+        if (name_status != 0) {
+          printf("getnameinfo() failed: %s\n", gai_strerror(name_status));
+          exit(EXIT_FAILURE);
+        }
+        if(strcmp(mydollytab->hostring[i],host) == 0) {
           me = i;
+          strncpy(mydollytab->myhostname,host,strlen(host));
+        } else if(!mydollytab->hyphennormal) {
+          /* Check if the hostname is correct, but a different interface is used */
+          if((sp = strchr(mydollytab->hostring[i], '-')) != NULL) {
+            if(strncmp(mydollytab->hostring[i], host, sp - mydollytab->hostring[i]) == 0) {
+              me = i;
+              strncpy(mydollytab->myhostname,host,strlen(host));
+            }
+          }
         }
       }
     }
   }
-
+	freeifaddrs(ifaddr);
   if(!mydollytab->meserver && (me == -2)) {
     fprintf(stderr, "Couldn't find myself '%s' in hostlist.\n",mydollytab->myhostname);
     exit(1);
+  } else {
+    fprintf(stderr,"My hostname is '%s' which is mydollytab->hostring[%i] %s\n",mydollytab->myhostname,me,mydollytab->hostring[me]);
   }
   
   /* Build up topology */
