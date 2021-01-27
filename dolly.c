@@ -12,27 +12,23 @@ static void alarm_handler() {
 static void print_params(struct dollytab* mydollytab) {
   unsigned int i;
   fprintf(stderr, "Parameter file: \n");
-  if(!dummy_mode) {
-    if(mydollytab->compressed_in) {
-      fprintf(stderr, "compressed ");
-    }
-    fprintf(stderr, "infile = '%s'", mydollytab->infile);
-    if(mydollytab->input_split != 0) {
-      fprintf(stderr, ", splitted in parts.\n");
-    } else {
-      fprintf(stderr, "\n");
-    }
-    if(mydollytab->compressed_out) {
-      fprintf(stderr, "compressed ");
-    }
-    fprintf(stderr, "outfile = '%s'", mydollytab->outfile);
-    if(mydollytab->output_split != 0) {
-      fprintf(stderr, ", splitted in %llu byte parts.\n", mydollytab->output_split);
-    } else {
-      fprintf(stderr, "\n");
-    }
+  if(mydollytab->compressed_in) {
+    fprintf(stderr, "compressed ");
+  }
+  fprintf(stderr, "infile = '%s'", mydollytab->infile);
+  if(mydollytab->input_split != 0) {
+    fprintf(stderr, ", splitted in parts.\n");
   } else {
-    fprintf(stderr, "dummy filesize = %d MB\n", mydollytab->dummysize/1024/1024);
+    fprintf(stderr, "\n");
+  }
+  if(mydollytab->compressed_out) {
+    fprintf(stderr, "compressed ");
+  }
+  fprintf(stderr, "outfile = '%s'", mydollytab->outfile);
+  if(mydollytab->output_split != 0) {
+    fprintf(stderr, ", splitted in %llu byte parts.\n", mydollytab->output_split);
+  } else {
+    fprintf(stderr, "\n");
   }
   fprintf(stderr, "using data port %u\n", dataport);
   fprintf(stderr, "using ctrl port %u\n", ctrlport);
@@ -724,12 +720,10 @@ static void buildring(struct dollytab * mydollytab) {
     }
   }
 
-  if(!dummy_mode) {
-    if(mydollytab->meserver) {
-      open_infile(1,mydollytab);
-    } else {
-      open_outfile(1,mydollytab);
-    }
+  if(mydollytab->meserver) {
+    open_infile(1,mydollytab);
+  } else {
+    open_outfile(1,mydollytab);
   }
 
   /* All the machines except the leaf(s) need to open output sockets */
@@ -853,9 +847,6 @@ static void transmit(struct dollytab * mydollytab) {
 
   buf_addr = (char *)malloc(2 * T_B_SIZEM1);
   buf = (char *)((unsigned long)(buf_addr + T_B_SIZEM1) & (~T_B_SIZEM1));
-  if(dummy_mode) {
-    bzero(buf, T_B_SIZE);
-  }
 
   t = 0x7fffffff;
   t <<= 32;
@@ -897,31 +888,7 @@ static void transmit(struct dollytab * mydollytab) {
       /*
        * Server part
        */
-      if(!dummy_mode) {
-        ret = movebytes(input, READ, buf, bytes,mydollytab);
-      } else {
-        if((mydollytab->dummysize > 0) && ((maxbytes + bytes) > mydollytab->dummysize)) {
-          ret = mydollytab->dummysize - maxbytes;
-        } else if(dummy_time > 0) {
-	  /* Check if the dummy transmission time is reached. */
-	  struct timeval tvt;
-	  static long long last_check = 0;
-	  if(maxbytes - last_check >= 1000000) {
-	    last_check = maxbytes;
-	    gettimeofday(&tvt, NULL);
-	    td = tvt.tv_sec - tv1.tv_sec;
-	    if(td > dummy_time) {
-	      ret = 0;
-	    } else {
-	      ret = bytes;
-	    }
-	  } else {
-	    ret = bytes;
-	  }
-	} else {
-	  ret = bytes;
-	}
-      }
+      ret = movebytes(input, READ, buf, bytes,mydollytab);
       maxbytes += ret;
       if(ret > 0) {
         if(mydollytab->add_nr == 0) {
@@ -1044,24 +1011,22 @@ static void transmit(struct dollytab * mydollytab) {
 	    /* There is data to be read from the net */
 	    bytes = (t >= T_B_SIZE ? T_B_SIZE : t);
 	    ret = movebytes(datain[0], READ, buf, bytes,mydollytab);
-	    if(!dummy_mode) {
 	      if(!mydollytab->output_split) {
-		movebytes(output, WRITE, buf, ret,mydollytab);
+          movebytes(output, WRITE, buf, ret,mydollytab);
 	      } else {
-		/* Check if output file needs to be split. */
-		if((transbytes / mydollytab->output_split)
-		   != ((transbytes + ret) / mydollytab->output_split)) {
-		  size_t old_part, new_part;
-		  old_part = ret - (transbytes + ret) % mydollytab->output_split;
-		  new_part = ret - old_part;
-		  movebytes(output, WRITE, buf, old_part,mydollytab);
-		  open_outfile(1,mydollytab);
-		  movebytes(output, WRITE, buf + old_part, new_part,mydollytab);
-		} else {
-		  movebytes(output, WRITE, buf, ret,mydollytab);
-		}
+          /* Check if output file needs to be split. */
+          if((transbytes / mydollytab->output_split)
+             != ((transbytes + ret) / mydollytab->output_split)) {
+            size_t old_part, new_part;
+            old_part = ret - (transbytes + ret) % mydollytab->output_split;
+            new_part = ret - old_part;
+            movebytes(output, WRITE, buf, old_part,mydollytab);
+            open_outfile(1,mydollytab);
+            movebytes(output, WRITE, buf + old_part, new_part,mydollytab);
+          } else {
+            movebytes(output, WRITE, buf, ret,mydollytab);
+          }
 	      } /* end input_split */
-	    }
 	    if(!mydollytab->melast) {
 	      for(i = 0; i < mydollytab->nr_childs; i++) {
           movebytes(dataout[i], WRITE, buf, ret,mydollytab);
@@ -1074,9 +1039,7 @@ static void transmit(struct dollytab * mydollytab) {
 	    for(a = 1; a <= mydollytab->add_nr; a++) {
 	      bytes = (t >= T_B_SIZE ? T_B_SIZE : t);
 	      ret = movebytes(datain[a], READ, buf, bytes,mydollytab);
-	      if(!dummy_mode) {
-          movebytes(output, WRITE, buf, ret,mydollytab);
-	      }
+        movebytes(output, WRITE, buf, ret,mydollytab);
 	      if(!mydollytab->melast) {
           movebytes(dataout[a], WRITE, buf, bytes,mydollytab);
 	      }
@@ -1151,23 +1114,14 @@ static void transmit(struct dollytab * mydollytab) {
         perror("open logfile");
         exit(1);
       }
-      if(!dummy_mode) {
-	if(mydollytab->compressed_in) {
-	  fprintf(logfd, "compressed ");
-	}
-	fprintf(logfd, "infile = '%s'\n", mydollytab->infile);
-	if(mydollytab->compressed_out) {
-	  fprintf(logfd, "compressed ");
-	}
-	fprintf(logfd, "outfile = '%s'\n", mydollytab->outfile);
-      } else {
-	if(mydollytab->flag_v) {
-	  fprintf(logfd, "Transfered block : %d MB\n", mydollytab->dummysize/1024/1024);
-	} else {
-	  fprintf(logfd, " %8d",
-		  (unsigned int) mydollytab->dummysize > 0 ?(unsigned int) (mydollytab->dummysize/1024/1024) : (unsigned int)(maxbytes/1024LL/1024LL));
-	}
+      if(mydollytab->compressed_in) {
+        fprintf(logfd, "compressed ");
       }
+      fprintf(logfd, "infile = '%s'\n", mydollytab->infile);
+      if(mydollytab->compressed_out) {
+        fprintf(logfd, "compressed ");
+      }
+      fprintf(logfd, "outfile = '%s'\n", mydollytab->outfile);
       if(mydollytab->flag_v) {
         if(segsize > 0) {
           fprintf(logfd, "TCP segment size : %d Byte (%d Byte eth)\n", 
@@ -1310,12 +1264,8 @@ static void usage(void) {
   fprintf(stderr, "\t-f <configfile>, where <configfile> is the "
 	  "configuration file with all\n\t\tthe required information for "
 	  "this run. Required on server only.\n");
-  fprintf(stderr,
-	  "\t-d: dummy-mode. Dolly just sends data over the net,\n\t\twithout "
-	  "disk accesses. This ist mostly used to test switches.\n");
   fprintf(stderr, "\t-o <logfile>: Write some statistical information  "
 	  "in <logfile>\n");
-  fprintf(stderr, "\t-t <time>, where <time> is the run-time in seconds of this dummy-mode\n");
   fprintf(stderr, "\t-r <n>: Retry to connect to mode n times\n");
   fprintf(stderr, "\t-a <timeout>: Lets dolly terminate if it could not transfer\n\t\tany data after <timeout> seconds.\n");
   fprintf(stderr, "\t-n: Do not sync before exit. Dolly exits sooner.\n");
@@ -1349,7 +1299,7 @@ int main(int argc, char *argv[]) {
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:S:shndtR46:V:I:O:Y:H:");
+    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:S:shnR46:V:I:O:Y:H:");
     if(c == -1) break;
     
     switch(c) {
@@ -1413,23 +1363,6 @@ int main(int argc, char *argv[]) {
         exit(1);
       }
       strncpy(mydollytab->servername,optarg,strlen(optarg));
-      break;
-    case 'd':
-      /* Dummy mode. Just transfer data without disk accesses. */
-      dummy_mode = 1;
-      break;
-    case 't':
-      /* How long should dolly run in dummy mode? */
-      if(atoi(optarg) < 0) {
-        fprintf(stderr,
-          "Time for -t parameter should be positive instead of %d.\n",
-        atoi(optarg));
-        exit(1);
-      } else if(atoi(optarg) == 0) {
-
-      } else {
-        dummy_time = atoi(optarg);
-      }
       break;
     case 'a':
       i = atoi(optarg);
@@ -1701,7 +1634,7 @@ int main(int argc, char *argv[]) {
     if(mydollytab->flag_v) {
       fprintf(stderr, "\n");
     }
-  } while (!mydollytab->meserver && dummy_mode && !exitloop);
+  } while (!mydollytab->meserver  && !exitloop);
  
   fclose(stdtty);
   free(mydollytab);

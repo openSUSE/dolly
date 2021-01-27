@@ -38,118 +38,94 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   struct ifaddrs *ifaddr, *ifa;
   /* Read the parameters... */
   /* First we want to know the input filename */
-  if(!dummy_mode) {
+  if(fgets(str, 256, df) == NULL) {
+    fprintf(stderr, "errno = %d\n", errno);
+    perror("fgets for infile");
+    exit(1);
+  }
+  sp2 = str;
+  if(strncmp("compressed ", sp2, 11) == 0) {
+    mydollytab->compressed_in = 1;
+    sp2 += 11;
+  } else {
+    mydollytab->compressed_in = 0;
+  }
+  if(strncmp("infile ", sp2, 7) != 0) {
+    fprintf(stderr, "Missing 'infile ' in config-file.\n");
+    exit(1);
+  }
+  sp2 += 7;
+  if(sp2[strlen(sp2)-1] == '\n') {
+    sp2[strlen(sp2)-1] = '\0';
+  }
+  if((sp = strchr(sp2, ' ')) == NULL) {
+    sp = sp2 + strlen(sp2);
+  }
+  if(mydollytab->compressed_in && (strncmp(&sp2[sp - sp2 - 3], ".gz", 3) != 0)) {
+    char tmp_str[256];
+    strncpy(tmp_str, sp2, sp - sp2);
+    tmp_str[sp - sp2] = '\0';
+    fprintf(stderr,
+      "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
+      tmp_str);
+    }
+    strncpy(mydollytab->infile, sp2, sp - sp2);
+    sp++;
+    if(strcmp(sp, "split") == 0) {
+      mydollytab->input_split = 1;
+    }
+    
+    /* Then we want to know the output filename */
     if(fgets(str, 256, df) == NULL) {
-      fprintf(stderr, "errno = %d\n", errno);
-      perror("fgets for infile");
+      perror("fgets for outfile");
       exit(1);
     }
     sp2 = str;
     if(strncmp("compressed ", sp2, 11) == 0) {
-      mydollytab->compressed_in = 1;
+      mydollytab->compressed_out = 1;
       sp2 += 11;
-    } else {
-      mydollytab->compressed_in = 0;
     }
-    if(strncmp("infile ", sp2, 7) != 0) {
-      fprintf(stderr, "Missing 'infile ' in config-file.\n");
+    if(strncmp("outfile ", sp2, 8) != 0) {
+      fprintf(stderr, "Missing 'outfile ' in config-file.\n");
       exit(1);
     }
-    sp2 += 7;
+    sp2 += 8;
     if(sp2[strlen(sp2)-1] == '\n') {
       sp2[strlen(sp2)-1] = '\0';
     }
     if((sp = strchr(sp2, ' ')) == NULL) {
       sp = sp2 + strlen(sp2);
     }
-    if(mydollytab->compressed_in && (strncmp(&sp2[sp - sp2 - 3], ".gz", 3) != 0)) {
+    if(mydollytab->compressed_out && (strncmp(&sp2[sp - sp2 - 3], ".gz", 3) != 0)) {
       char tmp_str[256];
       strncpy(tmp_str, sp2, sp - sp2);
       tmp_str[sp - sp2] = '\0';
       fprintf(stderr,
-	      "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
-	      tmp_str);
-      }
-      strncpy(mydollytab->infile, sp2, sp - sp2);
-      sp++;
-      if(strcmp(sp, "split") == 0) {
-        mydollytab->input_split = 1;
-      }
-      
-      /* Then we want to know the output filename */
-      if(fgets(str, 256, df) == NULL) {
-        perror("fgets for outfile");
-        exit(1);
-      }
-      sp2 = str;
-      if(strncmp("compressed ", sp2, 11) == 0) {
-        mydollytab->compressed_out = 1;
-        sp2 += 11;
-      }
-      if(strncmp("outfile ", sp2, 8) != 0) {
-        fprintf(stderr, "Missing 'outfile ' in config-file.\n");
-        exit(1);
-      }
-      sp2 += 8;
-      if(sp2[strlen(sp2)-1] == '\n') {
-        sp2[strlen(sp2)-1] = '\0';
-      }
-      if((sp = strchr(sp2, ' ')) == NULL) {
-        sp = sp2 + strlen(sp2);
-      }
-      if(mydollytab->compressed_out && (strncmp(&sp2[sp - sp2 - 3], ".gz", 3) != 0)) {
-        char tmp_str[256];
-        strncpy(tmp_str, sp2, sp - sp2);
-        tmp_str[sp - sp2] = '\0';
-        fprintf(stderr,
-          "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
-          tmp_str);
-      }
-      strncpy(mydollytab->outfile, sp2, sp - sp2);
-      sp++;
-      if(strncmp(sp, "split ", 6) == 0) {
-        unsigned long long size = 0;
-        char *s = sp+6;
-        while(isdigit(*s)) {
-          size *= 10LL;
-          size += (unsigned long long)(*s - '0');
-          s++;
-        }
-        switch(*s) {
-          case 'T': size *= 1024LL*1024LL*1024LL*1024LL; break;
-          case 'G': size *= 1024LL*1024LL*1024LL; break;
-          case 'M': size *= 1024LL*1024LL; break;
-          case 'k': size *= 1024LL; break;
-          default:
-            fprintf(stderr, "Unknown multiplier '%c' for split size.\n", *s);
-            break;
-        }
-        mydollytab->output_split = size;
-        str[sp - str - 1] = '\0';
-      }
-  } else {
-    /* Dummy Mode: Get the size of to transfer data */ 
-    if(fgets(str, 256, df) == NULL) {
-      perror("fgets on dummy");
-      exit(1);
+        "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
+        tmp_str);
     }
-    if(strncmp("dummy ", str, 6) == 0) {
-      if(str[strlen(str)-1] == '\n') {
-        str[strlen(str)-1] = '\0';
+    strncpy(mydollytab->outfile, sp2, sp - sp2);
+    sp++;
+    if(strncmp(sp, "split ", 6) == 0) {
+      unsigned long long size = 0;
+      char *s = sp+6;
+      while(isdigit(*s)) {
+        size *= 10LL;
+        size += (unsigned long long)(*s - '0');
+        s++;
       }
-      sp = strchr(str, ' ');
-      if(sp == NULL) {
-        fprintf(stderr, "Error dummy line.\n");
+      switch(*s) {
+        case 'T': size *= 1024LL*1024LL*1024LL*1024LL; break;
+        case 'G': size *= 1024LL*1024LL*1024LL; break;
+        case 'M': size *= 1024LL*1024LL; break;
+        case 'k': size *= 1024LL; break;
+        default:
+          fprintf(stderr, "Unknown multiplier '%c' for split size.\n", *s);
+          break;
       }
-      if(atoi(sp + 1) == 0) {
-        exitloop = 1;
-      }
-      mydollytab->dummysize = atoi(sp + 1);
-      mydollytab->dummysize = 1024*1024*mydollytab->dummysize;
-    } else if(strcmp("dummy\n", str) == 0) {
-      mydollytab->dummysize = 0;
+      mydollytab->output_split = size;
+      str[sp - str - 1] = '\0';
     }
-  }
   
   /* Get the optional TCPMaxSeg size */ 
   if(fgets(str, 256, df) == NULL) {

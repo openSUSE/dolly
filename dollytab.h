@@ -22,14 +22,11 @@ static unsigned int t_b_size = 4096;
 
 
 
-static char dummy_mode = 0; /* No disk accesses */
 static int segsize = 0; /* TCP Segment Size (useful for benchmarking only) */
 
-static int exitloop = 0;
 
 static char *dollybuf = NULL;
 static size_t dollybufsize = 0;
-
 
 
 /* Describes the tree-structure */

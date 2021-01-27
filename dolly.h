@@ -58,9 +58,10 @@ static int ctrlsock = -1;
 static unsigned long long maxbytes = 0; /* max bytes to transfer */
 static unsigned long long maxcbytes = 0;/*     --  "  --  in compressed mode */
 static int dosync = 1;                  /* sync() after transfer */
-static unsigned int dummy_time = 0;              /* Time for run in dummy-mode */
 static int timeout = 0;                 /* Timeout for startup */
 static int verbignoresignals = 1;       /* warn on ignore signal errors */
+
+static int exitloop = 0;
 
 static int max_retries = 10;
 static char dollytab[256];
