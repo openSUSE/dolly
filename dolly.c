@@ -1,5 +1,58 @@
 #include "dolly.h"
 
+static FILE *stdtty;           /* file pointer to the standard terminal tty */
+
+
+/* Clients need the ports before they can listen, so we use defaults. */
+static unsigned int dataport = 9998;
+static unsigned int ctrlport = 9997;
+
+/* File descriptors for file I/O */
+static int input = -1, output = -1;
+
+
+/* Numbers for splitted input/output files */
+static unsigned int input_nr = 0, output_nr = 0;
+
+
+/* size of buffers for TCP sockets (approx. 100KB, multiple of 4 KB) */
+static int buffer_size = 98304;
+#define SCKBUFSIZE buffer_size
+
+
+/* Normal sockets for data transfer */
+int datain[MAXFANOUT], dataout[MAXFANOUT];
+int datasock = -1;
+
+/* Special sockets for control information */
+int ctrlin = -1, ctrlout[MAXFANOUT];
+int ctrlsock = -1;
+
+static unsigned long long maxbytes = 0; /* max bytes to transfer */
+static unsigned long long maxcbytes = 0;/*     --  "  --  in compressed mode */
+static int dosync = 1;                  /* sync() after transfer */
+static int timeout = 0;                 /* Timeout for startup */
+static int verbignoresignals = 1;       /* warn on ignore signal errors */
+
+static int max_retries = 10;
+static char dollytab[256];
+
+
+
+static int flag_log = 0;
+static char logfile[256] = "";
+
+const char* host_delim = ",";
+
+/* Pipe descriptor in case data must be uncompressed before write */
+static int pd[2];
+/* Pipe descriptor in case input data must be compressed */
+static int id[2]; 
+
+/* PIDs of child processes */
+static int in_child_pid = 0, out_child_pid = 0;
+
+
 /* Handles timeouts by terminating the program. */
 static void alarm_handler() {
   fprintf(stderr, "Timeout reached (was set to %d seconds).\nTerminating.\n",
@@ -278,16 +331,16 @@ static void open_outsocks(struct dollytab * mydollytab) {
     do {
       dataout[i] = socket(PF_INET, SOCK_STREAM, 0);
       if(dataout[i] == -1) {
-	perror("Opening output data socket");
-	exit(1);
+        perror("Opening output data socket");
+        exit(1);
       }
 
       if((mydollytab->nr_childs > 1) || (i == 0)) {
-	ctrlout[i] = socket(PF_INET, SOCK_STREAM, 0);
-	if(ctrlout[i] == -1) {
-	  perror("Opening output control socket");
-	  exit(1);
-	}
+        ctrlout[i] = socket(PF_INET, SOCK_STREAM, 0);
+        if(ctrlout[i] == -1) {
+          perror("Opening output control socket");
+          exit(1);
+        }
       }
       
       /* Attempt to set TCP_NODELAY */
@@ -314,22 +367,22 @@ static void open_outsocks(struct dollytab * mydollytab) {
      	 taken from NETPIPE */
       /* Attempt to set output BUFFER sizes */
       if(dsndbuf == NULL){
-	dsndbuf = malloc(SCKBUFSIZE);/* Note it may reallocate, which is ok */
-	if(dsndbuf == NULL){
-	  perror("Error creating buffer for input data socket");
-	  exit(1);
-	}
-	if(setsockopt(dataout[i], SOL_SOCKET, SO_SNDBUF, &dsndbuf,
-		      SCKBUFSIZE) < 0)
-	  {
-	    (void) fprintf(stderr,
-			   "setsockopt: SO_SNDBUF failed! errno = %d\n",
-			   errno);
-	    exit(556);
-	  }
-	getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF,
-		   (char *) &send_size, (void *) &sizeofint);
-	fprintf(stderr, "Send buffer %d is %d bytes\n", i, send_size);
+        dsndbuf = malloc(SCKBUFSIZE);/* Note it may reallocate, which is ok */
+        if(dsndbuf == NULL){
+          perror("Error creating buffer for input data socket");
+          exit(1);
+        }
+        if(setsockopt(dataout[i], SOL_SOCKET, SO_SNDBUF, &dsndbuf,
+                SCKBUFSIZE) < 0)
+          {
+            (void) fprintf(stderr,
+               "setsockopt: SO_SNDBUF failed! errno = %d\n",
+               errno);
+            exit(556);
+          }
+        getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF,
+             (char *) &send_size, (void *) &sizeofint);
+        fprintf(stderr, "Send buffer %d is %d bytes\n", i, send_size);
       }
 
       /* Setup data port */
@@ -647,8 +700,8 @@ static int movebytes(int fd, int dir, char *addr, unsigned int n,struct dollytab
 
 static void buildring(struct dollytab * mydollytab) {
   socklen_t size;
-  int ret;
-  unsigned int i,nr;
+  int ret = 0;
+  unsigned int i = 0,j = 0,nr = 0;
   unsigned int ready_mach = 0;  /* Number of ready machines */
   char msg[1024];
   char info_buf[1024];
@@ -768,7 +821,7 @@ static void buildring(struct dollytab * mydollytab) {
     for(i = 0; i < mydollytab->nr_childs; i++) {
       FD_SET(ctrlout[i], &real_set);
       if(ctrlout[i] > maxsetnr) {
-	maxsetnr = ctrlout[i];
+        maxsetnr = ctrlout[i];
       }
     }
     maxsetnr++;
@@ -779,9 +832,9 @@ static void buildring(struct dollytab * mydollytab) {
         perror("select in buildring()\n");
         exit(1);
       }
-      for(i = 0; i < mydollytab->nr_childs; i++) {
-        if(FD_ISSET(ctrlout[i], &cur_set)) {
-          ret = read(ctrlout[i], info_buf, 1024);
+      for(j = 0; j < mydollytab->nr_childs; j++) {
+        if(FD_ISSET(ctrlout[j], &cur_set)) {
+          ret = read(ctrlout[j], info_buf, 1024);
           if(ret == -1) {
             perror("read backflow in buildring");
             exit(1);
@@ -936,18 +989,18 @@ static void transmit(struct dollytab * mydollytab) {
     }
       //if(mydollytab->flag_v && (maxbytes - lastout >= 10000000)) {
       if(maxbytes - lastout >= 10000000) {
-	tv3=tv2;
-	gettimeofday(&tv2, NULL);
-	td = (tv2.tv_sec*1000000 + tv2.tv_usec)
-	  - (tv1.tv_sec*1000000 + tv1.tv_usec);
-	tdlast = (tv2.tv_sec*1000000 + tv2.tv_usec)
-	  - (tv3.tv_sec*1000000 + tv3.tv_usec);
-	fprintf(stdtty,
-		"\rSent MB: %.0f, MB/s: %.3f, Current MB/s: %.3f      ",
-		(float)maxbytes/1000000,
-		(float)maxbytes/td,(float)(maxbytes - lastout)/tdlast);
-	fflush(stdtty);
-	lastout = maxbytes;
+        tv3=tv2;
+        gettimeofday(&tv2, NULL);
+        td = (tv2.tv_sec*1000000 + tv2.tv_usec)
+          - (tv1.tv_sec*1000000 + tv1.tv_usec);
+        tdlast = (tv2.tv_sec*1000000 + tv2.tv_usec)
+          - (tv3.tv_sec*1000000 + tv3.tv_usec);
+        fprintf(stdtty,
+          "\rSent MB: %.0f, MB/s: %.3f, Current MB/s: %.3f      ",
+          (float)maxbytes/1000000,
+          (float)maxbytes/td,(float)(maxbytes - lastout)/tdlast);
+        fflush(stdtty);
+        lastout = maxbytes;
       }
     } else {
       /*
@@ -1048,17 +1101,17 @@ static void transmit(struct dollytab * mydollytab) {
 	  } else { /* FD_ISSET(ctrlin[]) */
 	    int foundfd = 0;
 
-	    for(i = 0; i < mydollytab->nr_childs; i++) {
-	      if(FD_ISSET(ctrlout[i], &cur_set)) {
-		/* Backflow of control-information, just pass it on */
-		ret = read(ctrlout[i], buf, mydollytab->t_b_size);
-		if(ret == -1) {
-		  perror("read backflow in transmit");
-		  exit(1);
-		}
-		movebytes(ctrlin, WRITE, buf, ret,mydollytab);
-		foundfd++;
-		FD_CLR(ctrlout[i], &cur_set);
+	    for(j = 0; j < mydollytab->nr_childs; j++) {
+	      if(FD_ISSET(ctrlout[j], &cur_set)) {
+          /* Backflow of control-information, just pass it on */
+          ret = read(ctrlout[j], buf, mydollytab->t_b_size);
+          if(ret == -1) {
+            perror("read backflow in transmit");
+            exit(1);
+          }
+          movebytes(ctrlin, WRITE, buf, ret,mydollytab);
+          foundfd++;
+          FD_CLR(ctrlout[j], &cur_set);
 	      }
 	    }
 	    /* if nothing found */

@@ -37,6 +37,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   int me = -2;
 	int family, name_status;
   int fm = AF_INET;
+  char *mname = NULL;
 	char host[NI_MAXHOST];
   struct ifaddrs *ifaddr, *ifa;
   /* Read the parameters... */
@@ -391,13 +392,32 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
         }
       }
     }
+    /* check if hostname was in the configuration and not an ip */
+    if(me == -2) {
+       mname = getenv("MYNODENAME");
+       if(mname != NULL) {
+         strncpy(mydollytab->myhostname,mname,strlen(mname));
+          (void)fprintf(stderr,
+            "\nAssigned nodename %s from MYNODENAME environment variable\n",
+            mydollytab->myhostname);
+         me = i;
+       }
+    }
+    if(me == -2) {
+       mname = getenv("HOST");
+       if(mname != NULL) {
+         strncpy(mydollytab->myhostname,mname,strlen(mname));
+          (void)fprintf(stderr,
+            "\nAssigned nodename %s from HOST environment variable\n",
+            mydollytab->myhostname);
+         me = i;
+       }
+    }
   }
 	freeifaddrs(ifaddr);
   if(!mydollytab->meserver && (me == -2)) {
     fprintf(stderr, "Couldn't find myself '%s' in hostlist.\n",mydollytab->myhostname);
     exit(1);
-  } else {
-    fprintf(stderr,"My hostname is '%s' which is mydollytab->hostring[%i] %s\n",mydollytab->myhostname,me,mydollytab->hostring[me]);
   }
   
   /* Build up topology */
