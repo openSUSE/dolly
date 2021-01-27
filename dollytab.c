@@ -23,6 +23,8 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->hyphennormal = 0;
   mdt->fanout = 1;
   mdt->resolve = 0;
+  mdt->dollybufsize = 0;
+  mdt->segsize = 0;
   mdt->hostring = NULL;
 }
 
@@ -141,7 +143,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
       fprintf(stderr, "Error segsize line.\n");
       exit(1);
     }
-    segsize = atoi(sp + 1);
+    mydollytab->segsize = atoi(sp + 1);
     if(fgets(str, 256, df) == NULL) {
       perror("fgets after segsize");
       exit(1);
@@ -458,15 +460,15 @@ void getparams(int f,struct dollytab * mydollytab) {
     fprintf(stderr, "Trying to read parameters...");
     fflush(stderr);
   }
-  dollybuf = (char *)malloc(T_B_SIZE);
-  if(dollybuf == NULL) {
+  mydollytab->dollybuf = (char *)malloc(T_B_SIZE);
+  if(mydollytab->dollybuf == NULL) {
     fprintf(stderr, "Couldn't get memory for dollybuf.\n");
     exit(1);
   }
 
   readsize = 0;
   do {
-    ret = read(f, dollybuf + readsize, T_B_SIZE);
+    ret = read(f, mydollytab->dollybuf + readsize, T_B_SIZE);
     if(ret == -1) {
       perror("read in getparams while");
       exit(1);
@@ -477,7 +479,7 @@ void getparams(int f,struct dollytab * mydollytab) {
     }
     readsize += ret;
   } while(ret == 1448);
-  dollybufsize = readsize;
+    mydollytab->dollybufsize = readsize;
 
   /* Write everything to a file so we can use parse_dollytab(FILE *)
      afterwards.  */
@@ -490,7 +492,7 @@ void getparams(int f,struct dollytab * mydollytab) {
     perror("Opening temporary file 'tmp' in getparams");
     exit(1);
   }
-  writesize = write(fd, dollybuf, readsize);
+  writesize = write(fd, mydollytab->dollybuf, readsize);
   if(writesize == -1) {
     perror("Writing temporary file 'tmp' in getparams");
     exit(1);

@@ -33,8 +33,8 @@ static void print_params(struct dollytab* mydollytab) {
   fprintf(stderr, "using data port %u\n", dataport);
   fprintf(stderr, "using ctrl port %u\n", ctrlport);
   fprintf(stderr, "myhostname = '%s'\n", mydollytab->myhostname);
-  if(segsize > 0) {
-    fprintf(stderr, "TCP segment size = %d\n", segsize);
+  if(mydollytab->segsize > 0) {
+    fprintf(stderr, "TCP segment size = %d\n", mydollytab->segsize);
   }
   if(mydollytab->add_nr > 0) {
     fprintf(stderr, "add_nr (extra network interfaces) = %d\n", mydollytab->add_nr);
@@ -117,11 +117,11 @@ static void open_insocks(struct dollytab * mydollytab) {
     // exit(1);
   }
 
-  if(segsize > 0) {
+  if(mydollytab->segsize > 0) {
     /* Attempt to set TCP_MAXSEG */
-    fprintf(stderr, "Set TCP_MAXSEG to %d bytes\n", segsize);
+    fprintf(stderr, "Set TCP_MAXSEG to %d bytes\n", mydollytab->segsize);
     if(setsockopt(datasock, IPPROTO_TCP, TCP_MAXSEG,
-		  &segsize, sizeof(int)) < 0) {
+		  &mydollytab->segsize, sizeof(int)) < 0) {
       (void) fprintf(stderr,"setsockopt: TCP_MAXSEG failed! errno=%d\n", errno);
       // exit(1);
     }
@@ -299,11 +299,11 @@ static void open_outsocks(struct dollytab * mydollytab) {
         // exit(1);
       }
 
-      if(segsize > 0) {
+      if(mydollytab->segsize > 0) {
 	/* Attempt to set TCP_MAXSEG */
-	fprintf(stderr, "Set TCP_MAXSEG to %d bytes\n", segsize);
-	if(setsockopt(dataout[i], IPPROTO_TCP, TCP_MAXSEG,
-		      &segsize, sizeof(int)) < 0) {
+        fprintf(stderr, "Set TCP_MAXSEG to %d bytes\n", mydollytab->segsize);
+        if(setsockopt(dataout[i], IPPROTO_TCP, TCP_MAXSEG,
+		      &mydollytab->segsize, sizeof(int)) < 0) {
 	  (void) fprintf(stderr, "setsockopt: TCP_MAXSEG failed! errno = %d\n", 
 			 errno);
 	  // exit(1);
@@ -817,7 +817,7 @@ static void buildring(struct dollytab * mydollytab) {
     /* Send it further */
     if(!mydollytab->melast) {
       for(i = 0; i < mydollytab->nr_childs; i++) {
-        movebytes(ctrlout[i], WRITE, dollybuf, dollybufsize,mydollytab);
+        movebytes(ctrlout[i], WRITE, mydollytab->dollybuf, mydollytab->dollybufsize,mydollytab);
       }
     }
     
@@ -998,7 +998,7 @@ static void transmit(struct dollytab * mydollytab) {
 	    maxbytes = *(unsigned long long *)&mybuf;
 	    if(!mydollytab->melast) {
 	      for(i = 0; i < mydollytab->nr_childs; i++) {
-		movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8,mydollytab);
+          movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8,mydollytab);
 	      }
 	    }
 	    t = maxbytes - transbytes;
@@ -1123,16 +1123,16 @@ static void transmit(struct dollytab * mydollytab) {
       }
       fprintf(logfd, "outfile = '%s'\n", mydollytab->outfile);
       if(mydollytab->flag_v) {
-        if(segsize > 0) {
+        if(mydollytab->segsize > 0) {
           fprintf(logfd, "TCP segment size : %d Byte (%d Byte eth)\n", 
-            segsize,segsize+54);
+            mydollytab->segsize,mydollytab->segsize+54);
         } else {
           fprintf(logfd,
             "Standard TCP segment size : 1460 Bytes (1514 Byte eth)\n");
         }
       } else {
-        if(segsize > 0) {
-          fprintf(logfd, " %8d", segsize);
+        if(mydollytab->segsize > 0) {
+          fprintf(logfd, " %8d", mydollytab->segsize);
         } else {
           fprintf(logfd, " %8d", 1460);
         }

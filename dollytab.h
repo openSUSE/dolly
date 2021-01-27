@@ -22,11 +22,8 @@ static unsigned int t_b_size = 4096;
 
 
 
-static int segsize = 0; /* TCP Segment Size (useful for benchmarking only) */
 
 
-static char *dollybuf = NULL;
-static size_t dollybufsize = 0;
 
 
 /* Describes the tree-structure */
@@ -64,7 +61,10 @@ struct dollytab {
   int hyphennormal;      /* '-' normal or interf. sep. in hostnames */
 /* when 4 resolve hostanme to ipv4 addresses, when 6 try ipv6 addresse, do not resolve if anything else */
   unsigned int resolve;
+  size_t dollybufsize;
+  unsigned int segsize; /* TCP Segment Size (useful for benchmarking only) */
   char **hostring;
+  char *dollybuf;
 };
 
 void init_dollytab(struct dollytab *);
