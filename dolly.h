@@ -61,8 +61,6 @@ static int dosync = 1;                  /* sync() after transfer */
 static int timeout = 0;                 /* Timeout for startup */
 static int verbignoresignals = 1;       /* warn on ignore signal errors */
 
-static int exitloop = 0;
-
 static int max_retries = 10;
 static char dollytab[256];
 

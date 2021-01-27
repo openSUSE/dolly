@@ -16,17 +16,6 @@
 #define MAXHOSTS 65536
 
 /* Size of blocks transf. to/from net/disk and one less than that */
-static unsigned int t_b_size = 4096;
-#define T_B_SIZE   t_b_size
-#define T_B_SIZEM1 (T_B_SIZE - 1)
-
-
-
-
-
-
-
-/* Describes the tree-structure */
 
 
 struct dollytab {
@@ -63,6 +52,7 @@ struct dollytab {
   unsigned int resolve;
   size_t dollybufsize;
   unsigned int segsize; /* TCP Segment Size (useful for benchmarking only) */
+  unsigned int t_b_size; /* Size of blocks transf. to/from net/disk and one less than that */
   char **hostring;
   char *dollybuf;
 };

@@ -86,7 +86,7 @@ static void print_params(struct dollytab* mydollytab) {
   } else {
     fprintf(stderr, "No compression used.\n");
   }
-  fprintf(stderr, "Using transfer size %d bytes.\n", T_B_SIZE);
+  fprintf(stderr, "Using transfer size %d bytes.\n", mydollytab->t_b_size);
 }
 
 static void open_insocks(struct dollytab * mydollytab) {
@@ -628,7 +628,7 @@ static int movebytes(int fd, int dir, char *addr, unsigned int n,struct dollytab
     if(ret == -1) {
 #ifdef DOLLY_NONBLOCK
       if(errno == EAGAIN) {
-	continue;
+        continue;
       }
 #endif /* DOLLY_NONBLOCK */
       perror("movebytes read/write");
@@ -648,7 +648,7 @@ static int movebytes(int fd, int dir, char *addr, unsigned int n,struct dollytab
 static void buildring(struct dollytab * mydollytab) {
   socklen_t size;
   int ret;
-  unsigned int i, nr;
+  unsigned int i,nr;
   unsigned int ready_mach = 0;  /* Number of ready machines */
   char msg[1024];
   char info_buf[1024];
@@ -733,7 +733,7 @@ static void buildring(struct dollytab * mydollytab) {
   
   /* Finally, the first machine also accepts a connection */
   if(mydollytab->meserver) {
-    char buf[T_B_SIZE];
+    char buf[mydollytab->t_b_size];
     ssize_t readsize;
     int fd, ret, maxsetnr = -1;
     fd_set real_set, cur_set;
@@ -744,11 +744,11 @@ static void buildring(struct dollytab * mydollytab) {
       perror("open dollytab");
       exit(1);
     }
-    readsize = read(fd, buf, T_B_SIZE);
+    readsize = read(fd, buf, mydollytab->t_b_size);
     if(readsize == -1) {
       perror("read dollytab");
       exit(1);
-    } else if(readsize == T_B_SIZE) {
+    } else if(readsize == mydollytab->t_b_size) {
       fprintf(stderr, "Dollytab possibly too long, adjust program...\n");
       exit(1);
     } else if(readsize == 1448) {
@@ -837,16 +837,16 @@ static void buildring(struct dollytab * mydollytab) {
 static void transmit(struct dollytab * mydollytab) {
   char *buf_addr, *buf;
   unsigned long long t, transbytes = 0, lastout = 0;
-  unsigned int bytes = T_B_SIZE;
+  unsigned int bytes = mydollytab->t_b_size;
   int ret = 1, maxsetnr = 0;
   unsigned long td = 0, tdlast = 0;
-  unsigned int i = 0, a = 0;
+  unsigned int i = 0,j = 0, a = 0;
   FILE *logfd = NULL;
   struct timeval tv1, tv2, tv3;
   fd_set real_set, cur_set;
 
-  buf_addr = (char *)malloc(2 * T_B_SIZEM1);
-  buf = (char *)((unsigned long)(buf_addr + T_B_SIZEM1) & (~T_B_SIZEM1));
+  buf_addr = (char *)malloc(2 * (mydollytab->t_b_size-1));
+  buf = (char *)((unsigned long)(buf_addr + mydollytab->t_b_size-1) & (~(mydollytab->t_b_size-1)));
 
   t = 0x7fffffff;
   t <<= 32;
@@ -958,13 +958,13 @@ static void transmit(struct dollytab * mydollytab) {
       ret = select(maxsetnr, &cur_set, NULL, NULL, NULL);
       if(ret == -1) {
         if(errno != EINTR) {
-	  /* MATHOG: (on above "if" statement)
-	   * Some signal was received, don't have a handler, ignore it.
-	   */
-	  perror("select");
-	  exit(1);
-	}
-	ret = 0;
+        /* MATHOG: (on above "if" statement)
+         * Some signal was received, don't have a handler, ignore it.
+         */
+        perror("select");
+        exit(1);
+        }
+        ret = 0;
       }
       if(ret < 1) {
 	if(verbignoresignals) {
@@ -973,8 +973,7 @@ static void transmit(struct dollytab * mydollytab) {
 			"\nIgnoring unhandled signal (select() returned %d.\n",
 			ret);
 	}
-      }
-      else {
+      } else {
 	nr_descr = ret;
 	for(i = 0; i < nr_descr; i++) {
 	  if(FD_ISSET(ctrlin, &cur_set)) {
@@ -997,7 +996,7 @@ static void transmit(struct dollytab * mydollytab) {
 	    }
 	    maxbytes = *(unsigned long long *)&mybuf;
 	    if(!mydollytab->melast) {
-	      for(i = 0; i < mydollytab->nr_childs; i++) {
+	      for(j = 0; j < mydollytab->nr_childs; j++) {
           movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8,mydollytab);
 	      }
 	    }
@@ -1009,7 +1008,7 @@ static void transmit(struct dollytab * mydollytab) {
 	    FD_CLR(ctrlin, &cur_set);
 	  } else if(FD_ISSET(datain[0], &cur_set)) {
 	    /* There is data to be read from the net */
-	    bytes = (t >= T_B_SIZE ? T_B_SIZE : t);
+	    bytes = (t >= mydollytab->t_b_size ? mydollytab->t_b_size : t);
 	    ret = movebytes(datain[0], READ, buf, bytes,mydollytab);
 	      if(!mydollytab->output_split) {
           movebytes(output, WRITE, buf, ret,mydollytab);
@@ -1037,7 +1036,7 @@ static void transmit(struct dollytab * mydollytab) {
 	    FD_CLR(datain[0], &cur_set);
 	    /* Handle additional network interfaces, if available */
 	    for(a = 1; a <= mydollytab->add_nr; a++) {
-	      bytes = (t >= T_B_SIZE ? T_B_SIZE : t);
+	      bytes = (t >= mydollytab->t_b_size ? mydollytab->t_b_size : t);
 	      ret = movebytes(datain[a], READ, buf, bytes,mydollytab);
         movebytes(output, WRITE, buf, ret,mydollytab);
 	      if(!mydollytab->melast) {
@@ -1052,7 +1051,7 @@ static void transmit(struct dollytab * mydollytab) {
 	    for(i = 0; i < mydollytab->nr_childs; i++) {
 	      if(FD_ISSET(ctrlout[i], &cur_set)) {
 		/* Backflow of control-information, just pass it on */
-		ret = read(ctrlout[i], buf, T_B_SIZE);
+		ret = read(ctrlout[i], buf, mydollytab->t_b_size);
 		if(ret == -1) {
 		  perror("read backflow in transmit");
 		  exit(1);
@@ -1167,9 +1166,9 @@ static void transmit(struct dollytab * mydollytab) {
       }
       ret = movebytes(ctrlout[i], READ, buf, 8,mydollytab);
       if(ret != 8) {
-	fprintf(stderr,
-		"Server got only %d bytes back from client %d instead of 8\n",
-		ret, i);
+        fprintf(stderr,
+          "Server got only %d bytes back from client %d instead of 8\n",
+          ret, i);
       }
     }
     buf[8] = 0;
@@ -1198,34 +1197,33 @@ static void transmit(struct dollytab * mydollytab) {
     }
     if(flag_log) {
       if(mydollytab->flag_v) {
-	fprintf(logfd, "Time: %lu.%03lu\n", td / 1000000, td % 1000000);
-	fprintf(logfd, "MBytes/s: %0.3f\n", (double)maxbytes / td);
-	fprintf(logfd, "Aggregate MBytes/s: %0.3f\n",
-		(double)maxbytes * mydollytab->hostnr / td);
-	if(maxcbytes != 0) {
-	  fprintf(logfd, "Bytes written on each node: %llu\n", maxcbytes);
-	  fprintf(logfd, "MBytes/s written: %0.3f\n",
-		  (double)maxcbytes / td);
-	  fprintf(logfd, "Aggregate MBytes/s written: %0.3f\n",
-		  (double)maxcbytes * mydollytab->hostnr / td);
-	}
+        fprintf(logfd, "Time: %lu.%03lu\n", td / 1000000, td % 1000000);
+        fprintf(logfd, "MBytes/s: %0.3f\n", (double)maxbytes / td);
+        fprintf(logfd, "Aggregate MBytes/s: %0.3f\n",
+        (double)maxbytes * mydollytab->hostnr / td);
+        if(maxcbytes != 0) {
+          fprintf(logfd, "Bytes written on each node: %llu\n", maxcbytes);
+          fprintf(logfd, "MBytes/s written: %0.3f\n",
+            (double)maxcbytes / td);
+          fprintf(logfd, "Aggregate MBytes/s written: %0.3f\n",
+            (double)maxcbytes * mydollytab->hostnr / td);
+        }
       } else {
-	fprintf(logfd, "%4lu.%06lu  ", td / 1000000, td % 1000000);
-	fprintf(logfd, "%4.6f  ", (double)maxbytes / td);
-	fprintf(logfd, "%4.6f  ",
-		(double)maxbytes * mydollytab->hostnr / td);
-	if(maxcbytes != 0) {
-	  fprintf(logfd, "Bytes written on each node: %llu\n", maxcbytes);
-	  fprintf(logfd, "MBytes/s written: %0.3f\n",
-		  (double)maxcbytes / td);
-	  fprintf(logfd, "Aggregate MBytes/s written: %0.3f\n",
-		  (double)maxcbytes * mydollytab->hostnr / td);
-	}
-	fprintf(logfd, "\n");
+        fprintf(logfd, "%4lu.%06lu  ", td / 1000000, td % 1000000);
+        fprintf(logfd, "%4.6f  ", (double)maxbytes / td);
+        fprintf(logfd, "%4.6f  ",
+          (double)maxbytes * mydollytab->hostnr / td);
+        if(maxcbytes != 0) {
+          fprintf(logfd, "Bytes written on each node: %llu\n", maxcbytes);
+          fprintf(logfd, "MBytes/s written: %0.3f\n",
+            (double)maxcbytes / td);
+          fprintf(logfd, "Aggregate MBytes/s written: %0.3f\n",
+            (double)maxcbytes * mydollytab->hostnr / td);
+        }
+        fprintf(logfd, "\n");
       }
       fclose(logfd);
     }
-    
   } else if(!mydollytab->melast) {
     /* All clients except the last just transfer 8 bytes in the backflow */
     unsigned long long ll;
@@ -1240,10 +1238,6 @@ static void transmit(struct dollytab * mydollytab) {
     fprintf(stderr, "Transmitted.\n");
   }
   free(buf_addr);
-  if(maxbytes == 0) {
-    exitloop = 1;
-  }
-  
 }
 
 static void usage(void) {
@@ -1343,7 +1337,7 @@ int main(int argc, char *argv[]) {
       maxcbytes = atoi(optarg);
       break;
     case 'b':
-      t_b_size = atoi(optarg);
+      mydollytab->t_b_size = atoi(optarg);
       break;
     case 'u':
       buffer_size = atoi(optarg);
@@ -1599,43 +1593,39 @@ int main(int argc, char *argv[]) {
       stdtty = stderr;
     }
 
-  do {
-    if(mydollytab->flag_v) {
-      fprintf(stderr, "\nTrying to build ring...\n");
-    }
-    
-    alarm(timeout);
+  if(mydollytab->flag_v) {
+    fprintf(stderr, "\nTrying to build ring...\n");
+  }
+  
+  alarm(timeout);
 
-    buildring(mydollytab);
-    
-    if(mydollytab->meserver) {
-      fprintf(stdtty, "Server: Sending data...\n");
-    } else {    
-      if(mydollytab->flag_v) {
-        fprintf(stdtty, "Receiving...\n");
-      }
-    }
-
-    if(!exitloop) {
-      transmit(mydollytab);
-    }
-    /* remove the generated dollytab */
-    if(generated_dolly) {
-      unlink(dollytab);
-    }
-    close(datain[0]);
-    close(ctrlin);
-    close(datasock);
-    close(ctrlsock);
-    for(i = 0; i < mydollytab->nr_childs; i++) {
-      close(ctrlout[i]);
-      close(dataout[i]);
-    }
+  buildring(mydollytab);
+  
+  if(mydollytab->meserver) {
+    fprintf(stdtty, "Server: Sending data...\n");
+  } else {    
     if(mydollytab->flag_v) {
-      fprintf(stderr, "\n");
+      fprintf(stdtty, "Receiving...\n");
     }
-  } while (!mydollytab->meserver  && !exitloop);
- 
+  }
+
+  transmit(mydollytab);
+  /* remove the generated dollytab */
+  if(generated_dolly) {
+    unlink(dollytab);
+  }
+  close(datain[0]);
+  close(ctrlin);
+  close(datasock);
+  close(ctrlsock);
+  for(i = 0; i < mydollytab->nr_childs; i++) {
+    close(ctrlout[i]);
+    close(dataout[i]);
+  }
+  if(mydollytab->flag_v) {
+    fprintf(stderr, "\n");
+  }
+
   fclose(stdtty);
   free(mydollytab);
  

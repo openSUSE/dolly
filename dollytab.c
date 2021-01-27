@@ -25,6 +25,7 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->resolve = 0;
   mdt->dollybufsize = 0;
   mdt->segsize = 0;
+  mdt->t_b_size = 4096;
   mdt->hostring = NULL;
 }
 
@@ -460,7 +461,7 @@ void getparams(int f,struct dollytab * mydollytab) {
     fprintf(stderr, "Trying to read parameters...");
     fflush(stderr);
   }
-  mydollytab->dollybuf = (char *)malloc(T_B_SIZE);
+  mydollytab->dollybuf = (char *)malloc(mydollytab->t_b_size);
   if(mydollytab->dollybuf == NULL) {
     fprintf(stderr, "Couldn't get memory for dollybuf.\n");
     exit(1);
@@ -468,11 +469,11 @@ void getparams(int f,struct dollytab * mydollytab) {
 
   readsize = 0;
   do {
-    ret = read(f, mydollytab->dollybuf + readsize, T_B_SIZE);
+    ret = read(f, mydollytab->dollybuf + readsize, mydollytab->t_b_size);
     if(ret == -1) {
       perror("read in getparams while");
       exit(1);
-    } else if((unsigned int) ret == T_B_SIZE) {  /* This will probably not happen... */
+    } else if((unsigned int) ret == mydollytab->t_b_size) {  /* This will probably not happen... */
       fprintf(stderr, "Ups, the transmitted config-file seems to long.\n"
 	      "Please rewrite dolly.\n");
       exit(1);
