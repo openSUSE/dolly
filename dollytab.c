@@ -363,7 +363,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
       str[strlen(str)-1] = '\0';
     }
     mydollytab->hostring[i] = (char *)malloc(strlen(str)+1);
-    strncpy(mydollytab->hostring[i], str,strlen(str));
+    strcpy(mydollytab->hostring[i], str);
 
     /* Try to find next host in ring */
     /* if(strncmp(mydollytab->hostring[i], mydollytab->myhostname, strlen(mydollytab->myhostname)) == 0) { */
@@ -396,21 +396,25 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     if(me == -2) {
        mname = getenv("MYNODENAME");
        if(mname != NULL) {
-         strncpy(mydollytab->myhostname,mname,strlen(mname));
-          (void)fprintf(stderr,
-            "\nAssigned nodename %s from MYNODENAME environment variable\n",
-            mydollytab->myhostname);
-         me = i;
+          if(strcmp(mydollytab->hostring[i],mname) == 0) {
+            strncpy(mydollytab->myhostname,mname,strlen(mname));
+            me = i;
+            if(i == mydollytab->hostnr-1) {
+             mydollytab->melast = 1;
+            }
+          }
        }
     }
     if(me == -2) {
        mname = getenv("HOST");
        if(mname != NULL) {
-         strncpy(mydollytab->myhostname,mname,strlen(mname));
-          (void)fprintf(stderr,
-            "\nAssigned nodename %s from HOST environment variable\n",
-            mydollytab->myhostname);
-         me = i;
+          if(strcmp(mydollytab->hostring[i],mname) == 0) {
+            strncpy(mydollytab->myhostname,mname,strlen(mname));
+            me = i;
+            if(i == mydollytab->hostnr-1) {
+             mydollytab->melast = 1;
+            }
+          }
        }
     }
   }

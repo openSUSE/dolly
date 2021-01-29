@@ -1483,7 +1483,6 @@ int main(int argc, char *argv[]) {
       }
       nr_hosts++;
       mydollytab->hostnr = nr_hosts;
-      fprintf(stderr,"getting memory for hostring\n");
       mydollytab->hostring = (char**) malloc(nr_hosts * sizeof(char *));
       /* now find the first host */
       host_str = strtok(a_str,host_delim);
@@ -1506,6 +1505,7 @@ int main(int argc, char *argv[]) {
           strncpy(mydollytab->hostring[nr_hosts], ip_addr,strlen(ip_addr));
           free(ip_addr);
         }
+        fprintf(stderr,"host_str: '%s' dollytab->hostring[%lu]: '%s'\n",host_str,nr_hosts,mydollytab->hostring[nr_hosts]);
         host_str = strtok(NULL,host_delim);
         if(strcmp(mydollytab->hostring[nr_hosts], mydollytab->myhostname) == 0) {
           me = nr_hosts;
@@ -1629,6 +1629,7 @@ int main(int argc, char *argv[]) {
       fprintf(df,"clients %i\n",mydollytab->hostnr);
       for(i = 0; i < mydollytab->hostnr; i++) {
         fprintf(df,"%s\n",mydollytab->hostring[i]);
+        fprintf(stderr,"writing '%s'\n'",mydollytab->hostring[i]);
       }
       fprintf(df,"endconfig\n");
       fclose(df);
