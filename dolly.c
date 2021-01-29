@@ -2035,6 +2035,8 @@ static void transmit(void)
 static void usage(void)
 {
   fprintf(stderr, "\n");
+  fprintf(stderr, "Dolly version: %s\n",version_string);
+  fprintf(stderr, "\n");
   fprintf(stderr,
 	  "Usage: dolly [-hVvSsnY] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
 	  "[-o logfile] [-t time] -I [inputfile] -O [outpufile] -H [hostnames]\n");
@@ -2062,13 +2064,12 @@ static void usage(void)
   fprintf(stderr, "\t-h: Print this help and exit\n");
   fprintf(stderr, "\t-q: Suppresss \"ignored signal\" messages\n");
   fprintf(stderr, "\t-V: Print version number and exit\n");
+  fprintf(stderr, "\n");
   fprintf(stderr, "\tFollowing options can be used instead of a dollytab and\n");
-  fprintf(stderr, "\timply the -S or -s option which must me prceeded.\n");
+  fprintf(stderr, "\timply the [-S] or [-s] option which must me preceded.\n");
   fprintf(stderr, "\t-H: comma seperated list of the hosts to send to\n");
   fprintf(stderr, "\t-I: input file\n");
   fprintf(stderr, "\t-O: output file (just - for output to stdout)\n");
-  fprintf(stderr, "version: %s\n",version_string);
-  fprintf(stderr, "\nDolly was part of the ETH Patagonia cluster project, ");
   fprintf(stderr, "\n");
   exit(1);
 }
