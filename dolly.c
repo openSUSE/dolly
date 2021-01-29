@@ -1,23 +1,18 @@
 #include "dolly.h"
 
-static FILE *stdtty;           /* file pointer to the standard terminal tty */
+FILE *stdtty;           /* file pointer to the standard terminal tty */
 
-
-/* Clients need the ports before they can listen, so we use defaults. */
-static unsigned int dataport = 9998;
-static unsigned int ctrlport = 9997;
 
 /* File descriptors for file I/O */
-static int input = -1, output = -1;
+int input = -1, output = -1;
 
 
 /* Numbers for splitted input/output files */
-static unsigned int input_nr = 0, output_nr = 0;
+unsigned int input_nr = 0, output_nr = 0;
 
 
 /* size of buffers for TCP sockets (approx. 100KB, multiple of 4 KB) */
-static int buffer_size = 98304;
-#define SCKBUFSIZE buffer_size
+unsigned int buffer_size = 98304;
 
 
 /* Normal sockets for data transfer */
@@ -28,29 +23,28 @@ int datasock = -1;
 int ctrlin = -1, ctrlout[MAXFANOUT];
 int ctrlsock = -1;
 
-static unsigned long long maxbytes = 0; /* max bytes to transfer */
-static unsigned long long maxcbytes = 0;/*     --  "  --  in compressed mode */
-static int dosync = 1;                  /* sync() after transfer */
-static int timeout = 0;                 /* Timeout for startup */
-static int verbignoresignals = 1;       /* warn on ignore signal errors */
+unsigned long long maxbytes = 0; /* max bytes to transfer */
+unsigned long long maxcbytes = 0;/*     --  "  --  in compressed mode */
+int dosync = 1;                  /* sync() after transfer */
+int timeout = 0;                 /* Timeout for startup */
+int verbignoresignals = 1;       /* warn on ignore signal errors */
 
-static int max_retries = 10;
-static char dollytab[256];
+int max_retries = 10;
+char dollytab[256];
 
 
 
-static int flag_log = 0;
-static char logfile[256] = "";
+int flag_log = 0;
+char logfile[256] = "";
 
-const char* host_delim = ",";
 
 /* Pipe descriptor in case data must be uncompressed before write */
-static int pd[2];
+int pd[2];
 /* Pipe descriptor in case input data must be compressed */
-static int id[2]; 
+int id[2]; 
 
 /* PIDs of child processes */
-static int in_child_pid = 0, out_child_pid = 0;
+int in_child_pid = 0, out_child_pid = 0;
 
 
 /* Handles timeouts by terminating the program. */
@@ -235,6 +229,7 @@ static void open_insocks(struct dollytab * mydollytab) {
     perror("listen input control socket");
     exit(1);
   }
+  free(drcvbuf);
 }
 
 static void open_outsocks(struct dollytab * mydollytab) {
@@ -242,9 +237,9 @@ static void open_outsocks(struct dollytab * mydollytab) {
   struct sockaddr_in addrdata, addrctrl;
   int ret;
   int dataok = 0, ctrlok = 0, retry_count = 0;
-  int i;
+  unsigned int i;
   int optval;
-  int max;
+  unsigned int max = 0;
   char hn[256+32];
   char *dsndbuf = NULL;
   int send_size, sizeofint = sizeof(int);
