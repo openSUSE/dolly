@@ -24,14 +24,19 @@ static const char version_string[] = "0.62, 28-JAN-2020";
 #include <signal.h>
 
 #include "dollytab.h"
+#include "transmit.h"
 
 #define DOLLY_NONBLOCK 1                 /* Use nonblocking network sockets */
+#define WRITE 1
+#define READ 2
+
 extern FILE *stdtty;           /* file pointer to the standard terminal tty */
 
 
 /* Clients need the ports before they can listen, so we use defaults. */
-const unsigned int dataport = 9998;
-const unsigned int ctrlport = 9997;
+extern const unsigned int dataport;
+extern const unsigned int ctrlport;
+extern const char* host_delim;
 
 /* File descriptors for file I/O */
 extern int input, output;
@@ -65,7 +70,6 @@ extern char dollytab[256];
 extern int flag_log;
 extern char logfile[256];
 
-const char* host_delim = ",";
 
 /* Pipe descriptor in case data must be uncompressed before write */
 extern int pd[2];
