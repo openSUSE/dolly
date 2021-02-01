@@ -1,6 +1,6 @@
 CXX = g++
 CC = gcc
-CFLAGS = -std=gnu11 -s -O0
+CFLAGS = -std=gnu11 -s -O -fstack-protector-strong
 WARNINGS = -Werror -Wall -Wextra -pedantic-errors 
 LDFLAGS =
 LIBRARIES =

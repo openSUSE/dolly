@@ -21,6 +21,8 @@ unsigned int input_nr = 0, output_nr = 0;
 
 /* size of buffers for TCP sockets (approx. 100KB, multiple of 4 KB) */
 unsigned int buffer_size = 98304;
+/* buffer for setsockopt */
+char *dsndbuf = NULL;
 
 
 /* Normal sockets for data transfer */
@@ -249,7 +251,6 @@ static void open_outsocks(struct dollytab * mydollytab) {
   int optval;
   unsigned int max = 0;
   char hn[256+32];
-  char *dsndbuf = NULL;
   int send_size, sizeofint = sizeof(int);
 
   if(mydollytab->nr_childs > 1) {
@@ -289,17 +290,17 @@ static void open_outsocks(struct dollytab * mydollytab) {
       assert(i < 1);
       
       if(mydollytab->add_mode == 1) {
-	strcpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]]);
-	strcat(hn, mydollytab->add_name[0]);
+        strcpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]]);
+        strcat(hn, mydollytab->add_name[0]);
       } else if(mydollytab->add_mode == 2) {
-	int j = 0;
-	while(!isdigit(mydollytab->hostring[mydollytab->nexthosts[0]][j])) {
-	  hn[j] = mydollytab->hostring[mydollytab->nexthosts[0]][j];
-	  j++;
-	}
-	hn[j] = 0;
-	strcat(hn, mydollytab->add_name[0]);
-	strcat(hn, &mydollytab->hostring[mydollytab->nexthosts[0]][j]);
+        int j = 0;
+        while(!isdigit(mydollytab->hostring[mydollytab->nexthosts[0]][j])) {
+          hn[j] = mydollytab->hostring[mydollytab->nexthosts[0]][j];
+          j++;
+        }
+        hn[j] = 0;
+        strcat(hn, mydollytab->add_name[0]);
+        strcat(hn, &mydollytab->hostring[mydollytab->nexthosts[0]][j]);
       } else {
         fprintf(stderr, "Undefined add_mode %d!\n", mydollytab->add_mode);
         exit(1);
@@ -352,7 +353,7 @@ static void open_outsocks(struct dollytab * mydollytab) {
         	    &optval, sizeof(int)) < 0) {
         (void) fprintf(stderr,"setsockopt: TCP_NODELAY failed! errno = %d\n",
 		       errno);
-        // exit(1);
+        exit(1);
       }
 
       if(mydollytab->segsize > 0) {
@@ -362,7 +363,7 @@ static void open_outsocks(struct dollytab * mydollytab) {
 		      &mydollytab->segsize, sizeof(int)) < 0) {
 	  (void) fprintf(stderr, "setsockopt: TCP_MAXSEG failed! errno = %d\n", 
 			 errno);
-	  // exit(1);
+      exit(1);
 	}
       }
       
@@ -375,14 +376,10 @@ static void open_outsocks(struct dollytab * mydollytab) {
           perror("Error creating buffer for input data socket");
           exit(1);
         }
-        if(setsockopt(dataout[i], SOL_SOCKET, SO_SNDBUF, &dsndbuf,
-                SCKBUFSIZE) < 0)
-          {
-            (void) fprintf(stderr,
-               "setsockopt: SO_SNDBUF failed! errno = %d\n",
-               errno);
+        if(setsockopt(dataout[i], SOL_SOCKET, SO_SNDBUF,&(int){1}, SCKBUFSIZE) < 0) {
+            (void) fprintf(stderr, "setsockopt: SO_SNDBUF failed! errno = %d\n", errno);
             exit(556);
-          }
+        }
         getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF,
              (char *) &send_size, (void *) &sizeofint);
         fprintf(stderr, "Send buffer %d is %d bytes\n", i, send_size);
@@ -856,8 +853,8 @@ int main(int argc, char *argv[]) {
       /* check if have to resolve the hostnames */
       while(host_str != NULL) {
         if(mydollytab->resolve == 0 && 
-           inet_pton(AF_INET,host_str,&(sock_address.sin_addr)) == 0 &&
-           inet_pton(AF_INET6,host_str,&(sock_address.sin_addr)) == 0) {
+           inet_pton(AF_INET,host_str,&(sock_address.sin_addr)) == 1 &&
+           inet_pton(AF_INET6,host_str,&(sock_address.sin_addr)) == 1) {
           mydollytab->hostring[nr_hosts] = (char *)malloc(strlen(host_str)+1);
           strncpy(mydollytab->hostring[nr_hosts], host_str,strlen(host_str));
         } else { 
@@ -868,7 +865,11 @@ int main(int argc, char *argv[]) {
             exit(1);
           }
           mydollytab->hostring[nr_hosts] = (char *)malloc(strlen(ip_addr)+1);
-          strncpy(mydollytab->hostring[nr_hosts], ip_addr,strlen(ip_addr));
+          if(!mydollytab->hostring[nr_hosts]) {
+            fprintf(stderr,"Could not get memory for hostring!\n");
+            exit(1);
+          }
+          strcpy(mydollytab->hostring[nr_hosts],ip_addr);
           free(ip_addr);
         }
         fprintf(stderr,"host_str: '%s' dollytab->hostring[%lu]: '%s'\n",host_str,nr_hosts,mydollytab->hostring[nr_hosts]);
@@ -1047,7 +1048,13 @@ int main(int argc, char *argv[]) {
   }
 
   fclose(stdtty);
+  for(i = 0; i < mydollytab->hostnr; i++) {
+    free(mydollytab->hostring[i]);
+  }
+  free(mydollytab->dollybuf);
+  free(mydollytab->hostring);
   free(mydollytab);
+  free(dsndbuf);
  
   exit(0);
 }
