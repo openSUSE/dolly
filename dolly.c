@@ -121,7 +121,7 @@ static const char version_string[] = "0.60, 11-SEPT-2019";
 #define MAXFANOUT 8
 
 /* Size of blocks transf. to/from net/disk and one less than that */
-static int t_b_size = 4096;
+static unsigned int t_b_size = 4096;
 #define T_B_SIZE   t_b_size
 #define T_B_SIZEM1 (T_B_SIZE - 1)
 
@@ -221,7 +221,7 @@ static int id[2];
 static int in_child_pid = 0, out_child_pid = 0;
 
 /* Handles timeouts by terminating the program. */
-static void alarm_handler(int arg)
+static void alarm_handler()
 {
   fprintf(stderr, "Timeout reached (was set to %d seconds).\nTerminating.\n",
 	  timeout);
@@ -236,7 +236,7 @@ static void parse_dollytab(FILE *df)
   unsigned int i;
   int me = -2;
   int hadmynodename = 0; /* Did this node already get its node name? */
-  char *mnname = NULL;
+  char *mnname = getenv("MYNODENAME");
 
   /* Read the parameters... */
   
@@ -244,7 +244,7 @@ static void parse_dollytab(FILE *df)
      won't be a line like this on the server node, but there should always
      be a first line of some kind
   */
-  mnname = getenv("MYNODENAME");
+//  mnname = getenv("MYNODENAME");
   if(mnname != NULL) {
     (void)strcpy(myhostname, mnname);
     (void)fprintf(stderr,
@@ -338,9 +338,9 @@ static void parse_dollytab(FILE *df)
 	s++;
       }
       switch(*s) {
-      case 'T': size *= 1024LL;
-      case 'G': size *= 1024LL;
-      case 'M': size *= 1024LL;
+      case 'T': size *= 1024LL; break;
+      case 'G': size *= 1024LL; break;
+      case 'M': size *= 1024LL; break;
       case 'k': size *= 1024LL; break;
       default:
 	fprintf(stderr, "Unknown multiplier '%c' for split size.\n", *s);
@@ -398,7 +398,7 @@ static void parse_dollytab(FILE *df)
   /* Form of the line: add <nr_extra_interfaces>:<postfix>{:<postfix>} */
   if((strncmp("add ", str, 4) == 0) || (strncmp("add2 ", str, 5) == 0)) {
     char *s1, *s2;
-    int max = 0, i;
+    int max = 0; //, i;
 
     if(strncmp("add ", str, 4) == 0) {
       add_mode = 1;
@@ -442,7 +442,7 @@ static void parse_dollytab(FILE *df)
       *s2 = 0;
       strcpy(add_name[0], s1);
     } else {
-      for(i = 0; i < max; i++) {
+      for(int i = 0; i < max; i++) {
 	s1 = s2 + 1;
 	s2++;
 	while((*s2 != ':' && *s2 != '\n' && *s2 != 0)) s2++;
@@ -590,7 +590,7 @@ static void parse_dollytab(FILE *df)
   }
   hostnr = atoi(str+8);
   if((hostnr < 1) || (hostnr > 10000)) {
-    fprintf(stderr, "I think %d numbers of hosts doesn't make much sense.\n",
+    fprintf(stderr, "I think %u numbers of hosts doesn't make much sense.\n",
 	    hostnr);
     exit(1);
   }
@@ -598,7 +598,7 @@ static void parse_dollytab(FILE *df)
   for(i = 0; i < hostnr; i++) {
     if(fgets(str, 256, df) == NULL) {
       char errstr[256];
-      sprintf(errstr, "gets for host %d", i);
+      sprintf(errstr, "gets for host %u", i);
       perror(errstr);
       exit(1);
     }
@@ -630,14 +630,14 @@ static void parse_dollytab(FILE *df)
   /* Build up topology */
   nr_childs = 0;
   
-  for(i = 0; i < fanout; i++) {
+  for(int i = 0; i < fanout; i++) {
     if(meserver) {
-      if(i + 1 <= hostnr) {
+      if((unsigned int)i + 1 <= hostnr) {
 	nexthosts[i] = i;
 	nr_childs++;
       }
     } else {
-      if((me + 1) * fanout + 1 + i <= hostnr) {
+      if((me + 1) * fanout + 1 + (unsigned int)i <= hostnr) {
 	nexthosts[i] = (me + 1) * fanout + i;
 	nr_childs++;
       }
@@ -804,7 +804,7 @@ static void print_params(void)
   fprintf(stderr, "server = '%s'\n", servername);
   fprintf(stderr, "I'm %sthe server.\n", (meserver ? "" : "not "));
   fprintf(stderr, "I'm %sthe last host.\n", (melast ? "" : "not "));
-  fprintf(stderr, "There are %d hosts in the ring (excluding server):\n",
+  fprintf(stderr, "There are %u hosts in the ring (excluding server):\n",
 	  hostnr);
   for(i = 0; i < hostnr; i++) {
     fprintf(stderr, "\t'%s'\n", hostring[i]);
@@ -932,7 +932,7 @@ static void open_outsocks(void)
   struct hostent *hent;
   struct sockaddr_in addrdata, addrctrl;
   int ret;
-  int dataok = 0, ctrlok = 0;
+  int dataok =0, ctrlok = 0;
   int i;
   int optval;
   int max;
@@ -1017,7 +1017,7 @@ static void open_outsocks(void)
     }
     
     /* Wait until we connected to everything... */
-    dataok  = ctrlok = 0;
+    //dataok  = ctrlok = 0;
     dsndbuf = NULL;
     do {
       dataout[i] = socket(PF_INET, SOCK_STREAM, 0);
@@ -1164,7 +1164,7 @@ static int open_infile(int try_hard)
     }
   }
   if(input_split != 0) {
-    sprintf(name, "%s_%d", infile, input_nr);
+    sprintf(name, "%s_%u", infile, input_nr);
   } else {
     strcpy(name, infile);
   }
@@ -1239,7 +1239,7 @@ static int open_outfile(int try_hard)
     }
   }
   if(output_split != 0) {
-    sprintf(name, "%s_%d", outfile, output_nr);
+    sprintf(name, "%s_%u", outfile, output_nr);
   } else {
     strcpy(name, outfile);
   }
@@ -1476,7 +1476,7 @@ static void buildring(void)
   if(meserver) {
     char buf[T_B_SIZE];
     size_t readsize;
-    int fd, ret, maxsetnr = -1;
+    int fd, maxsetnr = -1; // ret
     fd_set real_set, cur_set;
     
     /* Send out dollytab */
@@ -1515,7 +1515,7 @@ static void buildring(void)
     maxsetnr++;
     do {
       cur_set = real_set;
-      ret = select(maxsetnr, &cur_set, NULL, NULL, NULL);
+      int ret = select(maxsetnr, &cur_set, NULL, NULL, NULL);
       if(ret == -1) {
 	perror("select in buildring()\n");
 	exit(1);
@@ -1543,7 +1543,7 @@ static void buildring(void)
 	      p++;
 	    }
 	    fprintf(stderr,
-		    "Machines left to wait for: %d\n", hostnr - ready_mach);
+		    "Machines left to wait for: %u\n", hostnr - ready_mach);
 	  }
 	}
       } /* For all childs */
@@ -1684,13 +1684,13 @@ static void transmit(void)
 	  }
 	  if(add_nr == 0) {
 	    for(i = 0; i < nr_childs; i++) {
-	      (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
+	      (void)fprintf(stderr, "Writing maxbytes = %llu to ctrlout\n",
 			    maxbytes);
 	      movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8);
 	      shutdown(dataout[i], 2);
 	    }
 	  } else {
-	    (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
+	    (void)fprintf(stderr, "Writing maxbytes = %llu to ctrlout\n",
 			  maxbytes);
 	    movebytes(ctrlout[0], WRITE, (char *)&maxbytes, 8);
 	    for(i = 0; i <= add_nr; i++) {
@@ -1722,7 +1722,7 @@ static void transmit(void)
       /*
        * Client part
        */
-      unsigned int i, nr_descr;
+      //unsigned int i; //, nr_descr;
       cur_set = real_set;
       ret = select(maxsetnr, &cur_set, NULL, NULL, NULL);
       if(ret == -1) {
@@ -1744,8 +1744,8 @@ static void transmit(void)
 	}
       }
       else {
-	nr_descr = ret;
-	for(i = 0; i < nr_descr; i++) {
+	int nr_descr = ret;
+	for(unsigned int i = 0; i < nr_descr; i++) {
 	  if(FD_ISSET(ctrlin, &cur_set)) {
 	    char mybuf[128];
 
@@ -1843,15 +1843,15 @@ static void transmit(void)
 	      for(i = 0; i < maxsetnr; i++) {
 		if(FD_ISSET(i, &cur_set)) {
 		  int j;
-		  fprintf(stderr, "  file descriptor %d is set.\n", i);
+		  fprintf(stderr, "  file descriptor %u is set.\n", i);
 		  for(j = 0; j < nr_childs; j++) {
 		    if(FD_ISSET(ctrlout[j], &cur_set)) {
-		      fprintf(stderr, "  (fd %d = ctrlout[%d])\n", i, j);
+		      fprintf(stderr, "  (fd %u = ctrlout[%d])\n", i, j);
 		    }
 		  }
 		  for(j = 0; j <= add_nr; j++) {
 		    if(FD_ISSET(datain[j], &cur_set)) {
-		      fprintf(stderr, "  (fd %d = datain[%d])\n", i, j);
+		      fprintf(stderr, "  (fd %u = datain[%d])\n", i, j);
 		    }
 		  }
 		}
@@ -1924,9 +1924,9 @@ static void transmit(void)
 	fprintf(logfd, "Server : '%s'\n", myhostname);
 	fprintf(logfd, "Fanout = %d\n", fanout);
 	fprintf(logfd, "Nr of childs = %d\n", nr_childs);
-	fprintf(logfd, "Nr of hosts = %d\n", hostnr);
+	fprintf(logfd, "Nr of hosts = %u\n", hostnr);
       } else {
-	fprintf(logfd, " %8d", hostnr);
+	fprintf(logfd, " %u", hostnr);
       }
       //fprintf(logfd, "server = '%s'\n", servername);
       //fprintf(logfd, "I'm %sthe server.\n", (meserver ? "" : "not "));
@@ -2076,17 +2076,17 @@ static void usage(void)
 
 int main(int argc, char *argv[])
 {
-  int c, i;
+  int i; // c
   int flag_f = 0, flag_cargs = 0, generated_dolly = 0, me = -2;
   FILE *df;
   char *mnname = NULL, *tmp_str, *host_str, *a_str, *sp;
   size_t nr_hosts = 0;
-  int fd;
+//  int fd;
 
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "f:c:b:u:vqo:Sshndt:a:V:I:O:Y:H:");
+    int c = getopt(argc, argv, "f:c:b:u:vqo:Sshndt:a:V:I:O:Y:H:");
     if(c == -1) break;
     
     switch(c) {
@@ -2325,7 +2325,7 @@ int main(int argc, char *argv[])
     if(strlen(dollytab) == 0) {
       generated_dolly = 1;
       strcpy(dollytab,"/tmp/dollygenXXXXXX");
-      fd = mkstemp(dollytab);
+      int fd = mkstemp(dollytab);
       df = fdopen(fd,"w");
       if(df == NULL) {
         printf("Could not open temporary dollytab");
@@ -2335,7 +2335,7 @@ int main(int argc, char *argv[])
       fprintf(df,"server %s\n",myhostname);
       fprintf(df,"firstclient %s\n",hostring[0]);
       fprintf(df,"lastclient %s\n",hostring[nr_hosts-1]);
-      fprintf(df,"clients %i\n",hostnr);
+      fprintf(df,"clients %u\n",hostnr);
       for(int i = 0; i < hostnr; i++) {
         fprintf(df,"%s\n",hostring[i]);
       }

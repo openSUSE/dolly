@@ -1,6 +1,6 @@
-VERSION=0.59
+VERSION=0.60
 CC=gcc
-CFLAGS=-Wall -ggdb -O2
+CFLAGS=-Wall -ggdb -O0 -Wextra -pedantic-errors
 
 all: dolly
 
