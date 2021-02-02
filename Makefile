@@ -1,8 +1,8 @@
 CXX = g++
 CC = gcc
-CFLAGS = -std=gnu11 -s -O -fstack-protector-strong
+CFLAGS = -std=gnu11 -s -O -fstack-protector-strong  -fPIE
 WARNINGS = -Werror -Wall -Wextra -pedantic-errors 
-LDFLAGS =
+LDFLAGS = -fpie
 LIBRARIES =
 BUILD_DIR = ./build
 SOURCES = $(wildcard *.c)
