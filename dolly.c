@@ -188,12 +188,14 @@ static void open_insocks(struct dollytab * mydollytab) {
      taken from NETPIPE. */
   /* Attempt to set input BUFFER sizes */
   if(mydollytab->flag_v) { fprintf(stderr, "Buffer size: %d\n", SCKBUFSIZE); }
+  /*
   drcvbuf = malloc(SCKBUFSIZE);
   if(drcvbuf == NULL) {
     perror("Error creating buffer for input data socket");
     exit(1);
   }
-  if(setsockopt(datasock, SOL_SOCKET, SO_RCVBUF, &drcvbuf, SCKBUFSIZE) < 0) {
+  */
+  if(setsockopt(datasock, SOL_SOCKET, SO_RCVBUF, &SCKBUFSIZE,sizeof(SCKBUFSIZE)) < 0) {
     (void) fprintf(stderr, "setsockopt: SO_RCVBUF failed! errno = %d\n",
 		   errno);
     exit(556);
@@ -370,22 +372,22 @@ static void open_outsocks(struct dollytab * mydollytab) {
       /* MATHOG, set a large buffer for the data socket, this section is
      	 taken from NETPIPE */
       /* Attempt to set output BUFFER sizes */
-      if(dsndbuf == NULL){
-        dsndbuf = malloc(SCKBUFSIZE);/* Note it may reallocate, which is ok */
-        if(dsndbuf == NULL){
-          perror("Error creating buffer for input data socket");
-          exit(1);
-        }
-        if(setsockopt(dataout[i], SOL_SOCKET, SO_SNDBUF,&(int){1}, SCKBUFSIZE) < 0) {
+      //if(dsndbuf == NULL){
+      //  dsndbuf = malloc(SCKBUFSIZE);/* Note it may reallocate, which is ok */
+      //  if(dsndbuf == NULL){
+      //    perror("Error creating buffer for input data socket");
+      //    exit(1);
+      //  }
+        if(setsockopt(dataout[i], SOL_SOCKET, SO_SNDBUF,&SCKBUFSIZE,sizeof(SCKBUFSIZE)) < 0) {
             (void) fprintf(stderr, "setsockopt: SO_SNDBUF failed! errno = %d\n", errno);
             exit(556);
         }
         getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF,
              (char *) &send_size, (void *) &sizeofint);
         fprintf(stderr, "Send buffer %d is %d bytes\n", i, send_size);
-      }
+      //}
 
-      /* Setup data port */
+      ///* Setup data port */
       addrdata.sin_family = hent->h_addrtype;
       addrdata.sin_port = htons(dataport);
       bcopy(hent->h_addr, &addrdata.sin_addr, hent->h_length);
