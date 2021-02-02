@@ -1,6 +1,6 @@
 #ifndef DOLLY_H
 #define DOLLY_H
-static const char version_string[] = "0.62, 28-JAN-2020";
+static const char version_string[] = "0.63, 2-FEB-2020";
 
 #include <unistd.h>
 #include <stdio.h>
