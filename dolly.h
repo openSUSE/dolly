@@ -47,7 +47,6 @@ extern unsigned int input_nr, output_nr;
 
 /* size of buffers for TCP sockets (approx. 100KB, multiple of 4 KB) */
 extern unsigned int buffer_size ;
-char *dsndbuf;
 
 #define SCKBUFSIZE buffer_size
 /* Normal sockets for data transfer */

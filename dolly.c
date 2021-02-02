@@ -21,8 +21,6 @@ unsigned int input_nr = 0, output_nr = 0;
 
 /* size of buffers for TCP sockets (approx. 100KB, multiple of 4 KB) */
 unsigned int buffer_size = 98304;
-/* buffer for setsockopt */
-char *dsndbuf = NULL;
 
 
 /* Normal sockets for data transfer */
@@ -149,7 +147,6 @@ static void print_params(struct dollytab* mydollytab) {
 static void open_insocks(struct dollytab * mydollytab) {
   struct sockaddr_in addr;
   int optval;
-  char *drcvbuf = NULL;
   int recv_size, sizeofint = sizeof(int);
   
   /* All machines have an incoming data link */
@@ -184,17 +181,8 @@ static void open_insocks(struct dollytab * mydollytab) {
     }
   }
   
-  /* MATHOG, set a large buffer for the data socket, this section is
-     taken from NETPIPE. */
   /* Attempt to set input BUFFER sizes */
   if(mydollytab->flag_v) { fprintf(stderr, "Buffer size: %d\n", SCKBUFSIZE); }
-  /*
-  drcvbuf = malloc(SCKBUFSIZE);
-  if(drcvbuf == NULL) {
-    perror("Error creating buffer for input data socket");
-    exit(1);
-  }
-  */
   if(setsockopt(datasock, SOL_SOCKET, SO_RCVBUF, &SCKBUFSIZE,sizeof(SCKBUFSIZE)) < 0) {
     (void) fprintf(stderr, "setsockopt: SO_RCVBUF failed! errno = %d\n",
 		   errno);
@@ -241,7 +229,6 @@ static void open_insocks(struct dollytab * mydollytab) {
     perror("listen input control socket");
     exit(1);
   }
-  free(drcvbuf);
 }
 
 static void open_outsocks(struct dollytab * mydollytab) {
@@ -333,7 +320,6 @@ static void open_outsocks(struct dollytab * mydollytab) {
     
     /* Wait until we connected to everything... */
     dataok  = ctrlok = 0;
-    dsndbuf = NULL;
     do {
       dataout[i] = socket(PF_INET, SOCK_STREAM, 0);
       if(dataout[i] == -1) {
@@ -368,24 +354,13 @@ static void open_outsocks(struct dollytab * mydollytab) {
       exit(1);
 	}
       }
-      
-      /* MATHOG, set a large buffer for the data socket, this section is
-     	 taken from NETPIPE */
-      /* Attempt to set output BUFFER sizes */
-      //if(dsndbuf == NULL){
-      //  dsndbuf = malloc(SCKBUFSIZE);/* Note it may reallocate, which is ok */
-      //  if(dsndbuf == NULL){
-      //    perror("Error creating buffer for input data socket");
-      //    exit(1);
-      //  }
-        if(setsockopt(dataout[i], SOL_SOCKET, SO_SNDBUF,&SCKBUFSIZE,sizeof(SCKBUFSIZE)) < 0) {
-            (void) fprintf(stderr, "setsockopt: SO_SNDBUF failed! errno = %d\n", errno);
-            exit(556);
-        }
-        getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF,
-             (char *) &send_size, (void *) &sizeofint);
-        fprintf(stderr, "Send buffer %d is %d bytes\n", i, send_size);
-      //}
+      if(setsockopt(dataout[i], SOL_SOCKET, SO_SNDBUF,&SCKBUFSIZE,sizeof(SCKBUFSIZE)) < 0) {
+          (void) fprintf(stderr, "setsockopt: SO_SNDBUF failed! errno = %d\n", errno);
+          exit(556);
+      }
+      getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF,
+           (char *) &send_size, (void *) &sizeofint);
+      fprintf(stderr, "Send buffer %d is %d bytes\n", i, send_size);
 
       ///* Setup data port */
       addrdata.sin_family = hent->h_addrtype;
@@ -1056,7 +1031,6 @@ int main(int argc, char *argv[]) {
   free(mydollytab->dollybuf);
   free(mydollytab->hostring);
   free(mydollytab);
-  free(dsndbuf);
  
   exit(0);
 }
