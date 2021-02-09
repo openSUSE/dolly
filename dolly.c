@@ -141,7 +141,7 @@ static void print_params(struct dollytab* mydollytab) {
   } else {
     fprintf(stderr, "No compression used.\n");
   }
-  fprintf(stderr, "Using transfer size %d bytes.\n", mydollytab->t_b_size);
+  fprintf(stderr, "Using transfer size %d bytes.\n",(int) mydollytab->t_b_size);
 }
 
 static void open_insocks(struct dollytab * mydollytab) {
