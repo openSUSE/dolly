@@ -849,7 +849,6 @@ int main(int argc, char *argv[]) {
           strcpy(mydollytab->hostring[nr_hosts],ip_addr);
           free(ip_addr);
         }
-        fprintf(stderr,"host_str: '%s' dollytab->hostring[%lu]: '%s'\n",host_str,nr_hosts,mydollytab->hostring[nr_hosts]);
         host_str = strtok(NULL,host_delim);
         if(strcmp(mydollytab->hostring[nr_hosts], mydollytab->myhostname) == 0) {
           me = nr_hosts;

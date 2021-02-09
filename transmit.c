@@ -177,7 +177,7 @@ void transmit(struct dollytab * mydollytab) {
 	    FD_CLR(ctrlin, &cur_set);
 	  } else if(FD_ISSET(datain[0], &cur_set)) {
 	    /* There is data to be read from the net */
-	    bytes = (t >= mydollytab->t_b_size ? mydollytab->t_b_size : t);
+	    bytes = ((ssize_t) t >= mydollytab->t_b_size ? mydollytab->t_b_size : (ssize_t) t);
 	    ret = movebytes(datain[0], READ, buf, bytes,mydollytab);
 	      if(!mydollytab->output_split) {
           movebytes(output, WRITE, buf, ret,mydollytab);
@@ -205,7 +205,7 @@ void transmit(struct dollytab * mydollytab) {
 	    FD_CLR(datain[0], &cur_set);
 	    /* Handle additional network interfaces, if available */
 	    for(a = 1; a <= mydollytab->add_nr; a++) {
-	      bytes = (t >= mydollytab->t_b_size ? mydollytab->t_b_size : t);
+	      bytes = ((ssize_t)t >= mydollytab->t_b_size ? mydollytab->t_b_size :(ssize_t) t);
 	      ret = movebytes(datain[a], READ, buf, bytes,mydollytab);
         movebytes(output, WRITE, buf, ret,mydollytab);
 	      if(!mydollytab->melast) {

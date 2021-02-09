@@ -497,7 +497,7 @@ void getparams(int f,struct dollytab * mydollytab) {
     if(ret == -1) {
       perror("read in getparams while");
       exit(1);
-    } else if((unsigned int) ret == mydollytab->t_b_size) {  /* This will probably not happen... */
+    } else if((ssize_t) ret == mydollytab->t_b_size) {  /* This will probably not happen... */
       fprintf(stderr, "Ups, the transmitted config-file seems to long.\n"
 	      "Please rewrite dolly.\n");
       exit(1);
