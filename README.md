@@ -60,6 +60,12 @@ Following other options are:
  :  Same as "-s", but dolly will not warn you if the server's hostname
     and the name specified in the config file do not match.
 
+ -R
+ :  resolve the hostnames to ipv4 addresses
+
+ -6
+ :  resolve the hostnames to ipv6 addresses
+
   -q
  :  Usually dolly will print a warning when the select() system call
     is interrupted by a signal. This option suppresses these warnings.
@@ -116,10 +122,23 @@ Following other options are:
     of 4K.
 
   -b <size>
- :  option to specify the TRANSFER_BLOCK_SIZE. Should be a multiple of
+ :  Option to specify the TRANSFER_BLOCK_SIZE. Should be a multiple of
     the size of buffers for TCP sockets.
 
+ -r <n>
+ :  Retry to connect to mode n times
 
+
+ Following options can be used instead of a dollytab and imply the -S or -s option which must me preceded:
+
+ -H
+ :  Comma seperated list of the hosts to send to
+ 
+ -I
+ :  Input file
+ 
+ -O
+ :  Output file (just - for output to stdout)
 
 
 Configuration file
@@ -390,28 +409,28 @@ node0..node15. We want to clone the partition sda5 from node0 to all
 other nodes. The configuration file (let's name it dollytab.cfg)
 should then look as follows:
 ```
-  infile /dev/sda5
-  outfile /dev/sda5
-  server node0
-  firstclient node1
-  lastclient node15
-  clients 15
-  node1
-  node2
-  node3
-  node4
-  node5
-  node6
-  node7
-  node8
-  node9
-  node10
-  node11
-  node12
-  node13
-  node14
-  node15
-  endconfig
+infile /dev/sda5
+outfile /dev/sda5
+server node0
+firstclient node1
+lastclient node15
+clients 15
+node1
+node2
+node3
+node4
+node5
+node6
+node7
+node8
+node9
+node10
+node11
+node12
+node13
+node14
+node15
+endconfig
 ```
 
 Next, we start Dolly on all the clients. No options are required for
