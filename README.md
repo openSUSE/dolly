@@ -1,8 +1,6 @@
-%DOLLY(1) Version 0.60 | Dolly file transfer
-
 DOLLY
 =====
-A program to clone disks / partitions
+A program to clone disks / partitions / data
 
 SYNOPSIS
 ========
@@ -10,9 +8,6 @@ SYNOPSIS
 |dolly| \[**-f** config\]
   or
 |dolly| \[**-I** infile\] \[**-O** outfile\|-\] \[**-H** hostlist\] 
-
-
-11 Sept 2019
 
 
 DESCRIPTION
@@ -384,100 +379,8 @@ WARNING: You can NOT clone an OS which is currently in use. That is why
 
 CHANGES 
 =======
-version 0.2
-------------------
 
-We applied some changes to Dolly since version 0.2. Most of them are
-not very important.
-
-- Dolly as a benchmarking tool.
-  Dolly can now be used to benchmark your network. In the dummy mode,
-  Dolly will not access the hard disk, neither for reading nor for
-  writing. It just transfers data between your machines. This might be
-  useful for testing the throughput of your switch. The running time
-  for such a run can be specified with the "-t" option on the command
-  line. With the "-o" option you can specify a logfile where Dolly
-  will write some statistical information.
-
-- Using extra network interfaces.
-  It's now possible to use multiple network interfaces for the data
-  transfer. This is mostly useful if you have multiple network
-  interfaces with similar speeds, e.g. two fast ethernet networks (one
-  for administration/logins and the other for your applications
-  communication). For example: If your machines are connected with two
-  fast ethernet links, then you should be able to increase the
-  thourghput of the cloning process from 10 to 20 MB/s, therefore
-  cutting the cloning-time by half.
-  You need the "add" option in the config file to use this feature.
-  WARNING: This feature has only been tested with the linear network
-  topology (no fanout option or "fanout 1" option in the config file).
-
-- Different networking topologies.
-  We tried different topologies (binary trees, ternary trees, ...) to
-  get somre more results in a paper, but the initial multi-drop chain
-  (virtual TCP ring) is still the best. You will most likely not need
-  this feature.
-
-
-version 0.57
-------------
-
-Besides some bug-files and smaller improvements, it's now possible to
-split an image in multiple files for archival and send the
-multiple-file image to the clients. This allows to story arbitrary
-long partitions on file systems with a file size limit. For details
-and examples, see the section about the configuration file below
-(parameters infile and outfile).
-
-
-version 0.58
-------------
-
-Thanks to David Mathog, dolly is now able to read or write data from
-its standard input or to its standard output. That means that you can
-e.g. pipe a tar stream through dolly. Whether that feature is useful
-or not depends on your situation. By using tar (instead of cloning the
-whole partition) your disks' reads and writes will be slower, but you
-only transfer the data that is actually needed. This feature might be
-most useful in situations where e.g. your disks/partitions are mostly
-empty or have different sizes/geometries.
-
-Please note that version 0.58 has not yet been thoroughly tested (I'm
-no longer working with clusters). E.g. it is not yet clear what
-happens when somebody tries to reach you with the "write", "talk" or
-"wall" commands while dolly is running (which might potentially
-interfere with with your stdin/stdout, see below).
-
-Note also, that since all of dolly's output is now written to stderr
-(instead of stdout as before), some third-party scripts might no
-longer work.
-
-To use the feature, you should specify /dev/stdin as your infile
-and/or /dev/stdout as your outfile.
-
-
-version 0.58C
--------------
-
-Again, thanks to David Mathog, dolly can now be run without explicit
-sync() at the end of the cloning process (option "-n"). This can speed
-up dolly's runtime considerably when cloning smaller files, but there
-is no garantuee that the data actually made it to the disk if there is
-e.g. a power loss right after dolly finished.
-
-version 0.59
-------------
-
-Some output improvments and add some options to deal with socket and 
-buffer size to experiment some parameter on the fly. Done some cleanup
-in the C code to get less warning in building with recent GCC7.
-
-version 0.60
-------------
-
-Added pure commandline feature, so that there is no need for
-a dolly configuration file. Also output to stdout is now possible.
-
+See CHANGELOG file
 
 EXAMPLE
 =======
@@ -486,6 +389,7 @@ In this example we assume a cluster of 16 machines, named
 node0..node15. We want to clone the partition sda5 from node0 to all
 other nodes. The configuration file (let's name it dollytab.cfg)
 should then look as follows:
+```
   infile /dev/sda5
   outfile /dev/sda5
   server node0
@@ -508,6 +412,8 @@ should then look as follows:
   node14
   node15
   endconfig
+```
+
 Next, we start Dolly on all the clients. No options are required for
 the clients (but you might want to add the "-v" option for verbose
 progress reports). Finally, Dolly is started on the server as follows:
@@ -530,5 +436,5 @@ Felix Rauch <rauch@inf.ethz.ch>
 AUTHORS
 =======
 Felix Rauch <rauch@inf.ethz.ch>
-Antoine Aginies <agienes@suse.com>
+Antoine Ginies <aginies@suse.com>
 Christian Goll <cgoll@suse.com>
