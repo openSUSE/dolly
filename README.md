@@ -1,6 +1,7 @@
 DOLLY
 =====
-A program to clone disks / partitions / data
+A program to clone disks / partitions / data.
+Take same amount of time to copy data to one node to X nodes.
 
 SYNOPSIS
 ========
@@ -9,8 +10,7 @@ dolly \[**-f** config\]
 
 dolly \[**-I** infile\] \[**-O** outfile\|-\] \[**-H** hostlist\] 
 
-IE:
-dolly -v -r 40 -S SERVERIP -H IPNODE1,IPNODE2,IPNODE3 -I /dev/vdd -O /dev/vdd
+dolly **-v** **-r** 40 **-S** SERVERIP **-H** IPNODE1,IPNODE2,IPNODE3 **-I** /dev/vdd **-O** /dev/vdd
 
 DESCRIPTION
 ===========
@@ -21,8 +21,7 @@ partitions or whole hard disk drives to other partitions or hard disk
 drives. As it forms a "virtual TCP ring" to distribute data, it works
 best with fast switched networks.
 
-As dolly clones whole partitions block-wise it works for most
-boot setups).
+As dolly clones whole partitions block-wise.
 
 OPTIONS
 =======
@@ -283,7 +282,7 @@ following "EG:" are example lines)
    EG: endconfig
 
 
-Note on nodes' hostnames
+Note on nodes hostnames
 ------------------------
 
 On some machines (e.g. with very small maintenance installations),
@@ -442,8 +441,8 @@ Maintained by Felix Rauch.
 http://www.cs.inf.ethz.ch/~rauch/
 Felix Rauch <rauch@inf.ethz.ch>
 
-AUTHORS
-=======
+AUTHORS / CONTRIBUTORS
+=======================
 Felix Rauch <rauch@inf.ethz.ch>
 Antoine Ginies <aginies@suse.com>
 Christian Goll <cgoll@suse.com>
