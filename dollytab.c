@@ -342,7 +342,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
   mydollytab->hostnr = atoi(str+8);
   if((mydollytab->hostnr < 1) || (mydollytab->hostnr > MAXHOSTS)) {
-    fprintf(stderr, "I think %d numbers of hosts doesn't make much sense.\n",
+    fprintf(stderr, "I think %u numbers of hosts doesn't make much sense.\n",
 	    mydollytab->hostnr);
     exit(1);
   }
@@ -355,7 +355,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   for(i = 0; i < mydollytab->hostnr; i++) {
     if(fgets(str, 256, df) == NULL) {
       char errstr[256];
-      sprintf(errstr, "gets for host %d", i);
+      sprintf(errstr, "gets for host %u", i);
       perror(errstr);
       exit(1);
     }

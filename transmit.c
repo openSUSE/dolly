@@ -84,13 +84,13 @@ void transmit(struct dollytab * mydollytab) {
           }
           if(mydollytab->add_nr == 0) {
             for(i = 0; i < mydollytab->nr_childs; i++) {
-              (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
+              (void)fprintf(stderr, "Writing maxbytes = %llu to ctrlout\n",
                 maxbytes);
               movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8,mydollytab);
               shutdown(dataout[i], 2);
             }
           } else {
-            (void)fprintf(stderr, "Writing maxbytes = %lld to ctrlout\n",
+            (void)fprintf(stderr, "Writing maxbytes = %llu to ctrlout\n",
               maxbytes);
             movebytes(ctrlout[0], WRITE, (char *)&maxbytes, 8,mydollytab);
             for(i = 0; i <= mydollytab->add_nr; i++) {
@@ -238,15 +238,15 @@ void transmit(struct dollytab * mydollytab) {
 	      for(i = 0;(int) i < maxsetnr; i++) {
 		if(FD_ISSET(i, &cur_set)) {
 		  unsigned int j;
-		  fprintf(stderr, "  file descriptor %d is set.\n", i);
+		  fprintf(stderr, "  file descriptor %u is set.\n", i);
 		  for(j = 0; j < mydollytab->nr_childs; j++) {
 		    if(FD_ISSET(ctrlout[j], &cur_set)) {
-		      fprintf(stderr, "  (fd %d = ctrlout[%d])\n", i, j);
+		      fprintf(stderr, "  (fd %u = ctrlout[%u])\n", i, j);
 		    }
 		  }
 		  for(j = 0; j <= mydollytab->add_nr; j++) {
 		    if(FD_ISSET(datain[j], &cur_set)) {
-		      fprintf(stderr, "  (fd %d = datain[%d])\n", i, j);
+		      fprintf(stderr, "  (fd %u = datain[%u])\n", i, j);
 		    }
 		  }
 		}
@@ -292,7 +292,7 @@ void transmit(struct dollytab * mydollytab) {
       fprintf(logfd, "outfile = '%s'\n", mydollytab->outfile);
       if(mydollytab->flag_v) {
         if(mydollytab->segsize > 0) {
-          fprintf(logfd, "TCP segment size : %d Byte (%d Byte eth)\n", 
+          fprintf(logfd, "TCP segment size : %u Byte (%u Byte eth)\n", 
             mydollytab->segsize,mydollytab->segsize+54);
         } else {
           fprintf(logfd,
@@ -300,7 +300,7 @@ void transmit(struct dollytab * mydollytab) {
         }
       } else {
         if(mydollytab->segsize > 0) {
-          fprintf(logfd, " %8d", mydollytab->segsize);
+          fprintf(logfd, " %8u", mydollytab->segsize);
         } else {
           fprintf(logfd, " %8d", 1460);
         }
@@ -308,11 +308,11 @@ void transmit(struct dollytab * mydollytab) {
       
       if(mydollytab->flag_v) {
         fprintf(logfd, "Server : '%s'\n", mydollytab->myhostname);
-        fprintf(logfd, "Fanout = %d\n", mydollytab->fanout);
-        fprintf(logfd, "Nr of childs = %d\n", mydollytab->nr_childs);
-        fprintf(logfd, "Nr of hosts = %d\n", mydollytab->hostnr);
+        fprintf(logfd, "Fanout = %u\n", mydollytab->fanout);
+        fprintf(logfd, "Nr of childs = %u\n", mydollytab->nr_childs);
+        fprintf(logfd, "Nr of hosts = %u\n", mydollytab->hostnr);
       } else {
-        fprintf(logfd, " %8d", mydollytab->hostnr);
+        fprintf(logfd, " %8u", mydollytab->hostnr);
       }
     }
   } else {
@@ -331,12 +331,12 @@ void transmit(struct dollytab * mydollytab) {
   if(mydollytab->meserver) {
     for(i = 0; i < mydollytab->nr_childs; i++) {
       if(mydollytab->flag_v) {
-        fprintf(stderr, "Waiting for child %d.\n",i);
+        fprintf(stderr, "Waiting for child %u.\n",i);
       }
       ret = movebytes(ctrlout[i], READ, buf, 8,mydollytab);
       if(ret != 8) {
         fprintf(stderr,
-          "Server got only %d bytes back from client %d instead of 8\n",
+          "Server got only %d bytes back from client %u instead of 8\n",
           ret, i);
       }
     }

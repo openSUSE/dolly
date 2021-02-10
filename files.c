@@ -16,7 +16,7 @@ int open_infile(int try_hard,struct dollytab * mydollytab) {
     }
   }
   if(mydollytab->input_split != 0) {
-    sprintf(name, "%s_%d", mydollytab->infile, input_nr);
+    sprintf(name, "%s_%u", mydollytab->infile, input_nr);
   } else {
     strcpy(name, mydollytab->infile);
   }
@@ -90,7 +90,7 @@ int open_outfile(int try_hard,struct dollytab * mydollytab) {
     }
   }
   if(mydollytab->output_split != 0) {
-    sprintf(name, "%s_%d", mydollytab->outfile, output_nr);
+    sprintf(name, "%s_%u", mydollytab->outfile, output_nr);
   } else {
     strcpy(name, mydollytab->outfile);
   }

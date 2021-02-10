@@ -89,10 +89,10 @@ static void print_params(struct dollytab* mydollytab) {
   fprintf(stderr, "using ctrl port %u\n", ctrlport);
   fprintf(stderr, "myhostname = '%s'\n", mydollytab->myhostname);
   if(mydollytab->segsize > 0) {
-    fprintf(stderr, "TCP segment size = %d\n", mydollytab->segsize);
+    fprintf(stderr, "TCP segment size = %u\n", mydollytab->segsize);
   }
   if(mydollytab->add_nr > 0) {
-    fprintf(stderr, "add_nr (extra network interfaces) = %d\n", mydollytab->add_nr);
+    fprintf(stderr, "add_nr (extra network interfaces) = %u\n", mydollytab->add_nr);
     if(mydollytab->add_mode == 1) {
       fprintf(stderr, "Postfixes: ");
     } else if(mydollytab->add_mode == 2) {
@@ -112,12 +112,12 @@ static void print_params(struct dollytab* mydollytab) {
     fprintf(stderr, "%s", mydollytab->add_name[0]);
     fprintf(stderr, "\n");
   }
-  fprintf(stderr, "fanout = %d\n", mydollytab->fanout);
-  fprintf(stderr, "nr_childs = %d\n", mydollytab->nr_childs);
+  fprintf(stderr, "fanout = %u\n", mydollytab->fanout);
+  fprintf(stderr, "nr_childs = %u\n", mydollytab->nr_childs);
   fprintf(stderr, "server = '%s'\n", mydollytab->servername);
   fprintf(stderr, "I'm %sthe server.\n", (mydollytab->meserver ? "" : "not "));
   fprintf(stderr, "I'm %sthe last host.\n", (mydollytab->melast ? "" : "not "));
-  fprintf(stderr, "There are %d hosts in the ring (excluding server):\n",
+  fprintf(stderr, "There are %u hosts in the ring (excluding server):\n",
 	  mydollytab->hostnr);
   for(i = 0; i < mydollytab->hostnr; i++) {
     fprintf(stderr, "\t'%s'\n", mydollytab->hostring[i]);
@@ -173,7 +173,7 @@ static void open_insocks(struct dollytab * mydollytab) {
 
   if(mydollytab->segsize > 0) {
     /* Attempt to set TCP_MAXSEG */
-    fprintf(stderr, "Set TCP_MAXSEG to %d bytes\n", mydollytab->segsize);
+    fprintf(stderr, "Set TCP_MAXSEG to %u bytes\n", mydollytab->segsize);
     if(setsockopt(datasock, IPPROTO_TCP, TCP_MAXSEG,
 		  &mydollytab->segsize, sizeof(int)) < 0) {
       (void) fprintf(stderr,"setsockopt: TCP_MAXSEG failed! errno=%d\n", errno);
@@ -182,7 +182,7 @@ static void open_insocks(struct dollytab * mydollytab) {
   }
   
   /* Attempt to set input BUFFER sizes */
-  if(mydollytab->flag_v) { fprintf(stderr, "Buffer size: %d\n", SCKBUFSIZE); }
+  if(mydollytab->flag_v) { fprintf(stderr, "Buffer size: %u\n", SCKBUFSIZE); }
   if(setsockopt(datasock, SOL_SOCKET, SO_RCVBUF, &SCKBUFSIZE,sizeof(SCKBUFSIZE)) < 0) {
     (void) fprintf(stderr, "setsockopt: SO_RCVBUF failed! errno = %d\n",
 		   errno);
@@ -346,7 +346,7 @@ static void open_outsocks(struct dollytab * mydollytab) {
 
       if(mydollytab->segsize > 0) {
 	/* Attempt to set TCP_MAXSEG */
-        fprintf(stderr, "Set TCP_MAXSEG to %d bytes\n", mydollytab->segsize);
+        fprintf(stderr, "Set TCP_MAXSEG to %u bytes\n", mydollytab->segsize);
         if(setsockopt(dataout[i], IPPROTO_TCP, TCP_MAXSEG,
 		      &mydollytab->segsize, sizeof(int)) < 0) {
 	  (void) fprintf(stderr, "setsockopt: TCP_MAXSEG failed! errno = %d\n", 
@@ -360,7 +360,7 @@ static void open_outsocks(struct dollytab * mydollytab) {
       }
       getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF,
            (char *) &send_size, (void *) &sizeofint);
-      fprintf(stderr, "Send buffer %d is %d bytes\n", i, send_size);
+      fprintf(stderr, "Send buffer %u is %d bytes\n", i, send_size);
 
       ///* Setup data port */
       addrdata.sin_family = hent->h_addrtype;
@@ -601,7 +601,7 @@ static void buildring(struct dollytab * mydollytab) {
               p++;
             }
             fprintf(stderr,
-              "Machines left to wait for: %d\n", mydollytab->hostnr - ready_mach);
+              "Machines left to wait for: %u\n", mydollytab->hostnr - ready_mach);
           }
         }
       } /* For all childs */
@@ -700,7 +700,7 @@ int main(int argc, char *argv[]) {
       flag_f = 1;
       break;
     case 'R':
-      if(mydollytab->resolve != 6 || mydollytab->resolve != 4) {
+      if(mydollytab->resolve != 6 && mydollytab->resolve != 4) {
         mydollytab->resolve = 1;
       }
       break;
@@ -753,8 +753,8 @@ int main(int argc, char *argv[]) {
       break;
     case 'a':
       i = atoi(optarg);
-      if(i <= 0) {
-        fprintf(stderr, "Timeout of %d doesn't make sense.\n", i);
+      if((int)i <= 0) {
+        fprintf(stderr, "Timeout of %u doesn't make sense.\n", i);
         exit(1);
       }
       timeout = i;
@@ -969,7 +969,7 @@ int main(int argc, char *argv[]) {
       fprintf(df,"server %s\n",mydollytab->myhostname);
       fprintf(df,"firstclient %s\n",mydollytab->hostring[0]);
       fprintf(df,"lastclient %s\n",mydollytab->hostring[nr_hosts-1]);
-      fprintf(df,"clients %i\n",mydollytab->hostnr);
+      fprintf(df,"clients %u\n",mydollytab->hostnr);
       for(i = 0; i < mydollytab->hostnr; i++) {
         fprintf(df,"%s\n",mydollytab->hostring[i]);
         fprintf(stderr,"writing '%s'\n'",mydollytab->hostring[i]);
