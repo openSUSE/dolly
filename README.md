@@ -5,10 +5,12 @@ A program to clone disks / partitions / data
 SYNOPSIS
 ========
 
-|dolly| \[**-f** config\]
-  or
-|dolly| \[**-I** infile\] \[**-O** outfile\|-\] \[**-H** hostlist\] 
+dolly \[**-f** config\]
 
+dolly \[**-I** infile\] \[**-O** outfile\|-\] \[**-H** hostlist\] 
+
+IE:
+dolly -v -r 40 -S SERVERIP -H IPNODE1,IPNODE2,IPNODE3 -I /dev/vdd -O /dev/vdd
 
 DESCRIPTION
 ===========
@@ -27,61 +29,61 @@ OPTIONS
 If used without a configuration file following three commanline options must be
 set:
 
--I FILE : FILE is used as input file.
+**-I** FILE : FILE is used as input file.
 
--O FILE\|- : FILE will be used as output file, if '-' is used as FILE, the
+**-O** FILE\|- : FILE will be used as output file, if '-' is used as FILE, the
 output will printed to stdout.
 
--H HOSTLIST: A comma seperated hostlist, where then the first host of the list
+**-H** HOSTLIST: A comma seperated hostlist, where then the first host of the list
 is used as firstclient and the last host  as lastclient, like in the
 configuration file.
 
 Following other options are:
 
-  -h
+  **-h**
  :   Prints a short help and exits.
 
-  -V
+  **-V**
  :   Prints the version number as well as the date of that version and exits.
 
-  -v
+  **-v**
  :  This switches to verbose mode in which dolly prints out a little
     bit more information. This option is recommended if you want to
     know what's going on during cloning and it might be helpful during
     debugging.
 
-  -s
+  **-s**
  :  This option specifies the server machine and should only be used
     on the master. Dolly will warn you if the config file specifies
     another master than the machine on which this option is set.
     This option must be secified before the "-f" option!
 
-  -S
+  **-S**
  :  Same as "-s", but dolly will not warn you if the server's hostname
     and the name specified in the config file do not match.
 
- -R
+ **-R**
  :  resolve the hostnames to ipv4 addresses
 
- -6
+ **-6**
  :  resolve the hostnames to ipv6 addresses
 
-  -q
+  **-q**
  :  Usually dolly will print a warning when the select() system call
     is interrupted by a signal. This option suppresses these warnings.
 
-  -c
+  **-c**
  :  With this option it is possible to specify the uncompressed size
     of a compressed file. It's only needed for performance statistics
     at the end of a cloning process and not important if you are not
     interested in the statistics.
 
-  -d
+  **-d**
  :  The "Dummy" option disables all disk accesses. It can be used to
     benchmark the throughput of your system (computers, network,
     switches). This option must be specified before the "-f" option!
 
-  -t <seconds>
+  **-t** <seconds>
  :  When in dummy mode, this option allows to specify how long the
     testrun should approximately take. Since the dummy mode is mostly
     used for benchmarking purposes and single runs might result in
@@ -90,12 +92,12 @@ Following other options are:
     the run-lenght in seconds, as the benchmark-time becomes more
     predictable.
     
-  -f <config file>
+  **-f** <config file>
  :  This option is used to select the config file for this cloning
     process. This option makes only sense on the master machine and
     the configuration file must exist on the master.
 
-  -o <logfile>
+  **-o** <logfile>
  :  This option specifies the logfile. Dolly will write some
     statistical information into the logfile. it is mostly
     used when benchmarking switches. The format of the lines in the
@@ -103,7 +105,7 @@ Following other options are:
     Trans. data  Segsize Clients Time      Dataflow  Agg. dataflow
     [MB]         [Byte]  [#]     [s]       [MB/s]    [MB/s]
 
-  -a <timeout>
+  **-a** <timeout>
  :  Sometimes it might be useful if Dolly would terminate instead of
     waiting indefinitely in case something goes wrong. This option
     lets you specify this timeout. If dolly could not transfer any
@@ -113,32 +115,20 @@ Following other options are:
     you don't want to have dolly-processes hang around if a machine
     hangs.
 
-  -n
+  **-n**
  :  Do not sync() before exit. Thus, dolly will exit sooner, but data
     may not make it to disk if power fails soon after dolly exits.
 
-  -u <size>
+  **-u** <size>
  :  Specify the size of buffers for TCP sockets. Should be a Multiple
     of 4K.
 
-  -b <size>
+  **-b** <size>
  :  Option to specify the TRANSFER_BLOCK_SIZE. Should be a multiple of
     the size of buffers for TCP sockets.
 
- -r <n>
- :  Retry to connect to mode n times
-
-
- Following options can be used instead of a dollytab and imply the -S or -s option which must me preceded:
-
- -H
- :  Comma seperated list of the hosts to send to
- 
- -I
- :  Input file
- 
- -O
- :  Output file (just - for output to stdout)
+ **-r** <n>
+ :  Retry to connect to mode <n> times
 
 
 Configuration file
