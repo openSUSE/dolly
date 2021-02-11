@@ -635,6 +635,7 @@ static void buildring(struct dollytab * mydollytab) {
 
 static void usage(void) {
   fprintf(stderr, "\n");
+  fprintf(stderr, "version: %s\n",version_string);
   fprintf(stderr,
 	  "Usage: dolly [-hVvSsnYR] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
 	  "[-o logfile] [-t time] -I [inputfile] -O [outpufile] -H [hostnames]\n");
@@ -665,8 +666,6 @@ static void usage(void) {
   fprintf(stderr, "\t-H: comma seperated list of the hosts to send to\n");
   fprintf(stderr, "\t-I: input file\n");
   fprintf(stderr, "\t-O: output file (just - for output to stdout)\n");
-  fprintf(stderr, "version: %s\n",version_string);
-  fprintf(stderr, "\nDolly was part of the ETH Patagonia cluster project, ");
   fprintf(stderr, "\n");
   exit(1);
 }
