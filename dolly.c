@@ -314,7 +314,7 @@ static void open_outsocks(struct dollytab * mydollytab) {
     }
     
     if(mydollytab->flag_v) {
-      fprintf(stderr, "Connecting to host %s... ", hn);
+      fprintf(stderr, "Connecting to host %s...\n", hn);
       fflush(stderr);
     }
     
@@ -360,7 +360,7 @@ static void open_outsocks(struct dollytab * mydollytab) {
       }
       getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF,
            (char *) &send_size, (void *) &sizeofint);
-      fprintf(stderr, "Send buffer %u is %d bytes\n", i, send_size);
+      //fprintf(stderr, "Send buffer %u is %d bytes\n", i, send_size);
 
       ///* Setup data port */
       addrdata.sin_family = hent->h_addrtype;
@@ -661,7 +661,7 @@ static void usage(void) {
   fprintf(stderr, "\t-q: Suppresss \"ignored signal\" messages\n");
   fprintf(stderr, "\t-V: Print version number and exit\n");
   fprintf(stderr, "\tFollowing options can be used instead of a dollytab and\n");
-  fprintf(stderr, "\timply the -S or -s option which must me prceeded.\n");
+  fprintf(stderr, "\timply the -S or -s option which must me preceded.\n");
   fprintf(stderr, "\t-H: comma seperated list of the hosts to send to\n");
   fprintf(stderr, "\t-I: input file\n");
   fprintf(stderr, "\t-O: output file (just - for output to stdout)\n");
