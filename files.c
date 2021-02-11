@@ -57,13 +57,13 @@ int open_infile(int try_hard,struct dollytab * mydollytab) {
       /* Here's the child. */
       close(id[0]);
       close(1);
-      dup(id[1]);
+      (void) !dup(id[1]);
       close(id[1]);
       if((fd = open(name, O_RDONLY)) == -1) {
         exit(1);
       }
       close(0);
-      dup(fd);
+      (void) !dup(fd);
       close(fd);
       if(execl("/usr/bin/gzip", "gzip", "-cf", NULL) == -1) {
         perror("execl for gzip in child");
@@ -144,7 +144,7 @@ int open_outfile(int try_hard,struct dollytab * mydollytab) {
       /* Here's the child! */
       close(pd[1]);
       close(0);      /* Close stdin */
-      dup(pd[0]);    /* Duplicate pipe on stdin */
+      (void) !dup(pd[0]);    /* Duplicate pipe on stdin */
       close(pd[0]);  /* Close the unused end of the pipe */
       if((fd = open(name, O_WRONLY)) == -1) {
         if(errno == ENOENT) {
@@ -154,7 +154,7 @@ int open_outfile(int try_hard,struct dollytab * mydollytab) {
         exit(1);
       }
       close(1);
-      dup(fd);
+      (void) !dup(fd);
       close(fd);
       /* Now stdout is redirected to our file */
       if(execl("/usr/bin/gunzip", "gunzip", "-c", NULL) == -1) {
