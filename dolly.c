@@ -635,10 +635,12 @@ static void buildring(struct dollytab * mydollytab) {
 
 static void usage(void) {
   fprintf(stderr, "\n");
-  fprintf(stderr, "version: %s\n",version_string);
+  fprintf(stderr, "Dolly version: %s\n", version_string);
+  fprintf(stderr, "\n");
   fprintf(stderr,
 	  "Usage: dolly [-hVvSsnYR] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
-	  "[-o logfile] [-t time] -I [inputfile] -O [outpufile] -H [hostnames]\n");
+	  "[-o logfile] [-t time] -I [inputfile] -O [outpufile] -H [node1,node2,node3...]\n");
+  fprintf(stderr, "\n");
   fprintf(stderr, "\t-s: this is the server, check hostname\n");
   fprintf(stderr, "\t-S <hostname>: use hostname as server\n");
   fprintf(stderr, "\t-R: resolve the hostnames to ipv4 addresses\n");

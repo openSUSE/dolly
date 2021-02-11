@@ -1,7 +1,7 @@
 CXX = g++
 CC = gcc
 CFLAGS += -std=gnu11 -s -O -fPIE $(RPM_OPT_FLAGS)
-WARNINGS = -Werror -Wall -Wextra -pedantic-errors 
+WARNINGS = -Werror -Wall -Wextra -pedantic-errors
 LDFLAGS =
 LIBRARIES =
 BUILD_DIR = ./build
@@ -10,7 +10,7 @@ OBJECTS = $(SOURCES:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(SOURCES:%.c=$(BUILD_DIR)/%.d)
 # Can 
 DEBUGFLAGS=-ggdb
-VERSION=0.63.2
+VERSION=0.63.3
 
 
 EXECUTABLE = dolly
