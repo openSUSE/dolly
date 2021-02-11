@@ -1,7 +1,7 @@
 DOLLY
 =====
 A program to clone disks / partitions / data.
-Take same amount of time to copy data to one node to X nodes.
+Take same amount of time to copy data to one node or to X nodes.
 
 SYNOPSIS
 ========
