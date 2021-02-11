@@ -10,11 +10,18 @@ OBJECTS = $(SOURCES:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(SOURCES:%.c=$(BUILD_DIR)/%.d)
 # Can 
 DEBUGFLAGS=-ggdb
+VERSION=0.63
 
 
 EXECUTABLE = dolly
 
 all: $(EXECUTABLE)
+
+tar: clean
+	mkdir $(EXECUTABLE)-$(VERSION)
+	find . -maxdepth 1 -type f -exec cp -a {} $(EXECUTABLE)-$(VERSION) \;
+	tar cfj $(EXECUTABLE)-$(VERSION).tar.bz2 $(EXECUTABLE)-$(VERSION)
+	rm -rf $(EXECUTABLE)-$(VERSION)
 
 $(BUILD_DIR)/%.d: %.c
 	@mkdir -p $(dir $@)
@@ -32,5 +39,6 @@ $(EXECUTABLE): $(OBJECTS)
 
 clean:
 	rm -rf $(EXECUTABLE) $(OBJECTS) $(DEPS)
+	rm -rf $(EXECUTABLE)-$(VERSION) $(EXECUTABLE)-$(VERSION).tar.bz2
 
 -include $(DEPS)
