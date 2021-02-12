@@ -300,7 +300,7 @@ static void open_outsocks(struct dollytab * mydollytab) {
     }
     
     hent = gethostbyname(hn);
-    /*  (void)fprintf(stderr,"DEBUG gethostbyname on >%s<\n",hn); */
+    //(void)fprintf(stderr,"DEBUG gethostbyname on >%s<\n",hn);
     if(hent == NULL) {
       char str[strlen(hn)];
       sprintf(str, "gethostbyname for host '%s' error %d",
@@ -312,7 +312,7 @@ static void open_outsocks(struct dollytab * mydollytab) {
       fprintf(stderr, "Expected h_addrtype of AF_INET, got %d\n",
 	      hent->h_addrtype);
     }
-    
+
     if(mydollytab->flag_v) {
       fprintf(stderr, "Connecting to host %s...\n", hn);
       fflush(stderr);
@@ -750,7 +750,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr,"'%s' is not a valid servername\n",optarg);
         exit(1);
       }
-      strncpy(mydollytab->servername,optarg,strlen(optarg));
+      memcpy(mydollytab->servername,optarg,strlen(optarg));
       break;
     case 'a':
       i = atoi(optarg);
@@ -787,7 +787,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr,"the -S/-s must preceed the -I option\n");
         exit(1);
       }
-      strncpy(mydollytab->infile,optarg,strlen(optarg)); 
+      memcpy(mydollytab->infile,optarg,strlen(optarg));
       flag_cargs = 1;
       break;
 
@@ -800,7 +800,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr,"the -S/-s must preceed the -O option\n");
         exit(1);
       }
-      strncpy(mydollytab->outfile,optarg,strlen(optarg)); 
+      memcpy(mydollytab->outfile,optarg,strlen(optarg));
       flag_cargs = 1;
       break;
 
@@ -834,7 +834,7 @@ int main(int argc, char *argv[]) {
            inet_pton(AF_INET,host_str,&(sock_address.sin_addr)) == 1 &&
            inet_pton(AF_INET6,host_str,&(sock_address.sin_addr)) == 1) {
           mydollytab->hostring[nr_hosts] = (char *)malloc(strlen(host_str)+1);
-          strncpy(mydollytab->hostring[nr_hosts], host_str,strlen(host_str));
+          memcpy(mydollytab->hostring[nr_hosts], host_str,strlen(host_str));
         } else { 
           /* get memory for ip address */
           ip_addr = (char*)malloc(sizeof(char)*256);
@@ -903,12 +903,12 @@ int main(int argc, char *argv[]) {
             fprintf(stderr,"Could resolve the server address '%s'\n",mydollytab->servername);
             exit(1);
           }
-          strncpy(mydollytab->myhostname,ip_addr,strlen(ip_addr));
-          strncpy(mydollytab->servername,ip_addr,strlen(ip_addr));
+          memcpy(mydollytab->myhostname,ip_addr,strlen(ip_addr));
+          memcpy(mydollytab->servername,ip_addr,strlen(ip_addr));
           free(ip_addr);
         } else {
-          strncpy(mydollytab->myhostname,mnname,strlen(mnname));
-          strncpy(mydollytab->servername,mnname,strlen(mnname));
+          memcpy(mydollytab->myhostname,mnname,strlen(mnname));
+          memcpy(mydollytab->servername,mnname,strlen(mnname));
         }
       } else {
         /* check if we allready have a valid ip address */
@@ -920,11 +920,11 @@ int main(int argc, char *argv[]) {
             fprintf(stderr,"Could resolve the server address '%s'\n",mydollytab->servername);
             exit(1);
           }
-          strncpy(mydollytab->servername,ip_addr,strlen(ip_addr));
-          strncpy(mydollytab->myhostname,ip_addr,strlen(ip_addr));
+          memcpy(mydollytab->servername,ip_addr,strlen(ip_addr));
+          memcpy(mydollytab->myhostname,ip_addr,strlen(ip_addr));
           free(ip_addr);
         } else {
-          strncpy(mydollytab->myhostname,mydollytab->servername,strlen(mydollytab->servername));
+          memcpy(mydollytab->myhostname,mydollytab->servername,strlen(mydollytab->servername));
         }
       }
 
