@@ -1028,7 +1028,6 @@ int main(int argc, char *argv[]) {
   for(i = 0; i < mydollytab->hostnr; i++) {
     free(mydollytab->hostring[i]);
   }
-  free(mydollytab->dollybuf);
   free(mydollytab->hostring);
   free(mydollytab);
  
