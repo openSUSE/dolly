@@ -27,7 +27,7 @@ int open_infile(int try_hard,struct dollytab * mydollytab) {
     input = open(name, O_RDONLY);
     if(input == -1) {
       if(try_hard == 1) {
-        char str[strlen(name)];
+        char str[strlen(name)+18];
         sprintf(str, "open inputfile '%s'", name);
         perror(str);
         exit(1);
@@ -39,7 +39,7 @@ int open_infile(int try_hard,struct dollytab * mydollytab) {
     /* Input should be compressed first. */
     if(access(name, R_OK) == -1) {
       if(try_hard == 1) {
-        char str[strlen(name)];
+        char str[strlen(name)+18];
         sprintf(str, "open inputfile '%s'", name);
         perror(str);
         exit(1);
@@ -117,7 +117,7 @@ int open_outfile(int try_hard,struct dollytab * mydollytab) {
       output = open(name, O_WRONLY | O_CREAT | O_EXCL, 0644);
     }
     if(output == -1) {
-      char str[strlen(name)];
+      char str[strlen(name)+19];
       sprintf(str, "open outputfile '%s'", name);
       perror(str);
       exit(1);
@@ -125,7 +125,7 @@ int open_outfile(int try_hard,struct dollytab * mydollytab) {
   } else { /* Compressed_In */
     if(access(name, W_OK) == -1) {
       if(try_hard == 1) {
-        char str[strlen(name)];
+        char str[strlen(name)+19];
         sprintf(str, "open outputfile '%s'", name);
         perror(str);
         exit(1);
