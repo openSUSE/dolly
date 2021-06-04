@@ -302,7 +302,7 @@ static void open_outsocks(struct dollytab * mydollytab) {
     hent = gethostbyname(hn);
     //(void)fprintf(stderr,"DEBUG gethostbyname on >%s<\n",hn);
     if(hent == NULL) {
-      char str[strlen(hn)];
+      char str[strlen(hn)+34];
       sprintf(str, "gethostbyname for host '%s' error %d",
 	      hn, h_errno);
       herror(str);
