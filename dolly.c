@@ -637,38 +637,46 @@ static void usage(void) {
   fprintf(stderr, "\n");
   fprintf(stderr, "Dolly version: %s\n", version_string);
   fprintf(stderr, "\n");
+  fprintf(stderr, "Dolly is a program to clone disks / partitions / data. It takes same amount of time to copy data to one node or to X nodes.\n");
+  fprintf(stderr, "\n");
   fprintf(stderr,
 	  "Usage: dolly [-hVvSsnYR] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
 	  "[-o logfile] [-t time] -I [inputfile] -O [outpufile] -H [node1,node2,node3...]\n");
   fprintf(stderr, "\n");
+  fprintf(stderr, "\tWithout any -s or -S option dolly will be a client\n");
   fprintf(stderr, "\t-s: this is the server, check hostname\n");
   fprintf(stderr, "\t-S <hostname>: use hostname as server\n");
   fprintf(stderr, "\t-R: resolve the hostnames to ipv4 addresses\n");
   fprintf(stderr, "\t-6: resolve the hostnames to ipv6 addresses\n");
-  fprintf(stderr, "\t-v: verbose\n");
-  fprintf(stderr, "\t-b <size>, where size is the size of block to transfer (default 4096)\n");
-  fprintf(stderr, "\t-u <size>, size of the buffer (multiple of 4K)\n");
-  fprintf(stderr, "\t-c <size>, where size is uncompressed size of "
-	  "compressed inputfile\n\t\t(for statistics only)\n");
-
+  fprintf(stderr, "\t-V: Print version number and exit\n");
+  fprintf(stderr, "\t-h: Print this help and exit\n");
+  fprintf(stderr, "\t-v: Verbose mode\n");
+  fprintf(stderr, "\t-q: Suppresss \"ignored signal\" messages\n");
   fprintf(stderr, "\t-f <configfile>, where <configfile> is the "
 	  "configuration file with all\n\t\tthe required information for "
 	  "this run. Required on server only.\n");
   fprintf(stderr, "\t-o <logfile>: Write some statistical information  "
 	  "in <logfile>\n");
-  fprintf(stderr, "\t-r <n>: Retry to connect to mode n times\n");
   fprintf(stderr, "\t-a <timeout>: Lets dolly terminate if it could not transfer\n\t\tany data after <timeout> seconds.\n");
   fprintf(stderr, "\t-n: Do not sync before exit. Dolly exits sooner.\n");
-  fprintf(stderr, "\t    Data may not make it to disk if power fails soon after dolly exits.\n");
-  fprintf(stderr, "\t-h: Print this help and exit\n");
-  fprintf(stderr, "\t-q: Suppresss \"ignored signal\" messages\n");
-  fprintf(stderr, "\t-V: Print version number and exit\n");
+  fprintf(stderr, "\t    Data may not make it to disk if power fails soon after dolly exits.\n\n");
   fprintf(stderr, "\tFollowing options can be used instead of a dollytab and\n");
-  fprintf(stderr, "\timply the -S or -s option which must me preceded.\n");
+  fprintf(stderr, "\timply the -S or -s option which must me preceded:\n");
   fprintf(stderr, "\t-H: comma seperated list of the hosts to send to\n");
   fprintf(stderr, "\t-I: input file\n");
-  fprintf(stderr, "\t-O: output file (just - for output to stdout)\n");
+  fprintf(stderr, "\t-O: output file (just - for output to stdout)\n\n");
+  fprintf(stderr, "\tCustomize network transfer:\n");
+  fprintf(stderr, "\t-b <size>, where size is the size of block to transfer (default 4096)\n");
+  fprintf(stderr, "\t-u <size>, size of the buffer (multiple of 4K)\n");
+  fprintf(stderr, "\t-c <size>, where size is uncompressed size of "
+	  "compressed inputfile\n\t\t(for statistics only)\n");
   fprintf(stderr, "\n");
+  fprintf(stderr, "Example of usage:\n");
+  fprintf(stderr, "On client:\n");
+  fprintf(stderr, "\tdolly -v\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "On server:\n");
+  fprintf(stderr, "\tdolly -s -Hsle15sp32,sle15sp33,sle15sp34 -I files.tgz -O /tmp/files.tgz\n");
   exit(1);
 }
 
