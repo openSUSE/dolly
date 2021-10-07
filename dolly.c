@@ -676,7 +676,7 @@ static void usage(void) {
   fprintf(stderr, "\tdolly -v\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "On server:\n");
-  fprintf(stderr, "\tdolly -s -Hsle15sp32,sle15sp33,sle15sp34 -I files.tgz -O /tmp/files.tgz\n");
+  fprintf(stderr, "\tdolly -s -H sle15sp32,sle15sp33,sle15sp34 -I files.tgz -O /tmp/files.tgz\n");
   exit(1);
 }
 
