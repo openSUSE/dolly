@@ -7,6 +7,9 @@ License: GNU General Public License.
 
 History:
 
+V 0.63.5 07-OCT-2021 Antoine Ginies <aginies@suse.com>
+  improve help usage information
+
 V 0.63.4 11-SEP-2019 Christian Goll <cgoll@suse.com>
   fixed warnings for gcc 11
 
