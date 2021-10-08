@@ -640,7 +640,7 @@ static void usage(void) {
   fprintf(stderr, "Dolly is a program to clone disks / partitions / data. It takes same amount of time to copy data to one node or to X nodes.\n");
   fprintf(stderr, "\n");
   fprintf(stderr,
-	  "Usage: dolly [-hVvSsnYR] [-c <size>] [-b <size>] [-u <size>] [-d] [-f configfile] "
+	  "Usage: dolly [-hVvSsnYR] [-c <size>] [-b <size>] [-u <size>] [-f configfile] "
 	  "[-o logfile] [-t time] -I [inputfile] -O [outpufile] -H [node1,node2,node3...]\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "\tWithout any -s or -S option dolly will be a client\n");
