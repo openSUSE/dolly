@@ -7,6 +7,11 @@ License: GNU General Public License.
 
 History:
 
+V 0.63.6 13-OCT-2021 Antoine Ginies <aginies@suse.com>
+  fix hostname resolution is not done in case of usage
+  of an external configuration file (bsc#1191613)
+  fix -Werror=format-security
+
 V 0.63.5 07-OCT-2021 Antoine Ginies <aginies@suse.com>
   improve help usage information
 
