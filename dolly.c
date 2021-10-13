@@ -594,7 +594,7 @@ static void buildring(struct dollytab * mydollytab) {
             p = info_buf;
             info_buf[ret] = 0;	
             if(mydollytab->flag_v) {
-              fprintf(stderr, info_buf);
+              fprintf(stderr, "%s", info_buf);
             }
             while((p = strstr(p, "ready")) != NULL) {
               ready_mach++;
@@ -901,7 +901,8 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Unknown option '%c'.\n", c);
       exit(1);
     }
-    if(flag_cargs) {
+ // always do hostname resolution
+ //   if(flag_cargs) {
       /* only use HOST when servername or ip is not explictly set */
       if(strcmp(mydollytab->servername,"") == 0) {
         mnname = getenv("HOST");
@@ -936,7 +937,7 @@ int main(int argc, char *argv[]) {
         }
       }
 
-    }
+//    }
     if(flag_f && !flag_cargs) {
       /* Open the config-file */
       df = fopen(optarg, "r");
