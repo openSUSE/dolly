@@ -900,6 +900,7 @@ int main(int argc, char *argv[]) {
     default:
       fprintf(stderr, "Unknown option '%c'.\n", c);
       exit(1);
+    }
  // always do hostname resolution
  //   if(flag_cargs) {
       /* only use HOST when servername or ip is not explictly set */
