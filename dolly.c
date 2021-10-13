@@ -594,7 +594,7 @@ static void buildring(struct dollytab * mydollytab) {
             p = info_buf;
             info_buf[ret] = 0;	
             if(mydollytab->flag_v) {
-              fprintf(stderr, info_buf);
+              fprintf(stderr, "%s", info_buf);
             }
             while((p = strstr(p, "ready")) != NULL) {
               ready_mach++;
