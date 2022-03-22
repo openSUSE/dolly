@@ -1,13 +1,9 @@
 [Unit]
 Description=Dolly client daemon
-# Use Wants instead of Requires so that users
-# can disable these three .socket units to revert
-# to a traditional non-activation deployment setup
 Wants=dolly.socket
 After=network.target
 After=firewalld.service
 After=iptables.service
-After=ip6tables.service
 Documentation=https://github.com/openSUSE/dolly
 
 [Service]
@@ -16,7 +12,6 @@ Restart=no
 ExecStart=/usr/sbin/dolly
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
-#RemainAfterExit=no
 
 [Install]
 WantedBy=multi-user.target
