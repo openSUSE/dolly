@@ -13,7 +13,6 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->compressed_out = 0;
   mdt->output_split = 0;
   mdt->input_split = 0;
-  mdt->dummysize = 0;
   mdt->add_nr = 0;
   mdt->add_primary = 0;
   mdt->add_mode = 0;

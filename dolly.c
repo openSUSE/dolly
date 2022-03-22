@@ -6,6 +6,7 @@
 /* Clients need the ports before they can listen, so we use defaults. */
 const unsigned int dataport = 9998;
 const unsigned int ctrlport = 9997;
+const unsigned int systemdport = 9996;
 const char* host_delim = ",";
 
 FILE *stdtty;           /* file pointer to the standard terminal tty */
@@ -87,6 +88,7 @@ static void print_params(struct dollytab* mydollytab) {
   }
   fprintf(stderr, "using data port %u\n", dataport);
   fprintf(stderr, "using ctrl port %u\n", ctrlport);
+  fprintf(stderr, "using systemd port %u\n", systemdport);
   fprintf(stderr, "myhostname = '%s'\n", mydollytab->myhostname);
   if(mydollytab->segsize > 0) {
     fprintf(stderr, "TCP segment size = %u\n", mydollytab->segsize);
@@ -228,6 +230,29 @@ static void open_insocks(struct dollytab * mydollytab) {
   if(listen(ctrlsock, 1) == -1) {
     perror("listen input control socket");
     exit(1);
+  }
+}
+
+static void open_insystemdsocks(struct dollytab * mydollytab) {
+  int clientSocket;
+  unsigned int i;
+  struct sockaddr_in serverAddr;
+  socklen_t addr_size;
+  serverAddr.sin_family = AF_INET;
+  serverAddr.sin_port = htons(systemdport);
+  if(mydollytab->flag_v) {
+    fprintf(stderr, "Start dolly client using systemd socket on %u hosts:\n", mydollytab->hostnr);
+  }
+  for(i = 0; i < mydollytab->hostnr; i++) {
+      clientSocket = socket(PF_INET, SOCK_STREAM, 0);
+      if(mydollytab->flag_v) {
+        fprintf(stderr, "\t'%s'\n", mydollytab->hostring[i]);
+      }
+      serverAddr.sin_addr.s_addr = inet_addr(mydollytab->hostring[i]);
+      /* Connect to the systemd socket of all client nodes to start the dolly service */
+      addr_size = sizeof serverAddr;
+      connect(clientSocket, (struct sockaddr *) &serverAddr, addr_size);
+      close(clientSocket);
   }
 }
 
@@ -594,7 +619,7 @@ static void buildring(struct dollytab * mydollytab) {
             p = info_buf;
             info_buf[ret] = 0;	
             if(mydollytab->flag_v) {
-              fprintf(stderr, "%s", info_buf);
+              fprintf(stderr, info_buf);
             }
             while((p = strstr(p, "ready")) != NULL) {
               ready_mach++;
@@ -650,6 +675,7 @@ static void usage(void) {
   fprintf(stderr, "\t-6: resolve the hostnames to ipv6 addresses\n");
   fprintf(stderr, "\t-V: Print version number and exit\n");
   fprintf(stderr, "\t-h: Print this help and exit\n");
+  fprintf(stderr, "\t-d: connect to systemd socket on clients nodes to start the dolly service (port 9996)\n");
   fprintf(stderr, "\t-v: Verbose mode\n");
   fprintf(stderr, "\t-q: Suppresss \"ignored signal\" messages\n");
   fprintf(stderr, "\t-f <configfile>, where <configfile> is the "
@@ -695,7 +721,7 @@ int main(int argc, char *argv[]) {
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:S:shnR46:V:I:O:Y:H:");
+    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:S:shdnR46:V:I:O:Y:H:");
     if(c == -1) break;
     
     switch(c) {
@@ -722,6 +748,10 @@ int main(int argc, char *argv[]) {
     case 'v':
       /* Verbose */
       mydollytab->flag_v = 1;
+      break;
+    case 'd':
+      /* systemd socket activation */
+      mydollytab->flag_d = 1;
       break;
     case 'o':
       /* log filename */
@@ -999,6 +1029,12 @@ int main(int argc, char *argv[]) {
   if (stdtty == NULL) {
       stdtty = stderr;
     }
+
+
+  if(mydollytab->flag_d) {
+    fprintf(stderr, "\nStart the dolly client on all nodes ...\n");
+    open_insystemdsocks(mydollytab);
+  }
 
   if(mydollytab->flag_v) {
     fprintf(stderr, "\nTrying to build ring...\n");

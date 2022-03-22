@@ -20,6 +20,7 @@
 
 struct dollytab {
   unsigned int flag_v;                 /* verbose */
+  unsigned int flag_d;                 /* systemd */
   char myhostname[256];
   char servername[256];
   char infile[256];
@@ -32,7 +33,6 @@ struct dollytab {
   /* Sizes for splitted input/output files. 0 means "don't split" (default) */
   unsigned long long output_split;
   unsigned long long input_split;
-  unsigned int dummysize;
   unsigned int fanout;   /* default is linear list */
   unsigned int add_nr; /* Number of extra links for data transfers */
   int add_primary; /* Addition Post- or Midfix for primary interf. */
