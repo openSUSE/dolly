@@ -19,6 +19,7 @@ SYSTEMDDIR ?= $(PREFIX)/lib/systemd/system
 FIREWALLDDIR ?= $(PREFIX)/lib/firewalld/services
 DATADIR ?= $(PREFIX)/share
 MANDIR ?= $(DATADIR)/man
+SYSCONFDIR ?= $(PREFIX)/etc
 
 EXECUTABLE = dolly
 
@@ -61,10 +62,12 @@ install:
 	install -d -m 0755 $(DESTDIR)$(SBINDIR)
 	install -d -m 0755 $(DESTDIR)$(SYSTEMDDIR)
 	install -d -m 0755 $(DESTDIR)$(FIREWALLDDIR)
+	install -d -m 0755 $(DESTDIR)$(SYSCONFDIR)
 	install -m 0755 $(EXECUTABLE) $(DESTDIR)$(SBINDIR)
 	install -m 0644 dolly.service $(DESTDIR)$(SYSTEMDDIR)
 	install -m 0644 dolly.socket $(DESTDIR)$(SYSTEMDDIR)
 	install -m 0644 dolly_firewall.xml $(DESTDIR)$(FIREWALLDDIR)
+	install -m 0644 dolly.conf $(DESTDIR)$(SYSCONFDIR)
 	-test -e dolly.1.gz && install -d -m 0755 $(DESTDIR)$(MANDIR)/man1
 	-test -e dolly.1.gz && install -m 0644 dolly.1.gz $(DESTDIR)$(MANDIR)/man1/
 
