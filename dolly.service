@@ -1,0 +1,18 @@
+[Unit]
+Description=Dolly client daemon
+Wants=dolly.socket
+After=network.target
+After=firewalld.service
+After=iptables.service
+Documentation=https://github.com/openSUSE/dolly
+
+[Service]
+Type=oneshot
+Restart=no
+ExecStart=/usr/sbin/dolly
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
+Also=dolly.socket

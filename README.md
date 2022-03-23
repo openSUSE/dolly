@@ -78,9 +78,9 @@ Following other options are:
     interested in the statistics.
 
   **-d**
- :  The "Dummy" option disables all disk accesses. It can be used to
-    benchmark the throughput of your system (computers, network,
-    switches). This option must be specified before the "-f" option!
+ :  Connect to systemd socket on clients nodes to start the dolly 
+    service (port 9996). This option only available on command 
+    line.
 
   **-t** <seconds>
  :  When in dummy mode, this option allows to specify how long the

@@ -1,0 +1,15 @@
+[Unit]
+Description=Dolly local socket
+Before=dolly.service
+
+
+[Socket]
+ListenStream=0.0.0.0:9996
+Accept=no
+Service=dolly.service
+TriggerLimitIntervalSec=2
+FlushPending=yes
+SocketMode=0666
+
+[Install]
+WantedBy=sockets.target

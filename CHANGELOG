@@ -7,6 +7,10 @@ License: GNU General Public License.
 
 History:
 
+V 0.64.0 22-MAR-2022 Antoine Ginies <aginies@suse.com>
+  add systemd socket support to start dolly clients
+  nodes on demand from a dolly server
+
 V 0.63.6 13-OCT-2021 Antoine Ginies <aginies@suse.com>
   fix hostname resolution is not done in case of usage
   of an external configuration file (bsc#1191613)
