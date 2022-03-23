@@ -12,6 +12,9 @@ DEPS = $(SOURCES:%.c=$(BUILD_DIR)/%.d)
 DEBUGFLAGS=-ggdb
 VERSION=0.64.0
 
+PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
+SYSTEMDDIR ?= $(PREFIX)/lib/systemd/system
 
 EXECUTABLE = dolly
 
@@ -41,4 +44,11 @@ clean:
 	rm -rf $(EXECUTABLE) $(OBJECTS) $(DEPS)
 	rm -rf $(EXECUTABLE)-$(VERSION) $(EXECUTABLE)-$(VERSION).tar.bz2
 
+install:
+	echo $(PREFIX)
+	install -d -m 0755 $(BINDIR)
+	install -d -m 0755 $(SYSTEMDDIR)
+	install -m 0755 $(EXECUTABLE) $(BINDIR)
+	install -m 0644 dolly.service $(SYSTEMDDIR)
+	install -m 0644 dolly.socket $(SYSTEMDDIR)
 -include $(DEPS)
