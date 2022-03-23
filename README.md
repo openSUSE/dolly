@@ -81,7 +81,7 @@ Following other options are:
  :  Connect to systemd socket on clients nodes to start the dolly 
     service (port 9996). This option only available on command 
     line.
-    Warning !!
+    **Warning !!**
     By default if you use the dolly.socket, the dolly.service start
     as root user, which means that you can delete all your nodes
     data easily while pushing into the ring data in the wrong place.
