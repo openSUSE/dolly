@@ -88,7 +88,7 @@ static void print_params(struct dollytab* mydollytab) {
   }
   fprintf(stderr, "using data port %u\n", dataport);
   fprintf(stderr, "using ctrl port %u\n", ctrlport);
-  fprintf(stderr, "using systemd port %u\n", systemdport);
+  if(mydollytab->flag_d) { fprintf(stderr, "using systemd port %u\n", systemdport); }
   fprintf(stderr, "myhostname = '%s'\n", mydollytab->myhostname);
   if(mydollytab->segsize > 0) {
     fprintf(stderr, "TCP segment size = %u\n", mydollytab->segsize);
