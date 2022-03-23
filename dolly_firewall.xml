@@ -2,5 +2,5 @@
 <service>
   <short>Dolly</short>
   <description>Enables TCP ports for Dolly</description>
-  <port protocol="tcp" port="9997-9998"/>
+  <port protocol="tcp" port="9996-9998"/>
 </service>
