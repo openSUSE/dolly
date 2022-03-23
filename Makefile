@@ -12,7 +12,7 @@ DEPS = $(SOURCES:%.c=$(BUILD_DIR)/%.d)
 DEBUGFLAGS=-ggdb
 VERSION=0.64.0
 
-PREFIX ?= /usr/local
+PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
 SYSTEMDDIR ?= $(PREFIX)/lib/systemd/system
 DATADIR ?= $(PREFIX)/share
@@ -57,12 +57,12 @@ man: dolly.1.gz
 
 install:
 	echo $(PREFIX)
-	install -d -m 0755 $(BINDIR)
-	install -d -m 0755 $(SYSTEMDDIR)
-	install -m 0755 $(EXECUTABLE) $(BINDIR)
-	install -m 0644 dolly.service $(SYSTEMDDIR)
-	install -m 0644 dolly.socket $(SYSTEMDDIR)
-	-test -e dolly.1.gz && install -d -m 0755 $(MANDIR)/man1
-	-test -e dolly.1.gz && install -m 0644 dolly.1.gz $(MANDIR)/man1/
+	install -d -m 0755 $(DESTDIR)$(BINDIR)
+	install -d -m 0755 $(DESTDIR)$(SYSTEMDDIR)
+	install -m 0755 $(EXECUTABLE) $(DESTDIR)$(BINDIR)
+	install -m 0644 dolly.service $(DESTDIR)$(SYSTEMDDIR)
+	install -m 0644 dolly.socket $(DESTDIR)$(SYSTEMDDIR)
+	-test -e dolly.1.gz && install -d -m 0755 $(DESTDIR)$(MANDIR)/man1
+	-test -e dolly.1.gz && install -m 0644 dolly.1.gz $(DESTDIR)$(MANDIR)/man1/
 
 -include $(DEPS)
