@@ -1034,8 +1034,11 @@ int main(int argc, char *argv[]) {
       stdtty = stderr;
     }
 
-
   if(mydollytab->flag_d) {
+    if (mydollytab->hostnr < 1) {
+      fprintf(stderr, "\nAt least one node is needed, use the -H parameter\n");
+      exit(1);
+    }
     fprintf(stderr, "\nStart the dolly client on all nodes ...\n");
     open_insystemdsocks(mydollytab);
   }
