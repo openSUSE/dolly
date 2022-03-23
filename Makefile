@@ -66,7 +66,7 @@ install:
 	install -m 0755 $(EXECUTABLE) $(DESTDIR)$(SBINDIR)
 	install -m 0644 dolly.service $(DESTDIR)$(SYSTEMDDIR)
 	install -m 0644 dolly.socket $(DESTDIR)$(SYSTEMDDIR)
-	install -m 0644 dolly_firewall.xml $(DESTDIR)$(FIREWALLDDIR)
+	install -m 0644 dolly_firewall.xml $(DESTDIR)$(FIREWALLDDIR)/dolly.xml
 	install -m 0644 dolly.conf $(DESTDIR)$(SYSCONFDIR)
 	-test -e dolly.1.gz && install -d -m 0755 $(DESTDIR)$(MANDIR)/man1
 	-test -e dolly.1.gz && install -m 0644 dolly.1.gz $(DESTDIR)$(MANDIR)/man1/
