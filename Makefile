@@ -14,12 +14,12 @@ VERSION=0.64.0
 
 PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
-SBINDIR ?= $(PREFIX)/bin
+SBINDIR ?= $(PREFIX)/sbin
 SYSTEMDDIR ?= $(PREFIX)/lib/systemd/system
 FIREWALLDDIR ?= $(PREFIX)/lib/firewalld/services
 DATADIR ?= $(PREFIX)/share
 MANDIR ?= $(DATADIR)/man
-SYSCONFDIR ?= $(PREFIX)/etc
+SYSCONFDIR ?= /etc
 
 EXECUTABLE = dolly
 
