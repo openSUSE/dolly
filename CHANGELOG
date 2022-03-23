@@ -7,6 +7,13 @@ License: GNU General Public License.
 
 History:
 
+V 0.64.2 23-MAR-2022 Antoine Ginies <aginies@suse.com> Christian Goll <cgoll@suse.com>
+  improved Makefile
+  add a doly.conf configuration file
+  add a firewalld rule
+  typo fixes
+  bug fixes
+ 
 V 0.64.0 22-MAR-2022 Antoine Ginies <aginies@suse.com>
   add systemd socket support to start dolly clients
   nodes on demand from a dolly server
