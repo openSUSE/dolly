@@ -12,11 +12,14 @@ DEPS = $(SOURCES:%.c=$(BUILD_DIR)/%.d)
 DEBUGFLAGS=-ggdb
 VERSION=0.64.0
 
-PREFIX ?= /usr/local
+PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
+SBINDIR ?= $(PREFIX)/sbin
 SYSTEMDDIR ?= $(PREFIX)/lib/systemd/system
+FIREWALLDDIR ?= $(PREFIX)/lib/firewalld/services
 DATADIR ?= $(PREFIX)/share
 MANDIR ?= $(DATADIR)/man
+SYSCONFDIR ?= /etc
 
 EXECUTABLE = dolly
 
@@ -56,13 +59,16 @@ dolly.1.gz:
 man: dolly.1.gz
 
 install:
-	echo $(PREFIX)
-	install -d -m 0755 $(BINDIR)
-	install -d -m 0755 $(SYSTEMDDIR)
-	install -m 0755 $(EXECUTABLE) $(BINDIR)
-	install -m 0644 dolly.service $(SYSTEMDDIR)
-	install -m 0644 dolly.socket $(SYSTEMDDIR)
-	-test -e dolly.1.gz && install -d -m 0755 $(MANDIR)/man1
-	-test -e dolly.1.gz && install -m 0644 dolly.1.gz $(MANDIR)/man1/
+	install -d -m 0755 $(DESTDIR)$(SBINDIR)
+	install -d -m 0755 $(DESTDIR)$(SYSTEMDDIR)
+	install -d -m 0755 $(DESTDIR)$(FIREWALLDDIR)
+	install -d -m 0755 $(DESTDIR)$(SYSCONFDIR)
+	install -m 0755 $(EXECUTABLE) $(DESTDIR)$(SBINDIR)
+	install -m 0644 dolly.service $(DESTDIR)$(SYSTEMDDIR)
+	install -m 0644 dolly.socket $(DESTDIR)$(SYSTEMDDIR)
+	install -m 0644 dolly_firewall.xml $(DESTDIR)$(FIREWALLDDIR)/dolly.xml
+	install -m 0644 dolly.conf $(DESTDIR)$(SYSCONFDIR)
+	-test -e dolly.1.gz && install -d -m 0755 $(DESTDIR)$(MANDIR)/man1
+	-test -e dolly.1.gz && install -m 0644 dolly.1.gz $(DESTDIR)$(MANDIR)/man1/
 
 -include $(DEPS)
