@@ -58,7 +58,7 @@ dolly.1.gz:
 man: dolly.1.gz
 
 install:
-	install -d -m 0755 $(DESTDIR)$(BINDIR)
+	install -d -m 0755 $(DESTDIR)$(SBINDIR)
 	install -d -m 0755 $(DESTDIR)$(SYSTEMDDIR)
 	install -d -m 0755 $(DESTDIR)$(FIREWALLDDIR)
 	install -m 0755 $(EXECUTABLE) $(DESTDIR)$(SBINDIR)
