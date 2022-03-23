@@ -88,7 +88,7 @@ static void print_params(struct dollytab* mydollytab) {
   }
   fprintf(stderr, "using data port %u\n", dataport);
   fprintf(stderr, "using ctrl port %u\n", ctrlport);
-  fprintf(stderr, "using systemd port %u\n", systemdport);
+  if(mydollytab->flag_d) { fprintf(stderr, "using systemd port %u\n", systemdport); }
   fprintf(stderr, "myhostname = '%s'\n", mydollytab->myhostname);
   if(mydollytab->segsize > 0) {
     fprintf(stderr, "TCP segment size = %u\n", mydollytab->segsize);
@@ -100,7 +100,7 @@ static void print_params(struct dollytab* mydollytab) {
     } else if(mydollytab->add_mode == 2) {
       fprintf(stderr, "Midfixes: ");
     } else {
-      fprintf(stderr, "Undefined value fuer add_mode: %d\n", mydollytab->add_mode);
+      fprintf(stderr, "Undefined value for add_mode: %d\n", mydollytab->add_mode);
       exit(1);
     }
     for(i = 0; i < mydollytab->add_nr; i++) {
@@ -254,7 +254,7 @@ static void open_insystemdsocks(struct dollytab * mydollytab) {
       addr_size = sizeof serverAddr;
       Retval = connect(clientSocket, (struct sockaddr *) &serverAddr, addr_size);
       if (Retval < 0) {
-        fprintf(stderr, "Connection failed to %s ! dolly service wont be started !\n", mydollytab->hostring[i]);
+        fprintf(stderr, "Connection failed to %s ! dolly service wont be started !\n (Please do a: systemctl start dolly.socket)\n", mydollytab->hostring[i]);
       }
       close(clientSocket);
   }
