@@ -84,14 +84,18 @@ void transmit(struct dollytab * mydollytab) {
           }
           if(mydollytab->add_nr == 0) {
             for(i = 0; i < mydollytab->nr_childs; i++) {
-              (void)fprintf(stderr, "Writing maxbytes = %llu to ctrlout\n",
-                maxbytes);
+              if(mydollytab->flag_v) {
+                (void)fprintf(stderr, "Writing maxbytes = %llu to ctrlout\n",
+                  maxbytes);
+              }
               movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8,mydollytab);
               shutdown(dataout[i], 2);
             }
           } else {
-            (void)fprintf(stderr, "Writing maxbytes = %llu to ctrlout\n",
-              maxbytes);
+            if(mydollytab->flag_v) {
+              (void)fprintf(stderr, "Writing maxbytes = %llu to ctrlout\n",
+                maxbytes);
+            }
             movebytes(ctrlout[0], WRITE, (char *)&maxbytes, 8,mydollytab);
             for(i = 0; i <= mydollytab->add_nr; i++) {
               shutdown(dataout[i], 2);
@@ -274,7 +278,9 @@ void transmit(struct dollytab * mydollytab) {
   td = (tv2.tv_sec*1000000 + tv2.tv_usec) - (tv1.tv_sec*1000000 + tv1.tv_usec);
   
   if(mydollytab->meserver) {
-    fprintf(stdtty, "\rSent MB: %.0f.       \n", (float)maxbytes/1000000);
+    if(mydollytab->flag_v) {
+      fprintf(stdtty, "\rSent MB: %.0f.       \n", (float)maxbytes/1000000);
+    }
  
     if(flag_log){
       logfd = fopen(logfile, "a");
@@ -350,13 +356,14 @@ void transmit(struct dollytab * mydollytab) {
 	      maxbytes, maxbytes);
 	      */
     } else {
-      fprintf(stderr, "Clients done.\n");
+      fprintf(stderr, "Transfert to all client nodes done.\n");
     }
-
-    fprintf(stderr, "Time: %lu.%03lu\n", td / 1000000, td % 1000000);
-    fprintf(stderr, "MBytes/s: %0.3f\n", (double)maxbytes / td);
-    fprintf(stderr, "Aggregate MBytes/s: %0.3f\n",
+    if(mydollytab->flag_v) {
+      fprintf(stderr, "Time: %lu.%03lu\n", td / 1000000, td % 1000000);
+      fprintf(stderr, "MBytes/s: %0.3f\n", (double)maxbytes / td);
+      fprintf(stderr, "Aggregate MBytes/s: %0.3f\n",
 	    (double)maxbytes * mydollytab->hostnr / td);
+    }
     if(maxcbytes != 0) {
       fprintf(stderr, "Bytes written on each node: %llu\n", maxcbytes);
       fprintf(stderr, "MBytes/s written: %0.3f\n",

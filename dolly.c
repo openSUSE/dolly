@@ -629,8 +629,10 @@ static void buildring(struct dollytab * mydollytab) {
               ready_mach++;
               p++;
             }
-            fprintf(stderr,
-              "Machines left to wait for: %u\n", mydollytab->hostnr - ready_mach);
+            if(mydollytab->flag_v) {
+              fprintf(stderr,
+                "Machines left to wait for: %u\n", mydollytab->hostnr - ready_mach);
+            }
           }
         }
       } /* For all childs */
@@ -1016,7 +1018,7 @@ int main(int argc, char *argv[]) {
       fprintf(df,"clients %u\n",mydollytab->hostnr);
       for(i = 0; i < mydollytab->hostnr; i++) {
         fprintf(df,"%s\n",mydollytab->hostring[i]);
-        fprintf(stderr,"writing '%s'\n'",mydollytab->hostring[i]);
+        if(mydollytab->flag_v) { fprintf(stderr,"writing '%s'\n'",mydollytab->hostring[i]); }
       }
       fprintf(df,"endconfig\n");
       fclose(df);
@@ -1039,7 +1041,7 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "\nAt least one node is needed, use the -H parameter\n");
       exit(1);
     }
-    fprintf(stderr, "\nStart the dolly client on all nodes ...\n");
+    fprintf(stderr, "\nStart the dolly client on all nodes...\n");
     open_insystemdsocks(mydollytab);
   }
 
