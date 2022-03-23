@@ -85,6 +85,9 @@ Following other options are:
     By default if you use the dolly.socket, the dolly.service start
     as root user, which means that you can delete all your nodes
     data easily while pushing into the ring data in the wrong place.
+    There is **NO AUTH** process, which means that all nodes with a
+    dolly socket open and listed as a target from the server will get
+    the data.
 
   **-t** <seconds>
  :  When in dummy mode, this option allows to specify how long the
@@ -134,8 +137,8 @@ Following other options are:
  :  Retry to connect to mode <n> times
 
 
-Configuration file
-------------------
+CONFIGURATION FILE
+==================
 
 One can use either us the appropriate commandline options (-i,-o and -H) or a
 configuration file for the cloning process is needed. Its format is strict, but
@@ -286,8 +289,8 @@ following "EG:" are example lines)
    EG: endconfig
 
 
-Note on nodes hostnames
-------------------------
+NOTE on NODES HOSTNAMES
+=======================
 
 On some machines (e.g. with very small maintenance installations),
 gethostbyname() does not return the hostname (I don't know why). If
@@ -297,7 +300,7 @@ get the environment variable MYNODENAME, then HOST, then it tries
 gethostbyname(). This feature was introduced in dolly version 0.58.
 
 
-How it works
+HOW IT WORKS
 ============
 
 Setting up or upgrading a cluster of PCs typically leads to the
@@ -358,8 +361,8 @@ directly clone partitions from one machine to some others without any
 filesystem in the partition.
 
 
-Different cloning possibilities
--------------------------------
+DIFFERENT CLONING POSSIBILITIES
+===============================
 
 There are different possibilities to clone your master machine:
 
@@ -394,6 +397,11 @@ CHANGES
 
 See CHANGELOG file
 
+TODO
+====
+
+Add an AUTH method to validate client nodes from server.
+            
 EXAMPLE
 =======
 
