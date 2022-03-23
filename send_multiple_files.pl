@@ -4,7 +4,7 @@
 use strict;
 
 # basic dolly stuff
-my $DOLLY = "/usr/bin/dolly";
+my $DOLLY = "/usr/sbin/dolly";
 my $ARGS = "-dqs";
 
 # list of nodes, adjust to your setup
