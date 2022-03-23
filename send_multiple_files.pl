@@ -33,4 +33,5 @@ foreach my $INFILE (@INFILES) {
 	my $OUTFILE= $INFILE;
 	#print("$DOLLY $ARGS -H $NODES -I $INFILE -O $OUTFILE\n");
 	system("$DOLLY $ARGS -H $NODES -I $INFILE -O $OUTFILE");
+	sleep 1;
 }
