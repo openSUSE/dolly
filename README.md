@@ -79,7 +79,7 @@ Following other options are:
 
   **-d**
  :  Connect to systemd socket on clients nodes to start the dolly 
-    service on (port 9996). This option only available on command 
+    service (port 9996). This option only available on command 
     line.
 
   **-t** <seconds>
