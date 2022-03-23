@@ -236,12 +236,13 @@ static void open_insocks(struct dollytab * mydollytab) {
 static void open_insystemdsocks(struct dollytab * mydollytab) {
   int clientSocket;
   unsigned int i;
+  int Retval=-1;
   struct sockaddr_in serverAddr;
   socklen_t addr_size;
   serverAddr.sin_family = AF_INET;
   serverAddr.sin_port = htons(systemdport);
   if(mydollytab->flag_v) {
-    fprintf(stderr, "Start dolly client using systemd socket on %u hosts:\n", mydollytab->hostnr);
+    fprintf(stderr, "Start dolly client using systemd socket on %u hosts, port %i:\n", mydollytab->hostnr, systemdport);
   }
   for(i = 0; i < mydollytab->hostnr; i++) {
       clientSocket = socket(PF_INET, SOCK_STREAM, 0);
@@ -251,7 +252,10 @@ static void open_insystemdsocks(struct dollytab * mydollytab) {
       serverAddr.sin_addr.s_addr = inet_addr(mydollytab->hostring[i]);
       /* Connect to the systemd socket of all client nodes to start the dolly service */
       addr_size = sizeof serverAddr;
-      connect(clientSocket, (struct sockaddr *) &serverAddr, addr_size);
+      Retval = connect(clientSocket, (struct sockaddr *) &serverAddr, addr_size);
+      if (Retval < 0) {
+        fprintf(stderr, "Connection failed to %s ! dolly service wont be started !\n", mydollytab->hostring[i]);
+      }
       close(clientSocket);
   }
 }
