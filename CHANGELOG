@@ -6,6 +6,8 @@ Copyright: Felix Rauch <rauch@inf.ethz.ch> and ETH Zurich.
 License: GNU General Public License.
 
 History:
+V 0.64.3 26-APR-2022 Antoine Ginies <aginies@suse.com>
+  outfile is no more mandatory in commande line
 
 V 0.64.2 23-MAR-2022 Antoine Ginies <aginies@suse.com> Christian Goll <cgoll@suse.com>
   improved Makefile

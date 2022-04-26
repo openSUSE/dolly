@@ -994,15 +994,15 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   if(flag_cargs) {
-    if(strlen(mydollytab->outfile) == 0) {
-      fprintf(stderr,"outfile via '-O FILE' must be set\n");
-      exit(1);
-    }
     if(strlen(mydollytab->infile) == 0) {
       fprintf(stderr,"inputfile via '-I [FILE|-]' must be set\n");
       exit(1);
     }
-    if(strlen(dollytab) == 0) {
+    if(strlen(mydollytab->outfile) == 0) {
+      fprintf(stderr,"outfile via '-O FILE' not set, will use '%s' name as target\n", mydollytab->infile);
+      strcpy(mydollytab->outfile,mydollytab->infile);
+    }
+   if(strlen(dollytab) == 0) {
       generated_dolly = 1;
       strcpy(dollytab,"/tmp/dollygenXXXXXX");
       fd = mkstemp(dollytab);

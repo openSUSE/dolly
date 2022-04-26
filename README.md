@@ -31,11 +31,12 @@ set:
 **-I** FILE : FILE is used as input file.
 
 **-O** FILE\|- : FILE will be used as output file, if '-' is used as FILE, the
-output will printed to stdout.
+output will printed to stdout. This is not mandatory on the commande line, if 
+not specified this will be the same name as the one set in **-I** option.
 
 **-H** HOSTLIST: A comma seperated hostlist, where then the first host of the list
-is used as firstclient and the last host  as lastclient, like in the
-configuration file.
+is used as firstclient and the last host as lastclient, like in the configuration
+file.
 
 Following other options are:
 
@@ -97,7 +98,7 @@ Following other options are:
     or with small TCP segment sizes), it's more convenient to specify
     the run-lenght in seconds, as the benchmark-time becomes more
     predictable.
-    
+ 
   **-f** <config file>
  :  This option is used to select the config file for this cloning
     process. This option makes only sense on the master machine and
@@ -189,25 +190,13 @@ following "EG:" are example lines)
        Will store the incoming compressed data stream in the directory
       /images/cloneimages/ in files sda_all.gz_0, sda_all.gz_1 and so on.
 
--. Instead of the first two entries ("infile" and "outfile") it is
-   also possible to use the single line "dummy [<MB>]", where <MB> is
-   the number of Megabytes to transfer in dummy mode. If <MB> is set
-   to 0, then the clients will just terminate. This is useful when
-   benchmarking with different options, so the clients can run all the
-   time. To finally terminate them on all clients, just set dummy to 0.
-   NOTE: It is probably better to use the newer "-t" switch on the
-   server to specify the number of seconds the benchmarks should
-   run. In that case you can leave the <MB> blank.
-   Syntax: dummy [<MB>]
-   EG: dummy 128
-
 -. The optional keyword "segsize" is mostly used to benchmark
    switches. It specifies the maximal size of TCP segments during the
    network transfer. Usually you don't need to specify this option at
    all.
    Syntax: segsize <TCP_MAXSEG size>
    EG: segsize 128
-   
+
 -. With the optional keyword "add" it is possible to add more
    interfaces to use. The network traffic is then evenly distributed
    across the interfaces. This option is useful if you have for
@@ -243,7 +232,7 @@ following "EG:" are example lines)
    paramater if your hostnames include a hypen (like e.g. "node-12").
    Syntax: hyphennormal
    EG: hyphennormal
-   
+
 3. After the keyword "server" follows the hostname of the server (or
    master). This is required for the last machine in the ring to be
    able to send the end-acknowledge back to the server.
@@ -273,7 +262,7 @@ following "EG:" are example lines)
 7. The following lines contain the interface-names of the client
    machines. The number of machines must match the above number of
    clients (see 6.). You should use the name of the interface on
-   which the machines will receive the data.   
+   which the machines will receive the data.
    Syntax: <name of client 1>
            <name of client 2>
            [...]
@@ -381,7 +370,7 @@ There are different possibilities to clone your master machine:
 - You want to clone a whole disk including all the partitions. In this
   case you either need a second disk on all machines where your Linux
   used for the cloning process runs on (not the one you want to clone)
-  or you need a small one-floppy-disk-Linux which you boot on all
+  or you need a small one-disk-Linux which you boot on all
   machines. In the later case you also need dolly on all machines
   (copy it to your floppy disk or mount it with NFS) and the
   config-file on the master.
@@ -401,7 +390,7 @@ TODO
 ====
 
 Add an AUTH method to validate client nodes from server.
-            
+
 EXAMPLE
 =======
 
