@@ -7,10 +7,11 @@ License: GNU General Public License.
 
 History:
 V 0.64.3 26-APR-2022 Antoine Ginies <aginies@suse.com>
-  outfile is no more mandatory in commande line
+  using the -O outfile option is no more mandatory in commande line
   simplify usage of dolly command (automatically be a server in some scenario)
-  fix -V options
-  check that -I is a file/device and not a directory
+  improve documentation
+  bug fix: -V options doesnt need any arg
+  bug fix: check that -I is a file/device and not a directory to avoid dolly hangs
 
 V 0.64.2 23-MAR-2022 Antoine Ginies <aginies@suse.com> Christian Goll <cgoll@suse.com>
   improved Makefile
