@@ -255,7 +255,7 @@ static void open_insystemdsocks(struct dollytab * mydollytab) {
       addr_size = sizeof serverAddr;
       Retval = connect(clientSocket, (struct sockaddr *) &serverAddr, addr_size);
       if (Retval < 0) {
-        fprintf(stderr, "Connection failed to %s ! dolly service wont be started !\n (Please do a: systemctl start dolly.socket)\n", mydollytab->hostring[i]);
+        fprintf(stderr, "Connection failed to %s ! dolly service wont be started !\n (Please do a: systemctl start dolly.socket)\n (To always enable it: systemctl enable dolly.socket)\n", mydollytab->hostring[i]);
       }
       close(clientSocket);
   }
@@ -676,13 +676,13 @@ static void usage(void) {
 	  "[-o logfile] [-t time] -I [inputfile] -O [outpufile] -H [node1,node2,node3...]\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "\tWithout any -s or -S option dolly will be a client\n");
-  fprintf(stderr, "\t-s: this is the server, check hostname\n");
+  fprintf(stderr, "\t-s: This is the server, check hostname (no more mandatory if server options are used: -H, -I))\n");
   fprintf(stderr, "\t-S <hostname>: use hostname as server\n");
-  fprintf(stderr, "\t-R: resolve the hostnames to ipv4 addresses\n");
-  fprintf(stderr, "\t-6: resolve the hostnames to ipv6 addresses\n");
+  fprintf(stderr, "\t-R: Resolve the hostnames to ipv4 addresses\n");
+  fprintf(stderr, "\t-6: Resolve the hostnames to ipv6 addresses\n");
   fprintf(stderr, "\t-V: Print version number and exit\n");
   fprintf(stderr, "\t-h: Print this help and exit\n");
-  fprintf(stderr, "\t-d: connect to systemd socket on clients nodes to start the dolly service (port 9996)\n");
+  fprintf(stderr, "\t-d: Connect to systemd socket on clients nodes to start the dolly service (port 9996)\n");
   fprintf(stderr, "\t-v: Verbose mode\n");
   fprintf(stderr, "\t-q: Suppresss \"ignored signal\" messages\n");
   fprintf(stderr, "\t-f <configfile>, where <configfile> is the "
@@ -694,13 +694,13 @@ static void usage(void) {
   fprintf(stderr, "\t-n: Do not sync before exit. Dolly exits sooner.\n");
   fprintf(stderr, "\t    Data may not make it to disk if power fails soon after dolly exits.\n\n");
   fprintf(stderr, "\tFollowing options can be used instead of a dollytab:\n");
-  fprintf(stderr, "\t-H: comma seperated list of the hosts to send to\n");
-  fprintf(stderr, "\t-I: input file\n");
-  fprintf(stderr, "\t-O: output file (just - for output to stdout), if not set the value will be the same as -I\n\n");
+  fprintf(stderr, "\t-H: Comma seperated list of the hosts to send to\n");
+  fprintf(stderr, "\t-I: Input file\n");
+  fprintf(stderr, "\t-O: Output file (just - for output to stdout), if not set the value will be the same as -I\n\n");
   fprintf(stderr, "\tCustomize network transfer:\n");
-  fprintf(stderr, "\t-b <size>, where size is the size of block to transfer (default 4096)\n");
-  fprintf(stderr, "\t-u <size>, size of the buffer (multiple of 4K)\n");
-  fprintf(stderr, "\t-c <size>, where size is uncompressed size of "
+  fprintf(stderr, "\t-b <size>, Where size is the size of block to transfer (default 4096)\n");
+  fprintf(stderr, "\t-u <size>, Size of the buffer (multiple of 4K)\n");
+  fprintf(stderr, "\t-c <size>, Where size is uncompressed size of "
 	  "compressed inputfile\n\t\t(for statistics only)\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Example of usage:\n");
@@ -708,7 +708,12 @@ static void usage(void) {
   fprintf(stderr, "\tdolly -v\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "On server:\n");
-  fprintf(stderr, "\tdolly -s -H sle15sp32,sle15sp33,sle15sp34 -I files.tgz -O /tmp/files.tgz\n");
+  fprintf(stderr, "\tdolly -vs -H sle15sp32,sle15sp33,sle15sp34 -I files.tgz -O /tmp/files.tgz\n");
+  fprintf(stderr, "\tVerbose mode, copy data files.tgz to /tmp/files.tgz on sle15sp32,sle15sp33,sle15sp34 nodes\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "\tdolly -d -H sle15sp32,sle15sp33,sle15sp34 -I /tmp/files.tgz\n");
+  fprintf(stderr, "\tUsing systemd socket, copy /tmp/files.tgz to /tmp/files.tgz on nodes sle15sp32,sle15sp33,sle15sp34\n");
+  fprintf(stderr, "\n");
   exit(1);
 }
 
@@ -1034,6 +1039,10 @@ int main(int argc, char *argv[]) {
 
   if(mydollytab->meserver && mydollytab->flag_v) {
     print_params(mydollytab);
+  }
+
+  if(!mydollytab->meserver) {
+    fprintf(stderr,"I am a dolly client, waiting for a server...\n");
   }
 
   /* try to open standard terminal output */
