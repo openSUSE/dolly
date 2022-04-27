@@ -428,6 +428,26 @@ progress reports). Finally, Dolly is started on the server as follows:
   dolly -v -s -f dollytab.cfg
 That's all.
 
+EXPERIMENTAL
+============
+
+Be aware of the following restrictions:
+* The output data type must be the same as the input data type. Mixing the type of input and output can lead to data corruption.
+* Only clone partitions that are identical in size on the dolly server and the client node.
+* Only clone strictly identical storage devices, or corruption can occur.
+
+The following command line parameters are not tested and are provided as experimental::
+* -S: Ignoring the FQDN is not supported.
+* -6: Using IPv6 is not supported.
+* -n: Not doing a sync before exiting is not supported as this can lead to data corruption.
+* -c: Specifying the uncompressed size of a compressed file should only be used for performance statistics.
+
+The following configuration file options are not tested are provided as experimental:
+* compressed: Using the compression option is not supported.
+* split: Splitting files is not supported (infile or outfile).
+* fanout: This option must be set to 1 (a linear list). A binary tree or more is not supported.
+* segsize: This benchmark switch is not supported.
+* add: Using more than one interface to clone data is not supported.
 
 Bibliography
 ============
