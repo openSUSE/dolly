@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include "dolly.h"
 #include "transmit.h"
 #include "files.h"
@@ -826,11 +827,23 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Name of input-file too long.\n");
         exit(1);
       }
-      /* as -I is used automatically set this machine as the server. */
-      mydollytab->meserver = 1;
       memcpy(mydollytab->infile,optarg,strlen(optarg));
-      flag_cargs = 1;
-      break;
+      // check this is not a directory
+      DIR* tocheck = opendir(mydollytab->infile);
+      FILE* file = fopen(mydollytab->infile, "r");
+      if (tocheck) {
+        fprintf(stderr, "Error ! %s is a directory, it should be a file.\n", mydollytab->infile);
+        exit(1);
+      } else if (file) {
+        fclose(file);
+        /* as -I is used automatically set this machine as the server. */
+        mydollytab->meserver = 1;
+        flag_cargs = 1;
+        break;
+      } else {
+        fprintf(stderr, "Error ! %s is not a file or a device.\n", mydollytab->infile);
+        exit(1);
+      }
 
     case 'O':
       if(strlen(optarg) > 255) {
