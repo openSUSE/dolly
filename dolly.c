@@ -692,11 +692,10 @@ static void usage(void) {
   fprintf(stderr, "\t-a <timeout>: Lets dolly terminate if it could not transfer\n\t\tany data after <timeout> seconds.\n");
   fprintf(stderr, "\t-n: Do not sync before exit. Dolly exits sooner.\n");
   fprintf(stderr, "\t    Data may not make it to disk if power fails soon after dolly exits.\n\n");
-  fprintf(stderr, "\tFollowing options can be used instead of a dollytab and\n");
-  fprintf(stderr, "\timply the -S or -s option which must me preceded:\n");
+  fprintf(stderr, "\tFollowing options can be used instead of a dollytab:\n");
   fprintf(stderr, "\t-H: comma seperated list of the hosts to send to\n");
   fprintf(stderr, "\t-I: input file\n");
-  fprintf(stderr, "\t-O: output file (just - for output to stdout)\n\n");
+  fprintf(stderr, "\t-O: output file (just - for output to stdout), if not set the value will be the same as -I\n\n");
   fprintf(stderr, "\tCustomize network transfer:\n");
   fprintf(stderr, "\t-b <size>, where size is the size of block to transfer (default 4096)\n");
   fprintf(stderr, "\t-u <size>, size of the buffer (multiple of 4K)\n");
@@ -727,7 +726,7 @@ int main(int argc, char *argv[]) {
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:S:shdnR46:V:I:O:Y:H:");
+    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:S:shdnR46:VI:O:Y:H:");
     if(c == -1) break;
     
     switch(c) {
@@ -827,10 +826,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Name of input-file too long.\n");
         exit(1);
       }
-      if (mydollytab->meserver == 0) {
-        fprintf(stderr,"the -S/-s must preceed the -I option\n");
-        exit(1);
-      }
+      /* as -I is used automatically set this machine as the server. */
+      mydollytab->meserver = 1;
       memcpy(mydollytab->infile,optarg,strlen(optarg));
       flag_cargs = 1;
       break;
@@ -840,10 +837,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Name of output-file too long.\n");
         exit(1);
       }
-      if (mydollytab->meserver == 0) {
-        fprintf(stderr,"the -S/-s must preceed the -O option\n");
-        exit(1);
-      }
+      /* as -I is used automatically set this machine as the server. */
+      mydollytab->meserver = 1;
       memcpy(mydollytab->outfile,optarg,strlen(optarg));
       flag_cargs = 1;
       break;
@@ -853,10 +848,9 @@ int main(int argc, char *argv[]) {
       break;
 
     case 'H':
-      if (mydollytab->meserver == 0) {
-        fprintf(stderr,"the -S/-s must preceed the -H option\n");
-        exit(1);
-      }
+      /* as -H is used automatically set this machine as the server. */
+      mydollytab->meserver = 1;
+
       /* copying string as it is modified*/
       a_str = strdup(optarg);
       tmp_str = a_str;

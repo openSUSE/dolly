@@ -32,7 +32,7 @@ set:
 
 **-O** FILE\|- : FILE will be used as output file, if '-' is used as FILE, the
 output will printed to stdout. This is not mandatory on the commande line, if 
-not specified this will be the same name as the one set in **-I** option.
+not specified this will use the same value as the one set in **-I** option.
 
 **-H** HOSTLIST: A comma seperated hostlist, where then the first host of the list
 is used as firstclient and the last host as lastclient, like in the configuration
@@ -118,9 +118,8 @@ Following other options are:
     lets you specify this timeout. If dolly could not transfer any
     data after <timeout> seconds, then it will simply print an error
     message and terminate. This feature might be especially useful for
-    scripted and automatic installations (such as "CloneSys"), where
-    you don't want to have dolly-processes hang around if a machine
-    hangs.
+    scripted and automatic installations where you don't want to have
+    dolly-processes hang around if a machine hangs.
 
   **-n**
  :  Do not sync() before exit. Thus, dolly will exit sooner, but data
