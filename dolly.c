@@ -691,6 +691,7 @@ static void usage(void) {
   fprintf(stderr, "\t-o <logfile>: Write some statistical information  "
 	  "in <logfile>\n");
   fprintf(stderr, "\t-a <timeout>: Lets dolly terminate if it could not transfer\n\t\tany data after <timeout> seconds.\n");
+  fprintf(stderr, "\t-r <n>: Retry to connect to node <n> times\n");
   fprintf(stderr, "\t-n: Do not sync before exit. Dolly exits sooner.\n");
   fprintf(stderr, "\t    Data may not make it to disk if power fails soon after dolly exits.\n\n");
   fprintf(stderr, "\tFollowing options can be used instead of a dollytab:\n");

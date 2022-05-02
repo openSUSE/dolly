@@ -1,16 +1,26 @@
 DOLLY
 =====
-A program to clone disks / partitions / data.
+A program to clone over the network disks / partitions / data.
 Take same amount of time to copy data to one node or to X nodes.
 
 SYNOPSIS
 ========
 
-dolly \[**-f** config\]
+General syntax:
+ dolly \[**-v**\] \[**-a** timeout\] \[**-r** max_retries\] \[**-s**\] \[**-I** infile\] \[**-O** outfile\|-\] \[**-H** hostlist\] 
 
-dolly \[**-I** infile\] \[**-O** outfile\|-\] \[**-H** hostlist\] 
+Dolly as a server using a configuration file:
+````dolly **-s** **-f** config_file````
 
-dolly **-v** **-r** 40 **-S** SERVERIP **-H** IPNODE1,IPNODE2,IPNODE3 **-I** /dev/vdd **-O** /dev/vdd
+Dolly as a server, verbose mode, trying to reconnect 40 times, copy /dev/vdd to /dev/vdd on nodes IPNODE1,IPNODE2,IPNODE3:
+````dolly **-v** **-r** 40 **-S** SERVERIP **-H** IPNODE1,IPNODE2,IPNODE3 **-I** /dev/vdd **-O** /dev/vdd````
+
+Dolly as a server, using systemd socket to connect to nodes, copy /dev/vdd to /dev/vdd on nodes IPNODE1,IPNODE2,IPNODE3:
+````dolly **-d** **-H** IPNODE1,IPNODE2,IPNODE3 **-I** /dev/vdd````
+
+Dolly as a client in verbose mode:
+````dolly **-v**````
+
 
 DESCRIPTION
 ===========
@@ -56,6 +66,7 @@ Following other options are:
  :  This option specifies the server machine and should only be used
     on the master. Dolly will warn you if the config file specifies
     another master than the machine on which this option is set.
+    This is no more mandatory if server options are used: -H, -I.
     This option must be secified before the "-f" option!
 
   **-S**
@@ -134,7 +145,7 @@ Following other options are:
     the size of buffers for TCP sockets.
 
  **-r** <n>
- :  Retry to connect to mode <n> times
+ :  Retry to connect to node <n> times
 
 
 CONFIGURATION FILE
