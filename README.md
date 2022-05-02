@@ -7,19 +7,29 @@ SYNOPSIS
 ========
 
 General syntax:
- dolly \[**-v**\] \[**-a** timeout\] \[**-r** max_retries\] \[**-s**\] \[**-I** infile\] \[**-O** outfile\|-\] \[**-H** hostlist\] 
+````sh
+dolly \[**-v**\] \[**-a** timeout\] \[**-r** max_retries\] \[**-s**\] \[**-I** infile\] \[**-O** outfile\|-\] \[**-H** hostlist\]
+````
 
 Dolly as a server using a configuration file:
-````dolly **-s** **-f** config_file````
+````sh
+dolly **-s** **-f** config_file
+````
 
 Dolly as a server, verbose mode, trying to reconnect 40 times, copy /dev/vdd to /dev/vdd on nodes IPNODE1,IPNODE2,IPNODE3:
-````dolly **-v** **-r** 40 **-S** SERVERIP **-H** IPNODE1,IPNODE2,IPNODE3 **-I** /dev/vdd **-O** /dev/vdd````
+````sh
+dolly **-v** **-r** 40 **-S** SERVERIP **-H** IPNODE1,IPNODE2,IPNODE3 **-I** /dev/vdd **-O** /dev/vdd
+````
 
 Dolly as a server, using systemd socket to connect to nodes, copy /dev/vdd to /dev/vdd on nodes IPNODE1,IPNODE2,IPNODE3:
-````dolly **-d** **-H** IPNODE1,IPNODE2,IPNODE3 **-I** /dev/vdd````
+````sh
+dolly **-d** **-H** IPNODE1,IPNODE2,IPNODE3 **-I** /dev/vdd
+````
 
 Dolly as a client in verbose mode:
-````dolly **-v**````
+````sh
+dolly **-v**
+````
 
 
 DESCRIPTION
