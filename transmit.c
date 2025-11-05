@@ -115,10 +115,11 @@ void transmit(struct dollytab * mydollytab) {
           - (tv1.tv_sec*1000000 + tv1.tv_usec);
         tdlast = (tv2.tv_sec*1000000 + tv2.tv_usec)
           - (tv3.tv_sec*1000000 + tv3.tv_usec);
+
         fprintf(stdtty,
-          "\rSent MB: %.0f, MB/s: %.3f, Current MB/s: %.3f      ",
-          (float)maxbytes/1000000,
-          (float)maxbytes/td,(float)(maxbytes - lastout)/tdlast);
+              "\rTransferred: %.0f MB | Speed: %.3f MB/s (current: %.3f MB/s)      ",
+              (float)maxbytes/1000000,
+              (float)maxbytes/td,(float)(maxbytes - lastout)/tdlast);
         fflush(stdtty);
         lastout = maxbytes;
       }
@@ -193,7 +194,7 @@ void transmit(struct dollytab * mydollytab) {
             old_part = ret - (transbytes + ret) % mydollytab->output_split;
             new_part = ret - old_part;
             movebytes(output, WRITE, buf, old_part,mydollytab);
-            open_outfile(1,mydollytab);
+            open_outfile(mydollytab);
             movebytes(output, WRITE, buf + old_part, new_part,mydollytab);
           } else {
             movebytes(output, WRITE, buf, ret,mydollytab);
@@ -267,7 +268,7 @@ void transmit(struct dollytab * mydollytab) {
 	  - (tv1.tv_sec*1000000 + tv1.tv_usec);
 	tdlast = (tv2.tv_sec*1000000 + tv2.tv_usec)
 	  - (tv3.tv_sec*1000000 + tv3.tv_usec);
-	fprintf(stdtty, "\rTransfered MB: %.0f, MB/s: %.3f, Current MB/s: %.3f      ", (float)transbytes/1000000, (float)transbytes/td,(float)(transbytes - lastout)/tdlast);
+	fprintf(stdtty, "\rTransferred: %.0f MB | Speed: %.3f MB/s (current: %.3f MB/s)      ", (float)transbytes/1000000, (float)transbytes/td,(float)(transbytes - lastout)/tdlast);
 	fflush(stdtty);
 	lastout = transbytes;
       }
@@ -291,7 +292,7 @@ void transmit(struct dollytab * mydollytab) {
       if(mydollytab->compressed_in) {
         fprintf(logfd, "compressed ");
       }
-      fprintf(logfd, "infile = '%s'\n", mydollytab->infile);
+      //fprintf(logfd, "infile = '%s'\n", mydollytab->infile);
       if(mydollytab->compressed_out) {
         fprintf(logfd, "compressed ");
       }
