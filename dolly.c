@@ -34,8 +34,8 @@ int datasock = -1;
 int ctrlin = -1, ctrlout[MAXFANOUT];
 int ctrlsock = -1;
 
-unsigned long long maxbytes = 0; /* max bytes to transfer */
 unsigned long long maxcbytes = 0;/*     --  "  --  in compressed mode */
+unsigned long long maxbytes = 0; /* max bytes to transfer */
 int dosync = 1;                  /* sync() after transfer */
 int timeout = 0;                 /* Timeout for startup */
 int verbignoresignals = 1;       /* warn on ignore signal errors */
@@ -98,7 +98,6 @@ static void print_params(struct dollytab* mydollytab) {
     fprintf(stderr, "| %-36s | %-40u |\n", "Fanout", mydollytab->fanout);
     fprintf(stderr, "| %-36s | %-40u |\n", "Number of Childs", mydollytab->nr_childs);
     fprintf(stderr, "| %-36s | %-40u |\n", "Clients in Ring (excluding server)", mydollytab->hostnr);
-    fprintf(stderr, "| %-36s | %-40s |\n", "Compression", (mydollytab->compressed_out ? "compressed" : "No compression used."));
     fprintf(stderr, "| %-36s | %-40u |\n", "Transfer Size", (unsigned int) mydollytab->t_b_size);
     fprintf(stderr, "\n");
   }
@@ -647,59 +646,55 @@ static void buildring(struct dollytab * mydollytab) {
 
 
 static void usage(void) {
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Dolly version: %s\n", version_string);
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Dolly is a program to clone disks / partitions / data. It takes same amount of time to copy data to one node or to X nodes.\n");
-  fprintf(stderr, "\n");
-  fprintf(stderr,
-	  "Usage: dolly [-hVvSsnYR] [-c <size>] [-b <size>] [-u <size>] [-f configfile] "
-	  "[-o logfile] [-t time] [-I inputfile] [-D inputdir] -O [outpufile] -H [node1,node2,node3...] [-X excludedir]");
-  fprintf(stderr, "\n");
-  fprintf(stderr, "\tWithout any -s or -S option dolly will be a client\n");
-  fprintf(stderr, "\t-s: This is the server, check hostname (no more mandatory if server options are used: -H, -I))\n");
-  fprintf(stderr, "\t-S <hostname>: use hostname as server\n");
-  fprintf(stderr, "\t-R: Resolve the hostnames to ipv4 addresses\n");
-  fprintf(stderr, "\t-6: Resolve the hostnames to ipv6 addresses\n");
-  fprintf(stderr, "\t-V: Print version number and exit\n");
-  fprintf(stderr, "\t-D <inputdir>: Send a directory instead of a file\n");
-  fprintf(stderr, "\t-I <inputfile>: Input file\n");
-  fprintf(stderr, "\t-X <excludedir>: Comma separated list of directories to exclude (e.g. /proc,/sys)\n");
-  fprintf(stderr, "\t-h: Print this help and exit\n");
-  fprintf(stderr, "\t-d: Connect to systemd socket on clients nodes to start the dolly service (port 9996)\n");
-  fprintf(stderr, "\t-v: Verbose mode\n");
-  fprintf(stderr, "\t-q: Suppresss \"ignored signal\" messages\n");
-  fprintf(stderr, "\t-f <configfile>, where <configfile> is the "
-	  "configuration file with all\n\t\tthe required information for "
-	  "this run. Required on server only.\n");
-  fprintf(stderr, "\t-o <logfile>: Write some statistical information  "
-	  "in <logfile>\n");
-  fprintf(stderr, "\t-a <timeout>: Lets dolly terminate if it could not transfer\n\t\tany data after <timeout> seconds.\n");
-  fprintf(stderr, "\t-r <n>: Retry to connect to node <n> times\n");
-  fprintf(stderr, "\t-n: Do not sync before exit. Dolly exits sooner.\n");
-  fprintf(stderr, "\t    Data may not make it to disk if power fails soon after dolly exits.\n\n");
-  fprintf(stderr, "\tFollowing options can be used instead of a dollytab:\n");
-  fprintf(stderr, "\t-H: Comma seperated list of the hosts to send to\n");
-  fprintf(stderr, "\t-I: Input file\n");
-  fprintf(stderr, "\t-O: Output file (just - for output to stdout), if not set the value will be the same as -I\n\n");
-  fprintf(stderr, "\tCustomize network transfer:\n");
-  fprintf(stderr, "\t-b <size>, Where size is the size of block to transfer (default 4096)\n");
-  fprintf(stderr, "\t-u <size>, Size of the buffer (multiple of 4K)\n");
-  fprintf(stderr, "\t-c <size>, Where size is uncompressed size of "
-	  "compressed inputfile\n\t\t(for statistics only)\n");
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Example of usage:\n");
-  fprintf(stderr, "On client:\n");
-  fprintf(stderr, "\tdolly -v\n");
-  fprintf(stderr, "\n");
-  fprintf(stderr, "On server:\n");
-  fprintf(stderr, "\tdolly -vs -H sle15sp32,sle15sp33,sle15sp34 -I files.tgz -O /tmp/files.tgz\n");
-  fprintf(stderr, "\tVerbose mode, copy data files.tgz to /tmp/files.tgz on sle15sp32,sle15sp33,sle15sp34 nodes\n");
-  fprintf(stderr, "\n");
-  fprintf(stderr, "\tdolly -d -H sle15sp32,sle15sp33,sle15sp34 -I /tmp/files.tgz\n");
-  fprintf(stderr, "\tUsing systemd socket, copy /tmp/files.tgz to /tmp/files.tgz on nodes sle15sp32,sle15sp33,sle15sp34\n");
-  fprintf(stderr, "\n");
-  exit(1);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Dolly v%s - Parallel disk/partition/data cloning tool\n", version_string);
+    fprintf(stderr, "------------------------------------------------------\n");
+    fprintf(stderr, "Dolly clones data to one or multiple nodes in parallel, saving time.\n");
+    fprintf(stderr, "Without -s or -S, dolly runs as a client.\n\n");
+
+    fprintf(stderr, "Usage:\n");
+    fprintf(stderr, "  dolly [-hVvSsnYR6d] [-c <size>] [-b <size>] [-u <size>] [-f configfile]\n");
+    fprintf(stderr, "       [-o logfile] [-a timeout] [-I inputfile] [-D inputdir] [-O outputfile]\n");
+    fprintf(stderr, "       [-H node1,node2,...] [-X excludedir]\n\n");
+
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -s                Run as server (check hostname; not required if -H or -I is used)\n");
+    fprintf(stderr, "  -S <hostname>     Use <hostname> as server\n");
+    fprintf(stderr, "  -R                Resolve hostnames to IPv4 addresses\n");
+    fprintf(stderr, "  -6                Resolve hostnames to IPv6 addresses\n");
+    fprintf(stderr, "  -V                Print version and exit\n");
+    fprintf(stderr, "  -D <inputdir>     Send a directory instead of a file\n");
+    fprintf(stderr, "  -I <inputfile>    Input file\n");
+    fprintf(stderr, "  -X <excludedir>   Comma-separated list of directories to exclude (e.g., /proc,/sys)\n");
+    fprintf(stderr, "  -h                Print this help and exit\n");
+    fprintf(stderr, "  -d                Connect to systemd socket on client nodes (port 9996)\n");
+    fprintf(stderr, "  -v                Verbose mode\n");
+    fprintf(stderr, "  -q                Suppress 'ignored signal' messages\n");
+    fprintf(stderr, "  -f <configfile>   Configuration file (required on server)\n");
+    fprintf(stderr, "  -o <logfile>      Write statistics to <logfile>\n");
+    fprintf(stderr, "  -a <timeout>      Terminate if no data transfer after <timeout> seconds\n");
+    fprintf(stderr, "  -r <n>            Retry connection to node <n> times\n");
+    fprintf(stderr, "  -n                Do not sync before exit (faster, but risk of data loss on power failure)\n");
+    fprintf(stderr, "  -Y                (Undocumented or placeholder)\n\n");
+
+    fprintf(stderr, "Network Transfer Options:\n");
+    fprintf(stderr, "  -b <size>         Block size for transfer (default: 4096)\n");
+    fprintf(stderr, "  -u <size>         Buffer size (multiple of 4K)\n\n");
+
+    fprintf(stderr, "Server Mode (alternative to dollytab):\n");
+    fprintf(stderr, "  -H <hosts>        Comma-separated list of target hosts\n");
+    fprintf(stderr, "  -O <outputfile>   Output file (use '-' for stdout; defaults to input filename)\n\n");
+
+    fprintf(stderr, "Examples:\n");
+    fprintf(stderr, "  # Client mode:\n");
+    fprintf(stderr, "  dolly -v\n\n");
+    fprintf(stderr, "  # Server mode:\n");
+    fprintf(stderr, "  dolly -vs -H sle15sp32,sle15sp33,sle15sp34 -I files.tgz -O /tmp/files.tgz\n");
+    fprintf(stderr, "    Copy files.tgz to /tmp/files.tgz on specified nodes (verbose)\n\n");
+    fprintf(stderr, "  dolly -d -H sle15sp32,sle15sp33,sle15sp34 -I /tmp/files.tgz\n");
+    fprintf(stderr, "    Use systemd socket to copy /tmp/files.tgz to nodes\n");
+
+    exit(1);
 }
 
 int main(int argc, char *argv[]) {
@@ -797,10 +792,6 @@ int main(int argc, char *argv[]) {
       break;
 
       /* This is now in the config file. */
-    case 'c':
-      mydollytab->compressed_in = 1;
-      maxcbytes = atoi(optarg);
-      break;
     case 'b':
       mydollytab->t_b_size = atoi(optarg);
       break;
