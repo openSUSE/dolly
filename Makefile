@@ -10,7 +10,7 @@ OBJECTS = $(SOURCES:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(SOURCES:%.c=$(BUILD_DIR)/%.d)
 # Can 
 DEBUGFLAGS=-ggdb
-VERSION=0.64.3
+VERSION=1.0.0
 
 PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
@@ -23,7 +23,7 @@ SYSCONFDIR ?= /etc
 
 EXECUTABLE = dolly
 
-all: $(EXECUTABLE) man
+all: $(EXECUTABLE)
 
 tar: clean
 	mkdir $(EXECUTABLE)-$(VERSION)
@@ -50,6 +50,7 @@ clean:
 	rm -rf $(EXECUTABLE) $(OBJECTS) $(DEPS)
 	rm -rf $(EXECUTABLE)-$(VERSION) $(EXECUTABLE)-$(VERSION).tar.bz2
 	rm -rf dolly.1*
+	rm -rf build
 
 dolly.1.gz:
 	@echo "Building man page"
