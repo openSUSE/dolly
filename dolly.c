@@ -68,9 +68,6 @@ static void alarm_handler() {
 static void print_params(struct dollytab* mydollytab) {
   unsigned int i;
 
-  if(mydollytab->compressed_in) {
-    fprintf(stderr, "compressed ");
-  }
   //fprintf(stderr, "infile = '%s'", mydollytab->infile);
   if(mydollytab->input_split != 0) {
     fprintf(stderr, ", splitted in parts.\n");
@@ -110,17 +107,6 @@ static void print_params(struct dollytab* mydollytab) {
 	      mydollytab->hostring[mydollytab->nexthosts[i]], mydollytab->nexthosts[i]);
     }
   }
-
-  if(mydollytab->compressed_in && !mydollytab->meserver) {
-    fprintf(stderr,
-	    "Will use gzip to uncompress data before writing.\n");
-  } else if(mydollytab->compressed_in && mydollytab->meserver) {
-    fprintf(stderr,
-	    "Clients will have to use gzip to uncompress data before writing.\n");
-  } else {
-  
-  }
-
 }
 
 static void open_insocks(struct dollytab * mydollytab) {

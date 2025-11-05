@@ -30,8 +30,6 @@ struct dollytab {
   char add_name[MAXFANOUT][32];
   unsigned int meserver; /* This machine sends the data. */
   int nexthosts[MAXFANOUT];
-  int compressed_in;           /* compressed transfer or not? */
-  int compressed_out;          /* write results compressed? */
   /* Sizes for splitted input/output files. 0 means "don't split" (default) */
   unsigned long long output_split;
   unsigned long long input_split;

@@ -17,7 +17,7 @@ int movebytes(int fd, int dir, char *addr, unsigned int n,struct dollytab * mydo
     } else if(dir == READ) {
       fflush(stderr);
       ret = read(fd, addr, n);
-      if(((unsigned int)ret < n) && mydollytab->compressed_out && mydollytab->meserver) {
+      if(((unsigned int)ret < n) && mydollytab->meserver && 0) {
         int wret, status;
         sleep(1);
         wret = waitpid(in_child_pid, &status, WNOHANG);
@@ -25,6 +25,7 @@ int movebytes(int fd, int dir, char *addr, unsigned int n,struct dollytab * mydo
           perror("waitpid");
         } else if(wret == 0) {
           fprintf(stderr, "waitpid returned 0\n");
+	  fprintf(stderr, "%d", mydollytab->meserver);
         } else {
           if(WIFEXITED(status)) {
             if(WEXITSTATUS(status) == 0) {

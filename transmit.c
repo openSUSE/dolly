@@ -289,13 +289,6 @@ void transmit(struct dollytab * mydollytab) {
         perror("open logfile");
         exit(1);
       }
-      if(mydollytab->compressed_in) {
-        fprintf(logfd, "compressed ");
-      }
-      //fprintf(logfd, "infile = '%s'\n", mydollytab->infile);
-      if(mydollytab->compressed_out) {
-        fprintf(logfd, "compressed ");
-      }
       fprintf(logfd, "outfile = '%s'\n", mydollytab->outfile);
       if(mydollytab->flag_v) {
         if(mydollytab->segsize > 0) {

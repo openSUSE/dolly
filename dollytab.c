@@ -11,8 +11,6 @@ void init_dollytab(struct dollytab * mdt) {
   memset(mdt->nexthosts,0,sizeof(mdt->nexthosts));
   memset(mdt->add_name,'\0',sizeof(mdt->add_name));
   mdt->meserver = 0;
-  mdt->compressed_in = 0;
-  mdt->compressed_out = 0;
   mdt->output_split = 0;
   mdt->input_split = 0;
   mdt->add_nr = 0;
@@ -56,12 +54,6 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     exit(1);
   }
   sp2 = str;
-  if(strncmp("compressed ", sp2, 11) == 0) {
-    mydollytab->compressed_in = 1;
-    sp2 += 11;
-  } else {
-    mydollytab->compressed_in = 0;
-  }
   if(strncmp("infile ", sp2, 7) != 0) {
     fprintf(stderr, "Missing 'infile ' in config-file.\n");
     exit(1);
@@ -73,14 +65,6 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   if((sp = strchr(sp2, ' ')) == NULL) {
     sp = sp2 + strlen(sp2);
   }
-      if(mydollytab->compressed_in && (strncmp(&sp2[sp - sp2 - 3], ".gz", 3) != 0)) {
-        char tmp_str[256];
-        strncpy(tmp_str, sp2, sp - sp2);
-        tmp_str[sp - sp2] = '\0';
-        fprintf(stderr,
-        "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
-        tmp_str);
-      }
       strncpy(mydollytab->infile, sp2, sp - sp2);
       mydollytab->infile[sp - sp2] = '\0';
       sp++;    if(strcmp(sp, "split") == 0) {
@@ -93,10 +77,6 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
       exit(1);
     }
     sp2 = str;
-    if(strncmp("compressed ", sp2, 11) == 0) {
-      mydollytab->compressed_out = 1;
-      sp2 += 11;
-    }
     if(strncmp("outfile ", sp2, 8) != 0) {
       fprintf(stderr, "Missing 'outfile ' in config-file.\n");
       exit(1);
@@ -107,14 +87,6 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     }
     if((sp = strchr(sp2, ' ')) == NULL) {
       sp = sp2 + strlen(sp2);
-    }
-    if(mydollytab->compressed_out && (strncmp(&sp2[sp - sp2 - 3], ".gz", 3) != 0)) {
-      char tmp_str[256];
-      strncpy(tmp_str, sp2, sp - sp2);
-      tmp_str[sp - sp2] = '\0';
-      fprintf(stderr,
-        "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
-        tmp_str);
     }
     strncpy(mydollytab->outfile, sp2, sp - sp2);
     mydollytab->outfile[sp - sp2] = '\0';
