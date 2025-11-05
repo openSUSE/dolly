@@ -6,6 +6,8 @@ void init_dollytab(struct dollytab * mdt) {
   memset(mdt->servername,'\0',sizeof(mdt->servername));
   memset(mdt->infile,'\0',sizeof(mdt->infile));
   memset(mdt->outfile,'\0',sizeof(mdt->infile));
+  memset(mdt->directory_list,'\0',sizeof(mdt->directory_list));
+
   memset(mdt->nexthosts,0,sizeof(mdt->nexthosts));
   memset(mdt->add_name,'\0',sizeof(mdt->add_name));
   mdt->meserver = 0;
@@ -26,6 +28,13 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->segsize = 0;
   mdt->t_b_size = 4096;
   mdt->hostring = NULL;
+  mdt->directory_mode = 0;
+  mdt->total_bytes = 0;
+  mdt->infiles = NULL;
+  mdt->num_infiles = 0;
+  mdt->excludes = (char**) malloc(sizeof(char *));
+  mdt->excludes[0] = strdup("/proc");
+  mdt->num_excludes = 1;
 }
 
 /* Parses the config-file. The path to the file is given in dollytab */
@@ -64,17 +73,17 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   if((sp = strchr(sp2, ' ')) == NULL) {
     sp = sp2 + strlen(sp2);
   }
-  if(mydollytab->compressed_in && (strncmp(&sp2[sp - sp2 - 3], ".gz", 3) != 0)) {
-    char tmp_str[256];
-    strncpy(tmp_str, sp2, sp - sp2);
-    tmp_str[sp - sp2] = '\0';
-    fprintf(stderr,
-      "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
-      tmp_str);
-    }
-    strncpy(mydollytab->infile, sp2, sp - sp2);
-    sp++;
-    if(strcmp(sp, "split") == 0) {
+      if(mydollytab->compressed_in && (strncmp(&sp2[sp - sp2 - 3], ".gz", 3) != 0)) {
+        char tmp_str[256];
+        strncpy(tmp_str, sp2, sp - sp2);
+        tmp_str[sp - sp2] = '\0';
+        fprintf(stderr,
+        "WARNING: Compressed outfile '%s' doesn't end with '.gz'!\n",
+        tmp_str);
+      }
+      strncpy(mydollytab->infile, sp2, sp - sp2);
+      mydollytab->infile[sp - sp2] = '\0';
+      sp++;    if(strcmp(sp, "split") == 0) {
       mydollytab->input_split = 1;
     }
     
@@ -108,6 +117,12 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
         tmp_str);
     }
     strncpy(mydollytab->outfile, sp2, sp - sp2);
+    mydollytab->outfile[sp - sp2] = '\0';
+    if (mydollytab->outfile[0] != '/') {
+      char temp_outfile[sizeof(mydollytab->outfile) + 1];
+      snprintf(temp_outfile, sizeof(temp_outfile), "/%s", mydollytab->outfile);
+      strcpy(mydollytab->outfile, temp_outfile);
+    }
     sp++;
     if(strncmp(sp, "split ", 6) == 0) {
       unsigned long long size = 0;
@@ -268,7 +283,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     fprintf(stderr, "Error in firstclient line.\n");
     exit(1);
   }
-  strncpy(mydollytab->servername, sp+1, strlen(sp));
+  strcpy(mydollytab->servername, sp+1);
 
   /* 
      disgusting hack to make -S work.  If the server name
@@ -379,13 +394,13 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
         }
         if(strcmp(mydollytab->hostring[i],host) == 0) {
           me = i;
-          strncpy(mydollytab->myhostname,host,strlen(host));
+          strcpy(mydollytab->myhostname,host);
         } else if(!mydollytab->hyphennormal) {
           /* Check if the hostname is correct, but a different interface is used */
           if((sp = strchr(mydollytab->hostring[i], '-')) != NULL) {
             if(strncmp(mydollytab->hostring[i], host, sp - mydollytab->hostring[i]) == 0) {
               me = i;
-              strncpy(mydollytab->myhostname,host,strlen(host));
+              strcpy(mydollytab->myhostname,host);
             }
           }
         }
@@ -396,7 +411,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
        mname = getenv("MYNODENAME");
        if(mname != NULL) {
           if(strcmp(mydollytab->hostring[i],mname) == 0) {
-            strncpy(mydollytab->myhostname,mname,strlen(mname));
+            strcpy(mydollytab->myhostname,mname);
             me = i;
             if(i == mydollytab->hostnr-1) {
              mydollytab->melast = 1;
@@ -408,7 +423,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
        mname = getenv("HOST");
        if(mname != NULL) {
           if(strcmp(mydollytab->hostring[i],mname) == 0) {
-            strncpy(mydollytab->myhostname,mname,strlen(mname));
+            strcpy(mydollytab->myhostname,mname);
             me = i;
             if(i == mydollytab->hostnr-1) {
              mydollytab->melast = 1;
@@ -480,10 +495,13 @@ void getparams(int f,struct dollytab * mydollytab) {
   FILE *dolly_df = NULL;
   char tmpfile[32] = "/tmp/dollytmpXXXXXX";
 
-  if(mydollytab->flag_v) {
-    fprintf(stderr, "Trying to read parameters...");
-    fflush(stderr);
+
+
+  if (read(f, &mydollytab->directory_mode, sizeof(mydollytab->directory_mode)) != sizeof(mydollytab->directory_mode)) {
+      fprintf(stderr, "Failed to read directory_mode flag\n");
+      exit(1);
   }
+
   mydollytab->dollybuf = (char *)malloc(mydollytab->t_b_size);
   if(mydollytab->dollybuf == NULL) {
     fprintf(stderr, "Couldn't get memory for dollybuf.\n");
@@ -530,10 +548,7 @@ void getparams(int f,struct dollytab * mydollytab) {
   if(mydollytab->flag_v) {
     fprintf(stderr, "done.\n");
   }
-  if(mydollytab->flag_v) {
-    fprintf(stderr, "Parsing parameters...");
-    fflush(stderr);
-  }
+
   parse_dollytab(dolly_df,mydollytab); 
   fclose(dolly_df);
   close(fd);

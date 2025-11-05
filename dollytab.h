@@ -25,6 +25,8 @@ struct dollytab {
   char servername[256];
   char infile[256];
   char outfile[256];
+  char directory_list[256];
+
   char add_name[MAXFANOUT][32];
   unsigned int meserver; /* This machine sends the data. */
   int nexthosts[MAXFANOUT];
@@ -55,6 +57,12 @@ struct dollytab {
   ssize_t t_b_size; /* Size of blocks transf. to/from net/disk and one less than that */
   char **hostring;
   char *dollybuf;
+  unsigned int directory_mode;
+  unsigned long long total_bytes;
+  char **infiles;
+  unsigned int num_infiles;
+  char **excludes;
+  unsigned int num_excludes;
 };
 
 void init_dollytab(struct dollytab *);
