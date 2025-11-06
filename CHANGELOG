@@ -6,7 +6,7 @@ Copyright: Felix Rauch <rauch@inf.ethz.ch> and ETH Zurich.
 License: GNU General Public License.
 
 History:
-V 1.0.0 05-NOV-2025 Antoine Ginies <aginies@suse.com>
+V 0.70.0 05-NOV-2025 Antoine Ginies <aginies@suse.com>
   ping clients before adding them to the queue
   add -D option to include directory
   add -X option to exclude some directory
