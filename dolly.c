@@ -661,7 +661,7 @@ static void usage(void) {
     fprintf(stderr, "  -a <timeout>      Terminate if no data transfer after <timeout> seconds\n");
     fprintf(stderr, "  -r <n>            Retry connection to node <n> times\n");
     fprintf(stderr, "  -n                Do not sync before exit (faster, but risk of data loss on power failure)\n");
-    fprintf(stderr, "  -Y                (Undocumented or placeholder)\n\n");
+    fprintf(stderr, "  -Y                instructs Dolly to treat the '-' character in hostnames as any other character.\n\n");
 
     fprintf(stderr, "Network Transfer Options:\n");
     fprintf(stderr, "  -b <size>         Block size for transfer (default: 4096)\n");
