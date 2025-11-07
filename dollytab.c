@@ -7,6 +7,7 @@ void init_dollytab(struct dollytab * mdt) {
   memset(mdt->infile,'\0',sizeof(mdt->infile));
   memset(mdt->outfile,'\0',sizeof(mdt->infile));
   memset(mdt->directory_list,'\0',sizeof(mdt->directory_list));
+  memset(mdt->password, '\0', sizeof(mdt->password));
 
   memset(mdt->nexthosts,0,sizeof(mdt->nexthosts));
   memset(mdt->add_name,'\0',sizeof(mdt->add_name));
@@ -33,41 +34,42 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->excludes = (char**) malloc(sizeof(char *));
   mdt->excludes[0] = strdup("/proc");
   mdt->num_excludes = 1;
+  mdt->password_required = 0;
 }
 
 void free_dollytab(struct dollytab *mdt) {
-     if (!mdt) return;
-     if (mdt->infiles && mdt->num_infiles > 0) {
-         for (size_t i = 0; i < mdt->num_infiles; i++) {
-             free(mdt->infiles[i]);
-         }
-         free(mdt->infiles);
-         mdt->infiles = NULL;
-         mdt->num_infiles = 0;
-     }
-     if (mdt->excludes && mdt->num_excludes > 0) {
-         for (size_t i = 0; i < mdt->num_excludes; i++) {
-             free(mdt->excludes[i]);
-         }
-         free(mdt->excludes);
-         mdt->excludes = NULL;
-         mdt->num_excludes = 0; 
-     }
-     if (mdt->hostring && mdt->hostnr > 0) {
-         for (size_t i = 0; i < mdt->hostnr; i++) {
-             free(mdt->hostring[i]);
-         }
-         free(mdt->hostring);
-         mdt->hostring = NULL;
-         mdt->hostnr = 0;
-     }
-     if (mdt->dollybuf != NULL) {
-         free(mdt->dollybuf);
-         mdt->dollybuf = NULL;
-     }
-     if (mdt->hostring != NULL) {
-         mdt->hostring = NULL;
-     }
+  if (!mdt) return;
+  if (mdt->infiles && mdt->num_infiles > 0) {
+    for (size_t i = 0; i < mdt->num_infiles; i++) {
+      free(mdt->infiles[i]);
+    }
+    free(mdt->infiles);
+    mdt->infiles = NULL;
+    mdt->num_infiles = 0;
+  }
+  if (mdt->excludes && mdt->num_excludes > 0) {
+    for (size_t i = 0; i < mdt->num_excludes; i++) {
+      free(mdt->excludes[i]);
+    }
+    free(mdt->excludes);
+    mdt->excludes = NULL;
+    mdt->num_excludes = 0; 
+  }
+  if (mdt->hostring && mdt->hostnr > 0) {
+    for (size_t i = 0; i < mdt->hostnr; i++) {
+      free(mdt->hostring[i]);
+    }
+    free(mdt->hostring);
+    mdt->hostring = NULL;
+    mdt->hostnr = 0;
+  }
+  if (mdt->dollybuf != NULL) {
+    free(mdt->dollybuf);
+    mdt->dollybuf = NULL;
+  }
+  if (mdt->hostring != NULL) {
+    mdt->hostring = NULL;
+  }
 }
 
 /* Parses the config-file. The path to the file is given in dollytab */
@@ -76,10 +78,10 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   char *sp, *sp2;
   unsigned int i;
   int me = -2;
-	int family, name_status;
+  int family, name_status;
   int fm = AF_INET;
   char *mname = NULL;
-	char host[NI_MAXHOST];
+  char host[NI_MAXHOST];
   struct ifaddrs *ifaddr, *ifa;
   /* Read the parameters... */
   /* First we want to know the input filename */
@@ -100,56 +102,56 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   if((sp = strchr(sp2, ' ')) == NULL) {
     sp = sp2 + strlen(sp2);
   }
-      snprintf(mydollytab->infile, sizeof(mydollytab->infile), "%.*s", (int)(sp - sp2), sp2);
-      sp++;    if(strcmp(sp, "split") == 0) {
-      mydollytab->input_split = 1;
-    }
+  snprintf(mydollytab->infile, sizeof(mydollytab->infile), "%.*s", (int)(sp - sp2), sp2);
+  sp++;    if(strcmp(sp, "split") == 0) {
+    mydollytab->input_split = 1;
+  }
     
-    /* Then we want to know the output filename */
-    if (fgets(str, sizeof(str), df) == NULL) {
-      perror("fgets for outfile");
-      exit(1);
+  /* Then we want to know the output filename */
+  if (fgets(str, sizeof(str), df) == NULL) {
+    perror("fgets for outfile");
+    exit(1);
+  }
+  sp2 = str;
+  if(strncmp("outfile ", sp2, 8) != 0) {
+    fprintf(stderr, "Missing 'outfile ' in config-file.\n");
+    exit(1);
+  }
+  sp2 += 8;
+  if(sp2[strlen(sp2)-1] == '\n') {
+    sp2[strlen(sp2)-1] = '\0';
+  }
+  if((sp = strchr(sp2, ' ')) == NULL) {
+    sp = sp2 + strlen(sp2);
+  }
+  strncpy(mydollytab->outfile, sp2, sp - sp2);
+  mydollytab->outfile[sp - sp2] = '\0';
+  if (mydollytab->outfile[0] != '/') {
+    char temp_outfile[sizeof(mydollytab->outfile) + 1];
+    snprintf(temp_outfile, sizeof(temp_outfile), "/%s", mydollytab->outfile);
+    strcpy(mydollytab->outfile, temp_outfile);
+  }
+  sp++;
+  if(strncmp(sp, "split ", 6) == 0) {
+    unsigned long long size = 0;
+    char *s = sp+6;
+    while(isdigit(*s)) {
+      size *= 10LL;
+      size += (unsigned long long)(*s - '0');
+      s++;
     }
-    sp2 = str;
-    if(strncmp("outfile ", sp2, 8) != 0) {
-      fprintf(stderr, "Missing 'outfile ' in config-file.\n");
-      exit(1);
+    switch(*s) {
+    case 'T': size *= 1024LL*1024LL*1024LL*1024LL; break;
+    case 'G': size *= 1024LL*1024LL*1024LL; break;
+    case 'M': size *= 1024LL*1024LL; break;
+    case 'k': size *= 1024LL; break;
+    default:
+      fprintf(stderr, "Unknown multiplier '%c' for split size.\n", *s);
+      break;
     }
-    sp2 += 8;
-    if(sp2[strlen(sp2)-1] == '\n') {
-      sp2[strlen(sp2)-1] = '\0';
-    }
-    if((sp = strchr(sp2, ' ')) == NULL) {
-      sp = sp2 + strlen(sp2);
-    }
-    strncpy(mydollytab->outfile, sp2, sp - sp2);
-    mydollytab->outfile[sp - sp2] = '\0';
-    if (mydollytab->outfile[0] != '/') {
-      char temp_outfile[sizeof(mydollytab->outfile) + 1];
-      snprintf(temp_outfile, sizeof(temp_outfile), "/%s", mydollytab->outfile);
-      strcpy(mydollytab->outfile, temp_outfile);
-    }
-    sp++;
-    if(strncmp(sp, "split ", 6) == 0) {
-      unsigned long long size = 0;
-      char *s = sp+6;
-      while(isdigit(*s)) {
-        size *= 10LL;
-        size += (unsigned long long)(*s - '0');
-        s++;
-      }
-      switch(*s) {
-        case 'T': size *= 1024LL*1024LL*1024LL*1024LL; break;
-        case 'G': size *= 1024LL*1024LL*1024LL; break;
-        case 'M': size *= 1024LL*1024LL; break;
-        case 'k': size *= 1024LL; break;
-        default:
-          fprintf(stderr, "Unknown multiplier '%c' for split size.\n", *s);
-          break;
-      }
-      mydollytab->output_split = size;
-      str[sp - str - 1] = '\0';
-    }
+    mydollytab->output_split = size;
+    str[sp - str - 1] = '\0';
+  }
   
   /* Get the optional TCPMaxSeg size */ 
   if(fgets(str, sizeof(str), df) == NULL) {
@@ -367,10 +369,10 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     exit(1);
   }
   /* get a list to all availabel interfaces */
-	if (getifaddrs(&ifaddr) == -1) {
-		perror("getifaddrs");
-		exit(EXIT_FAILURE);
-	}
+  if (getifaddrs(&ifaddr) == -1) {
+    perror("getifaddrs");
+    exit(EXIT_FAILURE);
+  }
   mydollytab->hostring = (char **)malloc(mydollytab->hostnr * sizeof(char *));
   for(i = 0; i < mydollytab->hostnr; i++) {
     if(fgets(str, sizeof(str), df) == NULL) {
@@ -414,31 +416,31 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     }
     /* check if hostname was in the configuration and not an ip */
     if(me == -2) {
-       mname = getenv("MYNODENAME");
-       if(mname != NULL) {
-          if(strcmp(mydollytab->hostring[i],mname) == 0) {
-            strcpy(mydollytab->myhostname,mname);
-            me = i;
-            if(i == mydollytab->hostnr-1) {
-             mydollytab->melast = 1;
-            }
-          }
-       }
+      mname = getenv("MYNODENAME");
+      if(mname != NULL) {
+	if(strcmp(mydollytab->hostring[i],mname) == 0) {
+	  strcpy(mydollytab->myhostname,mname);
+	  me = i;
+	  if(i == mydollytab->hostnr-1) {
+	    mydollytab->melast = 1;
+	  }
+	}
+      }
     }
     if(me == -2) {
-       mname = getenv("HOST");
-       if(mname != NULL) {
-          if(strcmp(mydollytab->hostring[i],mname) == 0) {
-            strcpy(mydollytab->myhostname,mname);
-            me = i;
-            if(i == mydollytab->hostnr-1) {
-             mydollytab->melast = 1;
-            }
-          }
-       }
+      mname = getenv("HOST");
+      if(mname != NULL) {
+	if(strcmp(mydollytab->hostring[i],mname) == 0) {
+	  strcpy(mydollytab->myhostname,mname);
+	  me = i;
+	  if(i == mydollytab->hostnr-1) {
+	    mydollytab->melast = 1;
+	  }
+	}
+      }
     }
   }
-	freeifaddrs(ifaddr);
+  freeifaddrs(ifaddr);
   if(!mydollytab->meserver && (me == -2)) {
     fprintf(stderr, "Couldn't find myself '%s' in hostlist.\n",mydollytab->myhostname);
     exit(1);
@@ -504,8 +506,8 @@ void getparams(int f,struct dollytab * mydollytab) {
 
 
   if (read(f, &mydollytab->directory_mode, sizeof(mydollytab->directory_mode)) != sizeof(mydollytab->directory_mode)) {
-      fprintf(stderr, "Failed to read directory_mode flag\n");
-      exit(1);
+    fprintf(stderr, "Failed to read directory_mode flag\n");
+    exit(1);
   }
 
   mydollytab->dollybuf = (char *)malloc(mydollytab->t_b_size);
@@ -527,7 +529,7 @@ void getparams(int f,struct dollytab * mydollytab) {
     }
     readsize += ret;
   } while(ret == 1448);
-    mydollytab->dollybufsize = readsize;
+  mydollytab->dollybufsize = readsize;
 
   /* Write everything to a file so we can use parse_dollytab(FILE *)
      afterwards.  */

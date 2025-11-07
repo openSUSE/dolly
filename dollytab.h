@@ -36,19 +36,19 @@ struct dollytab {
   unsigned int fanout;   /* default is linear list */
   unsigned int add_nr; /* Number of extra links for data transfers */
   int add_primary; /* Addition Post- or Midfix for primary interf. */
-/* Postfix or midfix? */
-/* 0 = undefined, 1 = postfix, 2 = midfix */
-/* Some explanations about the meanings of postfix and midfix:
-   postfix ex.: hostname = "cops1", postfix = "-giga" -> "cops1-giga"
-   midfix ex.: hostname = "xibalba101", midfix = "-fast" -> "xibalba-fast101"
-*/
+  /* Postfix or midfix? */
+  /* 0 = undefined, 1 = postfix, 2 = midfix */
+  /* Some explanations about the meanings of postfix and midfix:
+     postfix ex.: hostname = "cops1", postfix = "-giga" -> "cops1-giga"
+     midfix ex.: hostname = "xibalba101", midfix = "-fast" -> "xibalba-fast101"
+  */
   unsigned short add_mode;
   unsigned int nr_childs;
   unsigned int hostnr;
   unsigned int melast;   /* This machine doesn't have children to send data */
   /* Postfix of extra network interface names */
   int hyphennormal;      /* '-' normal or interf. sep. in hostnames */
-/* when 4 resolve hostanme to ipv4 addresses, when 6 try ipv6 addresse, do not resolve if anything else */
+  /* when 4 resolve hostanme to ipv4 addresses, when 6 try ipv6 addresse, do not resolve if anything else */
   unsigned int resolve;
   size_t dollybufsize;
   unsigned int segsize; /* TCP Segment Size (useful for benchmarking only) */
@@ -57,10 +57,12 @@ struct dollytab {
   char *dollybuf;
   unsigned int directory_mode;
   unsigned long long total_bytes;
+  char password[256];
   char **infiles;
   unsigned int num_infiles;
   char **excludes;
   unsigned int num_excludes;
+  unsigned char password_required;
 };
 
 void init_dollytab(struct dollytab *);
