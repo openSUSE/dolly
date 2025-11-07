@@ -101,6 +101,9 @@ int open_outfile(struct dollytab * mydollytab) {
       (void) !dup(pd[0]);    /* Duplicate pipe on stdin */
       close(pd[0]);  /* Close the unused end of the pipe */
 
+      if (chdir(mydollytab->outfile) != 0) {
+        perror("chdir to output directory"); exit(1);
+      }
       if(execlp("tar", "tar", "-xf", "-", NULL) == -1) {
         perror("execlp for tar in child");
         exit(1);
