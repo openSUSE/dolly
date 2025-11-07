@@ -33,7 +33,7 @@ int movebytes(int fd, int dir, char *addr, unsigned int n,struct dollytab * mydo
               return ret;
             } else {
               fprintf(stderr, "Child terminated with return value %d\n",
-                WEXITSTATUS(status));
+		      WEXITSTATUS(status));
             }
           }
         }
