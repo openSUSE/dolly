@@ -7,11 +7,11 @@
  * dollytab.resolve = 6 -> force ipv6
  */
 int resolve_host(char *hostname , char *ip, int mode) {
-	struct addrinfo hints, *servinfo, *p;
-	struct sockaddr_in *h;
-	int rv;
+  struct addrinfo hints, *servinfo, *p;
+  struct sockaddr_in *h;
+  int rv;
 
-	memset(&hints, 0, sizeof hints);
+  memset(&hints, 0, sizeof hints);
   if(mode == 4) {
     hints.ai_family = AF_INET;
   } else if (mode == 6) {
@@ -19,22 +19,22 @@ int resolve_host(char *hostname , char *ip, int mode) {
   } else {
     hints.ai_family = AF_UNSPEC;
   }
-	hints.ai_socktype = SOCK_STREAM;
+  hints.ai_socktype = SOCK_STREAM;
 
-	if ( (rv = getaddrinfo( hostname , NULL , &hints , &servinfo)) != 0) 
-	{
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-		return 1;
-	}
+  if ( (rv = getaddrinfo( hostname , NULL , &hints , &servinfo)) != 0) 
+    {
+      fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+      return 1;
+    }
 
-	// loop through all the results and connect to the first we can
-	for(p = servinfo; p != NULL; p = p->ai_next) 
-	{
-		h = (struct sockaddr_in *) p->ai_addr;
-		strcpy(ip , inet_ntoa( h->sin_addr ));
-	}
-	freeaddrinfo(servinfo); // all done with this structure
-	return 0;
+  // loop through all the results and connect to the first we can
+  for(p = servinfo; p != NULL; p = p->ai_next) 
+    {
+      h = (struct sockaddr_in *) p->ai_addr;
+      strcpy(ip , inet_ntoa( h->sin_addr ));
+    }
+  freeaddrinfo(servinfo); // all done with this structure
+  return 0;
 }
 
 int resolve_host_replace(char *hostname , int mode) {
@@ -48,10 +48,10 @@ int resolve_host_replace(char *hostname , int mode) {
 }
 
 int get_default_ip(char *hostname , int mode)  {
-/*
- * Find local ip used as source ip in ip packets.
- * Read the /proc/net/route file
- */
+  /*
+   * Find local ip used as source ip in ip packets.
+   * Read the /proc/net/route file
+   */
   FILE *fhandle;
   char line[100] , *interface , *c;
   interface = NULL;
@@ -66,7 +66,7 @@ int get_default_ip(char *hostname , int mode)  {
     }
   }
   fclose(fhandle);
-/* which family do we require , AF_INET or AF_INET6 */
+  /* which family do we require , AF_INET or AF_INET6 */
   int fm = AF_UNSPEC;
   if(mode == 4) {
     fm = AF_INET;
@@ -74,33 +74,31 @@ int get_default_ip(char *hostname , int mode)  {
     fm = AF_INET6;
   }
   struct ifaddrs *ifaddr, *ifa;
-	int family , s;
-	char host[NI_MAXHOST];
-	if (getifaddrs(&ifaddr) == -1) {
-		perror("getifaddrs");
-		exit(EXIT_FAILURE);
+  int family , s;
+  char host[NI_MAXHOST];
+  if (getifaddrs(&ifaddr) == -1) {
+    perror("getifaddrs");
+    exit(EXIT_FAILURE);
+  }
+  /* Walk through linked list, maintaining head pointer so we can free list later */
+  for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+    if (ifa->ifa_addr == NULL) {
+      continue;
+    }
+    family = ifa->ifa_addr->sa_family;
+    if(strcmp( ifa->ifa_name , interface) == 0) {
+      if (family == fm) {
+	s = getnameinfo( ifa->ifa_addr, (family == AF_INET) ? 
+			 sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6) , 
+			 host , NI_MAXHOST , NULL , 0 , NI_NUMERICHOST);
+	if (s != 0) {
+	  printf("getnameinfo() failed: %s\n", gai_strerror(s));
+	  exit(EXIT_FAILURE);
 	}
-/* Walk through linked list, maintaining head pointer so we can free list later */
-	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-		if (ifa->ifa_addr == NULL) {
-			continue;
-		}
-		family = ifa->ifa_addr->sa_family;
-		if(strcmp( ifa->ifa_name , interface) == 0) {
-			if (family == fm) {
-				s = getnameinfo( ifa->ifa_addr, (family == AF_INET) ? 
-            sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6) , 
-            host , NI_MAXHOST , NULL , 0 , NI_NUMERICHOST);
-				if (s != 0) {
-					printf("getnameinfo() failed: %s\n", gai_strerror(s));
-					exit(EXIT_FAILURE);
-				}
-				strncpy(hostname,host,strlen(host));
-			}
-		}
-	}
-	freeifaddrs(ifaddr);
-	return 0;
+	strncpy(hostname,host,strlen(host));
+      }
+    }
+  }
+  freeifaddrs(ifaddr);
+  return 0;
 }
-
-  
