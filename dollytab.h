@@ -66,6 +66,7 @@ struct dollytab {
 void init_dollytab(struct dollytab *);
 /* Parses the config-file. The path to the file is given in dollytab */
 void parse_dollytab(FILE *df,struct dollytab*);
+void free_dollytab(struct dollytab *mdt);
 
 /*
  * Clients read the parameters from the control-socket.

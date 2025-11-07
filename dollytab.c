@@ -35,6 +35,41 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->num_excludes = 1;
 }
 
+void free_dollytab(struct dollytab *mdt) {
+     if (!mdt) return;
+     if (mdt->infiles && mdt->num_infiles > 0) {
+         for (size_t i = 0; i < mdt->num_infiles; i++) {
+             free(mdt->infiles[i]);
+         }
+         free(mdt->infiles);
+         mdt->infiles = NULL;
+         mdt->num_infiles = 0;
+     }
+     if (mdt->excludes && mdt->num_excludes > 0) {
+         for (size_t i = 0; i < mdt->num_excludes; i++) {
+             free(mdt->excludes[i]);
+         }
+         free(mdt->excludes);
+         mdt->excludes = NULL;
+         mdt->num_excludes = 0; 
+     }
+     if (mdt->hostring && mdt->hostnr > 0) {
+         for (size_t i = 0; i < mdt->hostnr; i++) {
+             free(mdt->hostring[i]);
+         }
+         free(mdt->hostring);
+         mdt->hostring = NULL;
+         mdt->hostnr = 0;
+     }
+     if (mdt->dollybuf != NULL) {
+         free(mdt->dollybuf);
+         mdt->dollybuf = NULL;
+     }
+     if (mdt->hostring != NULL) {
+         mdt->hostring = NULL;
+     }
+}
+
 /* Parses the config-file. The path to the file is given in dollytab */
 void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   char str[256];

@@ -1,5 +1,6 @@
 #include <dirent.h>
 #include "dolly.h"
+#include "dollytab.h"
 #include "transmit.h"
 #include "files.h"
 #include "movebytes.h"
@@ -1174,27 +1175,7 @@ int main(int argc, char *argv[]) {
   }
 
   fclose(stdtty);
-  for(i = 0; i < mydollytab->hostnr; i++) {
-    free(mydollytab->hostring[i]);
-  }
-  free(mydollytab->hostring);
-
-
-
-  if (mydollytab->num_infiles > 0) {
-      for (i = 0; i < mydollytab->num_infiles; i++) {
-          free(mydollytab->infiles[i]);
-      }
-      free(mydollytab->infiles);
-  }
-
-  if (mydollytab->num_excludes > 0) {
-      for (i = 0; i < mydollytab->num_excludes; i++) {
-          free(mydollytab->excludes[i]);
-      }
-      free(mydollytab->excludes);
-  }
-
+  free_dollytab(mydollytab);
   free(mydollytab);
  
   exit(0);
