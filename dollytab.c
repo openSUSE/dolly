@@ -83,7 +83,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   struct ifaddrs *ifaddr, *ifa;
   /* Read the parameters... */
   /* First we want to know the input filename */
-  if(fgets(str, 256, df) == NULL) {
+  if(fgets(str, sizeof(str), df) == NULL) {
     fprintf(stderr, "errno = %d\n", errno);
     perror("fgets for infile");
     exit(1);
@@ -152,7 +152,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     }
   
   /* Get the optional TCPMaxSeg size */ 
-  if(fgets(str, 256, df) == NULL) {
+  if(fgets(str, sizeof(str), df) == NULL) {
     perror("fgets on segsize or fanout");
     exit(1);
   }
@@ -166,7 +166,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
       exit(1);
     }
     mydollytab->segsize = atoi(sp + 1);
-    if(fgets(str, 256, df) == NULL) {
+    if(fgets(str, sizeof(str), df) == NULL) {
       perror("fgets after segsize");
       exit(1);
     }
@@ -233,7 +233,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
       }
     }
     mydollytab->add_nr = max;
-    if(fgets(str, 256, df) == NULL) {
+    if(fgets(str, sizeof(str), df) == NULL) {
       perror("fgets after add");
       exit(1);
     }
@@ -250,7 +250,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
       exit(1);
     }
     mydollytab->fanout = atoi(sp + 1);
-    if(fgets(str, 256, df) == NULL) {
+    if(fgets(str, sizeof(str), df) == NULL) {
       perror("fgets after fanout");
       exit(1);
     }
@@ -263,14 +263,14 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
    */
   if(strncmp("hyphennormal", str, 12) == 0) {
     mydollytab->hyphennormal = 1;
-    if(fgets(str, 256, df) == NULL) {
+    if(fgets(str, sizeof(str), df) == NULL) {
       perror("fgets after hyphennormal");
       exit(1);
     }
   }
   if(strncmp("hypheninterface", str, 12) == 0) {
     mydollytab->hyphennormal = 1;
-    if(fgets(str, 256, df) == NULL) {
+    if(fgets(str, sizeof(str), df) == NULL) {
       perror("fgets after hypheninterface");
       exit(1);
     }
@@ -311,7 +311,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   
   /* We need to know the FIRST host of the ring. */
   /* (Do we still need the firstclient?)         */
-  if(fgets(str, 256, df) == NULL) {
+  if(fgets(str, sizeof(str), df) == NULL) {
     perror("fgets for firstclient");
     exit(1);
   }
@@ -329,7 +329,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
 
   /* We need to know the LAST host of the ring. */
-  if(fgets(str, 256, df) == NULL) {
+  if(fgets(str, sizeof(str), df) == NULL) {
     perror("fgets for lastclient");
     exit(1);
   }
@@ -352,7 +352,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
 
   /* Read in all the participating hosts. */
-  if(fgets(str, 256, df) == NULL) {
+  if(fgets(str, sizeof(str), df) == NULL) {
     perror("fgets for clients");
     exit(1);
   }
@@ -373,7 +373,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
 	}
   mydollytab->hostring = (char **)malloc(mydollytab->hostnr * sizeof(char *));
   for(i = 0; i < mydollytab->hostnr; i++) {
-    if(fgets(str, 256, df) == NULL) {
+    if(fgets(str, sizeof(str), df) == NULL) {
       char errstr[256];
       sprintf(errstr, "gets for host %u", i);
       perror(errstr);
@@ -466,7 +466,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
 
   /* Did we reach the end? */
-  if(fgets(str, 256, df) == NULL) {
+  if(fgets(str, sizeof(str), df) == NULL) {
     perror("fgets for endconfig");
     exit(1);
   }
