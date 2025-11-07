@@ -1,6 +1,7 @@
 #include <dirent.h>
 #include "dolly.h"
 #include "dollytab.h"
+#include "sha256.h"
 #include "transmit.h"
 #include "files.h"
 #include "movebytes.h"
@@ -86,12 +87,12 @@ static void print_params(struct dollytab* mydollytab) {
     fprintf(stderr, "| %-36s | %-40u |\n", "Control Port", ctrlport);
     fprintf(stderr, "| %-36s | %-40u |\n", "Data Port", dataport);
     if (mydollytab->meserver) {
-        fprintf(stderr, "| %-36s | %-40s |\n", "Input File", mydollytab->infile);
-	fprintf(stderr, "| %-36s | %-40s |\n", "Output File", mydollytab->outfile);
-	fprintf(stderr, "| %-36s | %-40s |\n", "Directory List", mydollytab->directory_list);
+      fprintf(stderr, "| %-36s | %-40s |\n", "Input File", mydollytab->infile);
+      fprintf(stderr, "| %-36s | %-40s |\n", "Output File", mydollytab->outfile);
+      fprintf(stderr, "| %-36s | %-40s |\n", "Directory List", mydollytab->directory_list);
     }
     if (!mydollytab->meserver) {
-        fprintf(stdtty, "| %-36s | %-40u |\n", "I'm number", mydollytab->hostnr);
+      fprintf(stdtty, "| %-36s | %-40u |\n", "I'm number", mydollytab->hostnr);
     }
     fprintf(stderr, "| %-36s | %-40u |\n", "Fanout", mydollytab->fanout);
     fprintf(stderr, "| %-36s | %-40u |\n", "Number of Childs", mydollytab->nr_childs);
@@ -121,6 +122,7 @@ static void open_insocks(struct dollytab * mydollytab) {
     perror("Opening input data socket");
     exit(1);
   }
+
   optval = 1;
   if(setsockopt(datasock, SOL_SOCKET, SO_REUSEADDR,
 		&optval, sizeof(int)) == -1) {
@@ -207,18 +209,18 @@ static void open_insystemdsocks(struct dollytab * mydollytab) {
     fprintf(stderr, "Start dolly client using systemd socket on %u hosts, port %i:\n", mydollytab->hostnr, systemdport);
   }
   for(i = 0; i < mydollytab->hostnr; i++) {
-      clientSocket = socket(PF_INET, SOCK_STREAM, 0);
-      if(mydollytab->flag_v) {
-        fprintf(stderr, "\t'%s'\n", mydollytab->hostring[i]);
-      }
-      serverAddr.sin_addr.s_addr = inet_addr(mydollytab->hostring[i]);
-      /* Connect to the systemd socket of all client nodes to start the dolly service */
-      addr_size = sizeof serverAddr;
-      Retval = connect(clientSocket, (struct sockaddr *) &serverAddr, addr_size);
-      if (Retval < 0) {
-        fprintf(stderr, "Connection failed to %s ! dolly service wont be started !\n (Please do a: systemctl start dolly.socket)\n (To always enable it: systemctl enable dolly.socket)\n", mydollytab->hostring[i]);
-      }
-      close(clientSocket);
+    clientSocket = socket(PF_INET, SOCK_STREAM, 0);
+    if(mydollytab->flag_v) {
+      fprintf(stderr, "\t'%s'\n", mydollytab->hostring[i]);
+    }
+    serverAddr.sin_addr.s_addr = inet_addr(mydollytab->hostring[i]);
+    /* Connect to the systemd socket of all client nodes to start the dolly service */
+    addr_size = sizeof serverAddr;
+    Retval = connect(clientSocket, (struct sockaddr *) &serverAddr, addr_size);
+    if (Retval < 0) {
+      fprintf(stderr, "Connection failed to %s ! dolly service wont be started !\n (Please do a: systemctl start dolly.socket)\n (To always enable it: systemctl enable dolly.socket)\n", mydollytab->hostring[i]);
+    }
+    close(clientSocket);
   }
 }
 
@@ -342,15 +344,15 @@ static void open_outsocks(struct dollytab * mydollytab) {
 		      &mydollytab->segsize, sizeof(int)) < 0) {
 	  (void) fprintf(stderr, "setsockopt: TCP_MAXSEG failed! errno = %d\n", 
 			 errno);
-      exit(1);
+	  exit(1);
 	}
       }
       if(setsockopt(dataout[i], SOL_SOCKET, SO_SNDBUF,&SCKBUFSIZE,sizeof(SCKBUFSIZE)) < 0) {
-          (void) fprintf(stderr, "setsockopt: SO_SNDBUF failed! errno = %d\n", errno);
-          exit(556);
+	(void) fprintf(stderr, "setsockopt: SO_SNDBUF failed! errno = %d\n", errno);
+	exit(556);
       }
       getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF,
-           (char *) &send_size, (void *) &sizeofint);
+		 (char *) &send_size, (void *) &sizeofint);
       //fprintf(stderr, "Send buffer %u is %d bytes\n", i, send_size);
 
       ///* Setup data port */
@@ -369,7 +371,7 @@ static void open_outsocks(struct dollytab * mydollytab) {
         retry_count = 0;
         do {
           ret = connect(dataout[i],
-                  (struct sockaddr *)&addrdata, sizeof(addrdata));
+			(struct sockaddr *)&addrdata, sizeof(addrdata));
           retry_count++;
         } while(retry_count < max_retries && ret == -1 && errno != ECONNREFUSED);
         if((ret == -1) && (errno == ECONNREFUSED)) {
@@ -400,12 +402,13 @@ static void open_outsocks(struct dollytab * mydollytab) {
       }
       if(!ctrlok) {
 	if((mydollytab->nr_childs > 1) || (i == 0)) {
-    retry_count = 0;
-    do {
-      ret = connect(ctrlout[i],
-        (struct sockaddr *)&addrctrl, sizeof(addrctrl));
-      retry_count++;
-    } while(retry_count < max_retries && ret == -1 && errno != ECONNREFUSED);
+	  retry_count = 0;
+	  do {
+	    ret = connect(ctrlout[i],
+			  (struct sockaddr *)&addrctrl, sizeof(addrctrl));
+	    retry_count++;
+	  } while(retry_count < max_retries && ret == -1 && errno != ECONNREFUSED);
+
 	  if((ret == -1) && (errno == ECONNREFUSED)) {
 	    close(ctrlout[i]);
 	  } else if(ret == -1) {
@@ -417,6 +420,8 @@ static void open_outsocks(struct dollytab * mydollytab) {
 	      fprintf(stderr, "control ");
 	      fflush(stderr);
 	    }
+
+
 	  }
 	} else {
 	  ctrlok = 1;
@@ -432,9 +437,6 @@ static void open_outsocks(struct dollytab * mydollytab) {
   }
 }
 
-
-
-
 static void buildring(struct dollytab * mydollytab) {
   socklen_t size;
   int ret = 0;
@@ -443,9 +445,17 @@ static void buildring(struct dollytab * mydollytab) {
   char msg[1024];
   char info_buf[1024];
 
+  open_insocks(mydollytab);
+
+  if (mydollytab->meserver) {
+    if (!mydollytab->melast) {
+      open_outsocks(mydollytab);
+    }
+  }
+
   if(!mydollytab->meserver) {
+    fprintf(stderr, "DEBUG not a server\n");
     /* Open the input sockets and wait for connections... */
-    open_insocks(mydollytab);
     if(mydollytab->flag_v) {
       fprintf(stderr, "Accepting...");
       fflush(stderr);
@@ -458,13 +468,23 @@ static void buildring(struct dollytab * mydollytab) {
       exit(1);
     }
 
-    if(mydollytab->flag_v) {
-      fprintf(stderr, "control...\n");
-      fflush(stderr);
-    }
-    
-    /* Clients should now read everything from the ctrl-socket. */
     getparams(ctrlin,mydollytab);
+
+    if(mydollytab->password_required) {
+      fprintf(stderr, "I am a client sending the token\n");
+      movebytes(ctrlin, WRITE, mydollytab->password, sizeof(mydollytab->password), mydollytab);
+      char ack[256 + 13]; // "AUTH_FAILED:" + hostname + null terminator
+      memset(ack, 0, sizeof(ack));
+      read(ctrlin, ack, sizeof(ack));
+      if (strcmp(ack, "OK") != 0) {
+	if (strncmp(ack, "AUTH_FAILED:", 13) == 0) {
+	  fprintf(stderr, "Authentication failed for client: %s\n", ack + 13);
+	} else {
+	  fprintf(stderr, "Invalid password\n");
+	}
+	exit(1);
+	fprintf(stderr, "DEBUG: This message should NOT appear if exit(1) works.\n");
+      }    }
     if(mydollytab->flag_v) {
       print_params(mydollytab);
     }
@@ -511,177 +531,225 @@ static void buildring(struct dollytab * mydollytab) {
     }
   }
 
-  if(mydollytab->meserver) {
-    open_infile(1,mydollytab);
-  } else {
-    open_outfile(mydollytab);
-  }
-
-  /* All the machines except the leaf(s) need to open output sockets */
-  if(!mydollytab->melast) {
-    open_outsocks(mydollytab);
-  }
-
-  /* Finally, the first machine also accepts a connection */
-  if(mydollytab->meserver) {
-    char buf[mydollytab->t_b_size];
-    ssize_t readsize;
-    int fd, maxsetnr = -1;
-    fd_set real_set, cur_set;
-    
-    for(i = 0; i < mydollytab->nr_childs; i++) {
-      movebytes(ctrlout[i], WRITE, (char *)&mydollytab->directory_mode, sizeof(mydollytab->directory_mode), mydollytab);
+  if(mydollytab->password_required) {
+    if(mydollytab->meserver) {
+      fprintf(stderr, "I am the server, doing authentication\n");
+    }
+    if(mydollytab->meserver) {
+      open_infile(1,mydollytab);
+    } else {
+      open_outfile(mydollytab);
     }
 
-    /* Send out dollytab */
-    fd = open(dollytab, O_RDONLY);
-    if(fd == -1) {
-      perror("open dollytab");
-      exit(1);
+    /* All the machines except the leaf(s) need to open output sockets */
+    if(!mydollytab->melast && !mydollytab->meserver) {
+      open_outsocks(mydollytab);
     }
-    readsize = read(fd, buf, mydollytab->t_b_size);
-    if(readsize == -1) {
-      perror("read dollytab");
-      exit(1);
-    } else if(readsize == mydollytab->t_b_size) {
-      fprintf(stderr, "Dollytab possibly too long, adjust program...\n");
-      exit(1);
-    } else if(readsize == 1448) {
-      buf[1448] = ' ';
-      readsize += 1;
-    }
-    for(i = 0; i < mydollytab->nr_childs; i++) {
-      movebytes(ctrlout[i], WRITE, buf, readsize,mydollytab);
-    }
-    close(fd);
 
+    /* Finally, the first machine also accepts a connection */
+    if(mydollytab->meserver) {
+      char buf[mydollytab->t_b_size];
+      ssize_t readsize;
+      int fd, maxsetnr = -1;
+      fd_set real_set, cur_set;
 
-    /* Wait for backflow-information or the data socket connection */
-    fprintf(stderr, "Waiting for ring to build...\n");
-    FD_ZERO(&real_set);
-    maxsetnr = -1;
-    for(i = 0; i < mydollytab->nr_childs; i++) {
-      FD_SET(ctrlout[i], &real_set);
-      if(ctrlout[i] > maxsetnr) {
-        maxsetnr = ctrlout[i];
-      }
-    }
-    maxsetnr++;
-    do {
-      cur_set = real_set;
-      ret = select(maxsetnr, &cur_set, NULL, NULL, NULL);
-      if(ret == -1) {
-        perror("select in buildring()\n");
-        exit(1);
-      }
-      for(j = 0; j < mydollytab->nr_childs; j++) {
-        if(FD_ISSET(ctrlout[j], &cur_set)) {
-          ret = read(ctrlout[j], info_buf, 1024);
-          if(ret == -1) {
-            perror("read backflow in buildring");
-            exit(1);
-          }
-          if(ret == 0) {
-            fprintf(stderr, "read returned 0 from backflow in buildring.\n");
-            exit(1);
-          } else {
-            char *p;
-            
-            p = info_buf;
-            info_buf[ret] = 0;	
-            if(mydollytab->flag_v) {
-              fprintf(stderr, "%s", info_buf);
-            }
-            while((p = strstr(p, "ready")) != NULL) {
-              ready_mach++;
-              p++;
-            }
-            if(mydollytab->flag_v) {
-              fprintf(stderr,
-                "Machines left to wait for: %u\n", mydollytab->hostnr - ready_mach);
-            }
-          }
-        }
-      } /* For all childs */
-    } while(ready_mach < mydollytab->hostnr);
-  }
-
-  if(mydollytab->flag_v) {
-    fprintf(stderr, "Accepted.\n");
-  }
-  
-  if(!mydollytab->meserver) {
-    /* Send it further */
-    if(!mydollytab->melast) {
       for(i = 0; i < mydollytab->nr_childs; i++) {
-        movebytes(ctrlout[i], WRITE, (char *)&mydollytab->directory_mode, sizeof(mydollytab->directory_mode), mydollytab);
-        movebytes(ctrlout[i], WRITE, mydollytab->dollybuf, mydollytab->dollybufsize,mydollytab);
+	movebytes(ctrlout[i], WRITE, (char *)&mydollytab->directory_mode, sizeof(mydollytab->directory_mode), mydollytab);
       }
+
+      /* Send out dollytab */
+      fd = open(dollytab, O_RDONLY);
+      if(fd == -1) {
+	perror("open dollytab");
+	exit(1);
+      }
+      readsize = read(fd, buf, mydollytab->t_b_size);
+      if(readsize == -1) {
+	perror("read dollytab");
+	exit(1);
+      } else if(readsize == mydollytab->t_b_size) {
+	fprintf(stderr, "Dollytab possibly too long, adjust program...\n");
+	exit(1);
+      } else if(readsize == 1448) {
+	buf[1448] = ' ';
+	readsize += 1;
+      }
+      for(i = 0; i < mydollytab->nr_childs; i++) {
+	movebytes(ctrlout[i], WRITE, buf, readsize,mydollytab);
+      }
+      close(fd);
+
+      if (mydollytab->password_required) {
+        unsigned int i = 0;
+        while (i < mydollytab->nr_childs) {
+	  char password[256];
+	  memset(password, 0, sizeof(password));
+	  read(ctrlout[i], password, sizeof(password));
+	  if (strcmp(password, mydollytab->password) == 0) {
+	    write(ctrlout[i], "OK", 3);
+	    i++;
+	  } else {
+	    char fail_msg[256 + 13]; // "AUTH_FAILED:" + hostname + null terminator
+	    snprintf(fail_msg, sizeof(fail_msg), "AUTH_FAILED:%s", mydollytab->hostring[mydollytab->nexthosts[i]]);
+	    write(ctrlout[i], fail_msg, strlen(fail_msg) + 1); // +1 for null terminator
+	    fprintf(stderr, "Authentication failed for client: %s. Exiting.\n", fail_msg);
+	    close(ctrlout[i]);
+	    close(dataout[i]);
+	    exit(1);
+	  }
+        }
+      }
+
+      /* Wait for backflow-information or the data socket connection */
+      fprintf(stderr, "Waiting for ring to build...\n");
+      FD_ZERO(&real_set);
+      maxsetnr = -1;
+      for(i = 0; i < mydollytab->nr_childs; i++) {
+	FD_SET(ctrlout[i], &real_set);
+	if(ctrlout[i] > maxsetnr) {
+	  maxsetnr = ctrlout[i];
+	}
+      }
+      maxsetnr++;
+      do {
+	cur_set = real_set;
+	ret = select(maxsetnr, &cur_set, NULL, NULL, NULL);
+	if(ret == -1) {
+	  perror("select in buildring()\n");
+	  exit(1);
+	}
+	for(j = 0; j < mydollytab->nr_childs; j++) {
+	  if(FD_ISSET(ctrlout[j], &cur_set)) {
+	    ret = read(ctrlout[j], info_buf, 1024);
+	    if(ret == -1) {
+	      perror("read backflow in buildring");
+	      exit(1);
+	    }
+	    if(ret == 0) {
+	      fprintf(stderr, "Client %s disconnected due to an authentication failure in the ring. Check log on this client.\n", mydollytab->hostring[mydollytab->nexthosts[j]]);
+	      fprintf(stderr, "read returned 0 from backflow in buildring. Client disconnected.\n");
+	      close(ctrlout[j]);
+	      close(dataout[j]);
+	      exit(1);
+	    } else {
+	      char *p;
+            
+	      p = info_buf;
+	      info_buf[ret] = 0;	
+	      if(mydollytab->flag_v) {
+		fprintf(stderr, "%s", info_buf);
+	      }
+	      while((p = strstr(p, "ready")) != NULL) {
+		ready_mach++;
+		p++;
+	      }
+	      if(mydollytab->flag_v) {
+		fprintf(stderr,
+			"Machines left to wait for: %u\n", mydollytab->hostnr - ready_mach);
+	      }
+	    }
+	  }
+	} /* For all childs */
+      } while(ready_mach < mydollytab->hostnr);
     }
+
+    if(mydollytab->flag_v) {
+      fprintf(stderr, "Accepted.\n");
+    }
+  
+    if(!mydollytab->meserver) {
+      /* Send it further */
+      if(!mydollytab->melast) {
+	for(i = 0; i < mydollytab->nr_childs; i++) {
+	  movebytes(ctrlout[i], WRITE, (char *)&mydollytab->directory_mode, sizeof(mydollytab->directory_mode), mydollytab);
+	  movebytes(ctrlout[i], WRITE, mydollytab->dollybuf, mydollytab->dollybufsize,mydollytab);
+	}
+	if (mydollytab->password_required) {
+          unsigned int i = 0;
+          while (i < mydollytab->nr_childs) {
+	    char password[256];
+	    memset(password, 0, sizeof(password));
+	    read(ctrlout[i], password, sizeof(password));
+	    if (strcmp(password, mydollytab->password) == 0) {
+	      write(ctrlout[i], "OK", 3);
+	      i++;
+	    } else {
+	      char fail_msg[256 + 13]; // "AUTH_FAILED:" + hostname + null terminator
+	      snprintf(fail_msg, sizeof(fail_msg), "AUTH_FAILED:%s", mydollytab->hostring[mydollytab->nexthosts[i]]);
+	      write(ctrlout[i], fail_msg, strlen(fail_msg) + 1); // +1 for null terminator
+	      fprintf(stderr, "Authentication failed for client: %s. Exiting.\n", fail_msg);
+	      close(ctrlout[i]);
+	      close(dataout[i]);
+	      exit(0);
+	    }
+          }
+	}
+      }
     
-    /* Give information back to server */
-    sprintf(msg, "Host ready '%s'.\n", mydollytab->myhostname);
-    ret = movebytes(ctrlin, WRITE, msg, strlen(msg),mydollytab);
-    if((unsigned int) ret != strlen(msg)) {
-      fprintf(stderr,
-	      "Couldn't write ready-message back to server "
-	      "(sent %d instead of %zu bytes).\n",
-	      ret, strlen(msg));
+      /* Give information back to server */
+      sprintf(msg, "Host ready '%s'.\n", mydollytab->myhostname);
+      ret = movebytes(ctrlin, WRITE, msg, strlen(msg),mydollytab);
+      if((unsigned int) ret != strlen(msg)) {
+	fprintf(stderr,
+		"Couldn't write ready-message back to server "
+		"(sent %d instead of %zu bytes).\n",
+		ret, strlen(msg));
+      }
     }
   }
 }
 
-
 static void usage(void) {
-    fprintf(stderr, "\n");
-    fprintf(stderr, "Dolly v%s - Parallel disk/partition/data cloning tool\n", version_string);
-    fprintf(stderr, "------------------------------------------------------\n");
-    fprintf(stderr, "Dolly clones data to one or multiple nodes in parallel, saving time.\n");
-    fprintf(stderr, "Without -s or -S, dolly runs as a client.\n\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Dolly v%s - Parallel disk/partition/data cloning tool\n", version_string);
+  fprintf(stderr, "------------------------------------------------------\n");
+  fprintf(stderr, "Dolly clones data to one or multiple nodes in parallel, saving time.\n");
+  fprintf(stderr, "Without -s or -S, dolly runs as a client.\n\n");
 
-    fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "  dolly [-hVvSsnYR6d] [-c <size>] [-b <size>] [-u <size>] [-f configfile]\n");
-    fprintf(stderr, "       [-o logfile] [-a timeout] [-I inputfile] [-D inputdir] [-O outputfile]\n");
-    fprintf(stderr, "       [-H node1,node2,...] [-X excludedir]\n\n");
+  fprintf(stderr, "Usage:\n");
+  fprintf(stderr, "  dolly [-hPVvSsnYR6d] [-c <size>] [-b <size>] [-u <size>] [-f configfile]\n");
+  fprintf(stderr, "       [-o logfile] [-a timeout] [-I inputfile] [-D inputdir] [-O outputfile]\n");
+  fprintf(stderr, "       [-H node1,node2,...] [-X excludedir]\n\n");
 
-    fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  -s                Run as server (check hostname; not required if -H or -I is used)\n");
-    fprintf(stderr, "  -S <hostname>     Use <hostname> as server\n");
-    fprintf(stderr, "  -R                Resolve hostnames to IPv4 addresses\n");
-    fprintf(stderr, "  -6                Resolve hostnames to IPv6 addresses\n");
-    fprintf(stderr, "  -V                Print version and exit\n");
-    fprintf(stderr, "  -D <inputdir>     Send a directory instead of a file\n");
-    fprintf(stderr, "  -I <inputfile>    Input file\n");
-    fprintf(stderr, "  -X <excludedir>   Comma-separated list of directories to exclude (e.g., /proc,/sys)\n");
-    fprintf(stderr, "  -h                Print this help and exit\n");
-    fprintf(stderr, "  -d                Connect to systemd socket on client nodes (port 9996)\n");
-    fprintf(stderr, "  -v                Verbose mode\n");
-    fprintf(stderr, "  -q                Suppress 'ignored signal' messages\n");
-    fprintf(stderr, "  -f <configfile>   Configuration file (required on server)\n");
-    fprintf(stderr, "  -o <logfile>      Write statistics to <logfile>\n");
-    fprintf(stderr, "  -a <timeout>      Terminate if no data transfer after <timeout> seconds\n");
-    fprintf(stderr, "  -r <n>            Retry connection to node <n> times\n");
-    fprintf(stderr, "  -n                Do not sync before exit (faster, but risk of data loss on power failure)\n");
-    fprintf(stderr, "  -Y                instructs Dolly to treat the '-' character in hostnames as any other character.\n\n");
+  fprintf(stderr, "Options:\n");
+  fprintf(stderr, "  -s                Run as server (check hostname; not required if -H or -I is used)\n");
+  fprintf(stderr, "  -S <hostname>     Use <hostname> as server\n");
+  fprintf(stderr, "  -R                Resolve hostnames to IPv4 addresses\n");
+  fprintf(stderr, "  -6                Resolve hostnames to IPv6 addresses\n");
+  fprintf(stderr, "  -V                Print version and exit\n");
+  fprintf(stderr, "  -D <inputdir>     Send a directory instead of a file\n");
+  fprintf(stderr, "  -I <inputfile>    Input file\n");
+  fprintf(stderr, "  -X <excludedir>   Comma-separated list of directories to exclude (e.g., /proc,/sys)\n");
+  fprintf(stderr, "  -h                Print this help and exit\n");
+  fprintf(stderr, "  -d                Connect to systemd socket on client nodes (port 9996)\n");
+  fprintf(stderr, "  -v                Verbose mode\n");
+  fprintf(stderr, "  -q                Suppress 'ignored signal' messages\n");
+  fprintf(stderr, "  -P                Password for simple auth process\n");
+  fprintf(stderr, "  -f <configfile>   Configuration file (required on server)\n");
+  fprintf(stderr, "  -o <logfile>      Write statistics to <logfile>\n");
+  fprintf(stderr, "  -a <timeout>      Terminate if no data transfer after <timeout> seconds\n");
+  fprintf(stderr, "  -r <n>            Retry connection to node <n> times\n");
+  fprintf(stderr, "  -n                Do not sync before exit (faster, but risk of data loss on power failure)\n");
+  fprintf(stderr, "  -Y                instructs Dolly to treat the '-' character in hostnames as any other character.\n\n");
 
-    fprintf(stderr, "Network Transfer Options:\n");
-    fprintf(stderr, "  -b <size>         Block size for transfer (default: 4096)\n");
-    fprintf(stderr, "  -u <size>         Buffer size (multiple of 4K)\n\n");
+  fprintf(stderr, "Network Transfer Options:\n");
+  fprintf(stderr, "  -b <size>         Block size for transfer (default: 4096)\n");
+  fprintf(stderr, "  -u <size>         Buffer size (multiple of 4K)\n\n");
 
-    fprintf(stderr, "Server Mode (alternative to dollytab):\n");
-    fprintf(stderr, "  -H <hosts>        Comma-separated list of target hosts\n");
-    fprintf(stderr, "  -O <outputfile>   Output file (use '-' for stdout; defaults to input filename)\n\n");
+  fprintf(stderr, "Server Mode (alternative to dollytab):\n");
+  fprintf(stderr, "  -H <hosts>        Comma-separated list of target hosts\n");
+  fprintf(stderr, "  -O <outputfile>   Output file (use '-' for stdout; defaults to input filename)\n\n");
 
-    fprintf(stderr, "Examples:\n");
-    fprintf(stderr, "  # Client mode:\n");
-    fprintf(stderr, "  dolly -v\n\n");
-    fprintf(stderr, "  # Server mode:\n");
-    fprintf(stderr, "  dolly -vs -H sle15sp32,sle15sp33,sle15sp34 -I files.tgz -O /tmp/files.tgz\n");
-    fprintf(stderr, "    Copy files.tgz to /tmp/files.tgz on specified nodes (verbose)\n\n");
-    fprintf(stderr, "  dolly -d -H sle15sp32,sle15sp33,sle15sp34 -I /tmp/files.tgz\n");
-    fprintf(stderr, "    Use systemd socket to copy /tmp/files.tgz to nodes\n");
+  fprintf(stderr, "Examples:\n");
+  fprintf(stderr, "  # Client mode:\n");
+  fprintf(stderr, "  dolly -v\n\n");
+  fprintf(stderr, "  # Server mode:\n");
+  fprintf(stderr, "  dolly -vs -H sle15sp32,sle15sp33,sle15sp34 -I files.tgz -O /tmp/files.tgz\n");
+  fprintf(stderr, "    Copy files.tgz to /tmp/files.tgz on specified nodes (verbose)\n\n");
+  fprintf(stderr, "  dolly -d -H sle15sp32,sle15sp33,sle15sp34 -I /tmp/files.tgz\n");
+  fprintf(stderr, "    Use systemd socket to copy /tmp/files.tgz to nodes\n");
 
-    exit(1);
+  exit(1);
 }
 
 int main(int argc, char *argv[]) {
@@ -699,7 +767,7 @@ int main(int argc, char *argv[]) {
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:S:shdnR46:VI:O:Y:H:D:X:");
+    c = getopt(argc, argv, "a:b:c:f:r:u:vqo:S:shdnR46:VI:O:Y:H:D:P:X:");
     if(c == -1) break;
     
     switch(c) {
@@ -800,6 +868,15 @@ int main(int argc, char *argv[]) {
         exit(1);
       }
       strcpy(mydollytab->servername,optarg);
+      break;
+    case 'P':
+      if(strlen(optarg) > 255) {
+        fprintf(stderr, "Password too long.\n");
+        exit(1);
+      }
+      memset(mydollytab->password, 0, sizeof(mydollytab->password));
+      strncpy(mydollytab->password, optarg, sizeof(mydollytab->password) - 1);
+      mydollytab->password_required = 1;
       break;
     case 'a':
       i = atoi(optarg);
@@ -908,29 +985,29 @@ int main(int argc, char *argv[]) {
         }
 
         if (is_host_reachable(ip_addr)) {
-            /*if(mydollytab->flag_v) {
-                fprintf(stderr, "Host '%s' (%s) is reachable. Adding to list.\n", host_str, ip_addr);
+	  /*if(mydollytab->flag_v) {
+	    fprintf(stderr, "Host '%s' (%s) is reachable. Adding to list.\n", host_str, ip_addr);
             }*/
-            reachable_hosts[reachable_nr_hosts] = (char *)malloc(strlen(ip_addr)+1);
-            if(!reachable_hosts[reachable_nr_hosts]) {
-                fprintf(stderr,"Could not get memory for hostring!\n");
-                exit(1);
-            }
-            strcpy(reachable_hosts[reachable_nr_hosts], ip_addr);
-            reachable_nr_hosts++;
+	  reachable_hosts[reachable_nr_hosts] = (char *)malloc(strlen(ip_addr)+1);
+	  if(!reachable_hosts[reachable_nr_hosts]) {
+	    fprintf(stderr,"Could not get memory for hostring!\n");
+	    exit(1);
+	  }
+	  strcpy(reachable_hosts[reachable_nr_hosts], ip_addr);
+	  reachable_nr_hosts++;
 
-            // Store for table
-            host_ips[table_nr_hosts] = strdup(ip_addr);
-            host_statuses[table_nr_hosts] = strdup("Reachable");
-            table_nr_hosts++;
+	  // Store for table
+	  host_ips[table_nr_hosts] = strdup(ip_addr);
+	  host_statuses[table_nr_hosts] = strdup("Reachable");
+	  table_nr_hosts++;
         } else {
-            if(mydollytab->flag_v) {
-                fprintf(stderr, "Client '%s' (%s) is unreachable. Skipping.\n", host_str, ip_addr);
-            }
-            // Store for table
-            host_ips[table_nr_hosts] = strdup(ip_addr);
-            host_statuses[table_nr_hosts] = strdup("Unreachable");
-            table_nr_hosts++;
+	  if(mydollytab->flag_v) {
+	    fprintf(stderr, "Client '%s' (%s) is unreachable. Skipping.\n", host_str, ip_addr);
+	  }
+	  // Store for table
+	  host_ips[table_nr_hosts] = strdup(ip_addr);
+	  host_statuses[table_nr_hosts] = strdup("Unreachable");
+	  table_nr_hosts++;
         }
         free(ip_addr);
         host_str = strtok(NULL,host_delim);
@@ -963,23 +1040,23 @@ int main(int argc, char *argv[]) {
         exit(1);
       }
       for (i = 0; i < reachable_nr_hosts; i++) {
-          mydollytab->hostring[i] = reachable_hosts[i];
+	mydollytab->hostring[i] = reachable_hosts[i];
       }
       free(reachable_hosts);
 
       // Re-evaluate 'me' based on the filtered hostring
       me = -2; // Reset me
       for (i = 0; i < mydollytab->hostnr; i++) {
-          if (strcmp(mydollytab->hostring[i], mydollytab->myhostname) == 0) {
-              me = i;
-              break;
-          } else if (!mydollytab->hyphennormal) {
-              char *sp = strchr(mydollytab->hostring[i], '-');
-              if (sp != NULL && strncmp(mydollytab->hostring[i], mydollytab->myhostname, sp - mydollytab->hostring[i]) == 0) {
-                  me = i;
-                  break;
-              }
-          }
+	if (strcmp(mydollytab->hostring[i], mydollytab->myhostname) == 0) {
+	  me = i;
+	  break;
+	} else if (!mydollytab->hyphennormal) {
+	  char *sp = strchr(mydollytab->hostring[i], '-');
+	  if (sp != NULL && strncmp(mydollytab->hostring[i], mydollytab->myhostname, sp - mydollytab->hostring[i]) == 0) {
+	    me = i;
+	    break;
+	  }
+	}
       }
 
       /* Build up topology */
@@ -1035,43 +1112,43 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Unknown option '%c'.\n", c);
       exit(1);
     }
- // always do hostname resolution
- //   if(flag_cargs) {
-      /* only use HOST when servername or ip is not explictly set */
-      if(strcmp(mydollytab->servername,"") == 0) {
-        mnname = getenv("HOST");
-        if(mydollytab->resolve != 0) {
-          ip_addr = (char*)malloc(sizeof(char)*256);
-          if(resolve_host(mnname,ip_addr,mydollytab->resolve)) {
-            fprintf(stderr,"Could resolve the server address '%s'\n",mydollytab->servername);
-            exit(1);
-          }
-          memcpy(mydollytab->myhostname,ip_addr,strlen(ip_addr));
-          memcpy(mydollytab->servername,ip_addr,strlen(ip_addr));
-          free(ip_addr);
-        } else {
-          memcpy(mydollytab->myhostname,mnname,strlen(mnname));
-          memcpy(mydollytab->servername,mnname,strlen(mnname));
-        }
+    // always do hostname resolution
+    //   if(flag_cargs) {
+    /* only use HOST when servername or ip is not explictly set */
+    if(strcmp(mydollytab->servername,"") == 0) {
+      mnname = getenv("HOST");
+      if(mydollytab->resolve != 0) {
+	ip_addr = (char*)malloc(sizeof(char)*256);
+	if(resolve_host(mnname,ip_addr,mydollytab->resolve)) {
+	  fprintf(stderr,"Could resolve the server address '%s'\n",mydollytab->servername);
+	  exit(1);
+	}
+	memcpy(mydollytab->myhostname,ip_addr,strlen(ip_addr));
+	memcpy(mydollytab->servername,ip_addr,strlen(ip_addr));
+	free(ip_addr);
       } else {
-        /* check if we allready have a valid ip address */
-        if(inet_pton(AF_INET,mydollytab->servername,&(sock_address.sin_addr)) == 0 &&
-           inet_pton(AF_INET6,mydollytab->servername,&(sock_address.sin_addr)) == 0 &&
-           mydollytab->resolve != 0) {
-          ip_addr = (char*)malloc(sizeof(char)*256);
-          if(resolve_host(mydollytab->servername,ip_addr,mydollytab->resolve)) {
-            fprintf(stderr,"Could resolve the server address '%s'\n",mydollytab->servername);
-            exit(1);
-          }
-          memcpy(mydollytab->servername,ip_addr,strlen(ip_addr));
-          memcpy(mydollytab->myhostname,ip_addr,strlen(ip_addr));
-          free(ip_addr);
-        } else {
-          memcpy(mydollytab->myhostname,mydollytab->servername,strlen(mydollytab->servername));
-        }
+	memcpy(mydollytab->myhostname,mnname,strlen(mnname));
+	memcpy(mydollytab->servername,mnname,strlen(mnname));
       }
+    } else {
+      /* check if we allready have a valid ip address */
+      if(inet_pton(AF_INET,mydollytab->servername,&(sock_address.sin_addr)) == 0 &&
+	 inet_pton(AF_INET6,mydollytab->servername,&(sock_address.sin_addr)) == 0 &&
+	 mydollytab->resolve != 0) {
+	ip_addr = (char*)malloc(sizeof(char)*256);
+	if(resolve_host(mydollytab->servername,ip_addr,mydollytab->resolve)) {
+	  fprintf(stderr,"Could resolve the server address '%s'\n",mydollytab->servername);
+	  exit(1);
+	}
+	memcpy(mydollytab->servername,ip_addr,strlen(ip_addr));
+	memcpy(mydollytab->myhostname,ip_addr,strlen(ip_addr));
+	free(ip_addr);
+      } else {
+	memcpy(mydollytab->myhostname,mydollytab->servername,strlen(mydollytab->servername));
+      }
+    }
 
-//    }
+    //    }
     if(flag_f && !flag_cargs) {
       /* Open the config-file */
       df = fopen(optarg, "r");
@@ -1104,7 +1181,7 @@ int main(int argc, char *argv[]) {
       fprintf(stderr,"outfile via '-O FILE' not set, will use '%s' name as target\n", mydollytab->infile);
       strcpy(mydollytab->outfile,mydollytab->infile);
     }
-   if(strlen(dollytab) == 0) {
+    if(strlen(dollytab) == 0) {
       generated_dolly = 1;
       strcpy(dollytab,"/tmp/dollygenXXXXXX");
       fd = mkstemp(dollytab);
@@ -1139,8 +1216,8 @@ int main(int argc, char *argv[]) {
   /* if it fails, redirect stdtty to stderr */
   stdtty = fopen("/dev/tty","a");
   if (stdtty == NULL) {
-      stdtty = stderr;
-    }
+    stdtty = stderr;
+  }
 
   if(mydollytab->flag_d) {
     if (mydollytab->hostnr < 1) {
@@ -1173,6 +1250,7 @@ int main(int argc, char *argv[]) {
   for(i = 0; i < mydollytab->nr_childs; i++) {
     close(ctrlout[i]);
     close(dataout[i]);
+    //close(client_control_socks[i]);
   }
   if(mydollytab->flag_v) {
     fprintf(stderr, "\n");
