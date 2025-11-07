@@ -147,7 +147,7 @@ int open_outfile(struct dollytab * mydollytab) {
     }
     if(output == -1) {
       char str[strlen(name)+19];
-      sprintf(str, "open outputfile '%s'", name);
+      snprintf(str, sizeof(str), "open outputfile '%s'", name);
       perror(str);
       exit(1);
     }
