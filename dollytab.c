@@ -100,14 +100,13 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   if((sp = strchr(sp2, ' ')) == NULL) {
     sp = sp2 + strlen(sp2);
   }
-      strncpy(mydollytab->infile, sp2, sp - sp2);
-      mydollytab->infile[sp - sp2] = '\0';
+      snprintf(mydollytab->infile, sizeof(mydollytab->infile), "%.*s", (int)(sp - sp2), sp2);
       sp++;    if(strcmp(sp, "split") == 0) {
       mydollytab->input_split = 1;
     }
     
     /* Then we want to know the output filename */
-    if(fgets(str, 256, df) == NULL) {
+    if (fgets(str, sizeof(str), df) == NULL) {
       perror("fgets for outfile");
       exit(1);
     }

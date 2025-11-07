@@ -957,7 +957,11 @@ int main(int argc, char *argv[]) {
       free(host_statuses);
 
       mydollytab->hostnr = reachable_nr_hosts;
-      mydollytab->hostring = (char**) malloc(reachable_nr_hosts * sizeof(char *));
+      mydollytab->hostring = malloc(mydollytab->hostnr * sizeof(char *));
+      if (!mydollytab->hostring) {
+        perror("malloc failed for hostring");
+        exit(1);
+      }
       for (i = 0; i < reachable_nr_hosts; i++) {
           mydollytab->hostring[i] = reachable_hosts[i];
       }
