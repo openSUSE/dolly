@@ -1,4 +1,5 @@
 #include "files.h"
+#include "socks.h"
 #include "dolly.h"
 /*
  * If "try_hard" is 1, call must be succesful.

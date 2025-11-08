@@ -146,14 +146,6 @@ Following other options are:
  :  Do not sync() before exit. Thus, dolly will exit sooner, but data
     may not make it to disk if power fails soon after dolly exits.
 
-  **-u** <size>
- :  Specify the size of buffers for TCP sockets. Should be a Multiple
-    of 4K.
-
-  **-b** <size>
- :  Option to specify the TRANSFER_BLOCK_SIZE. Should be a multiple of
-    the size of buffers for TCP sockets.
-
  **-r** <n>
  :  Retry to connect to node <n> times
 

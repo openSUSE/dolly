@@ -52,7 +52,7 @@ struct dollytab {
   unsigned int resolve;
   size_t dollybufsize;
   unsigned int segsize; /* TCP Segment Size (useful for benchmarking only) */
-  ssize_t t_b_size; /* Size of blocks transf. to/from net/disk and one less than that */
+  ssize_t t_b_size;
   char **hostring;
   char *dollybuf;
   unsigned int directory_mode;

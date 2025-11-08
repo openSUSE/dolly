@@ -2,6 +2,7 @@
 #include "dolly.h"
 #include "movebytes.h"
 #include "files.h"
+#include "socks.h"
 /* The main transmitting function */
 void transmit(struct dollytab * mydollytab) {
   char *buf_addr, *buf;
