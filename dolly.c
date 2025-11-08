@@ -225,7 +225,6 @@ static void open_insystemdsocks(struct dollytab * mydollytab) {
 }
 
 static void open_outsocks(struct dollytab * mydollytab) {
-  struct hostent *hent;
   struct sockaddr_in addrdata, addrctrl;
   int ret;
   int dataok = 0, ctrlok = 0, retry_count = 0;
@@ -291,19 +290,22 @@ static void open_outsocks(struct dollytab * mydollytab) {
       assert(i < 1);
       strcpy(hn, mydollytab->hostring[mydollytab->nexthosts[i]]);
     }
+
+    // Using getaddrinfo instead of gethostbyname
+    struct addrinfo *result;
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET; // Only IPv4
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = 0;
+    hints.ai_protocol = 0; // Any protocol
     
-    hent = gethostbyname(hn);
-    //(void)fprintf(stderr,"DEBUG gethostbyname on >%s<\n",hn);
-    if(hent == NULL) {
+    if (getaddrinfo(hn, NULL, &hints, &result) != 0) {
       char str[strlen(hn)+34];
-      sprintf(str, "gethostbyname for host '%s' error %d",
+      sprintf(str, "getaddrinfo for host '%s' error %d",
 	      hn, h_errno);
       herror(str);
       exit(1);
-    }
-    if(hent->h_addrtype != AF_INET) {
-      fprintf(stderr, "Expected h_addrtype of AF_INET, got %d\n",
-	      hent->h_addrtype);
     }
 
     if(mydollytab->flag_v) {
@@ -356,15 +358,15 @@ static void open_outsocks(struct dollytab * mydollytab) {
       //fprintf(stderr, "Send buffer %u is %d bytes\n", i, send_size);
 
       ///* Setup data port */
-      addrdata.sin_family = hent->h_addrtype;
+      addrdata.sin_family = AF_INET;
       addrdata.sin_port = htons(dataport);
-      bcopy(hent->h_addr, &addrdata.sin_addr, hent->h_length);
+      memcpy(&addrdata.sin_addr, &((struct sockaddr_in *)result->ai_addr)->sin_addr, sizeof(struct in_addr));
 
       if((mydollytab->nr_childs > 1) || (i == 0)) {
         /* Setup control port */
-        addrctrl.sin_family = hent->h_addrtype;
+        addrctrl.sin_family = AF_INET;
         addrctrl.sin_port = htons(ctrlport);
-        bcopy(hent->h_addr, &addrctrl.sin_addr, hent->h_length);
+        memcpy(&addrctrl.sin_addr, &((struct sockaddr_in *)result->ai_addr)->sin_addr, sizeof(struct in_addr));
       }
       
       if(!dataok) {
@@ -434,6 +436,8 @@ static void open_outsocks(struct dollytab * mydollytab) {
     if(mydollytab->flag_v) {
       fprintf(stderr, "\b.\n");
     }
+
+    freeaddrinfo(result);
   }
 }
 
