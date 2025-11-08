@@ -56,7 +56,6 @@ void print_params(struct dollytab* mydollytab) {
     fprintf(stderr, "| %-36s | %-40u |\n", "Fanout", mydollytab->fanout);
     fprintf(stderr, "| %-36s | %-40u |\n", "Number of Childs", mydollytab->nr_childs);
     fprintf(stderr, "| %-36s | %-40u |\n", "Clients in Ring (excluding server)", mydollytab->hostnr);
-    fprintf(stderr, "| %-36s | %-40u |\n", "Transfer Size", (unsigned int) mydollytab->t_b_size);
     fprintf(stderr, "\n");
   }
 
