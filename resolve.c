@@ -102,3 +102,20 @@ int get_default_ip(char *hostname , int mode)  {
   freeifaddrs(ifaddr);
   return 0;
 }
+
+struct addrinfo *resolve_host_addrinfo(const char *hostname) {
+  struct addrinfo *result;
+  struct addrinfo hints;
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family = AF_INET; // Only IPv4
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = 0;
+  hints.ai_protocol = 0; // Any protocol
+
+  if (getaddrinfo(hostname, NULL, &hints, &result) != 0) {
+    fprintf(stderr, "getaddrinfo for host '%s' error: %s\n",
+            hostname, gai_strerror(errno));
+    exit(1);
+  }
+  return result;
+}

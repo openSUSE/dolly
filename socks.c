@@ -8,6 +8,7 @@
 #include "movebytes.h"
 #include "ping.h"
 #include "socks.h"
+#include "resolve.h"
 
 /* File descriptors for file I/O */
 int input = -1, output = -1;
@@ -229,22 +230,7 @@ void open_outsocks(struct dollytab * mydollytab) {
     }
     hn[sizeof(hn) - 1] = '\0';
 
-    // Using getaddrinfo instead of gethostbyname
-    struct addrinfo *result;
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_INET; // Only IPv4
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = 0;
-    hints.ai_protocol = 0; // Any protocol
-
-    if (getaddrinfo(hn, NULL, &hints, &result) != 0) {
-      char str[strlen(hn)+34];
-      sprintf(str, "getaddrinfo for host '%s' error %d",
-    	      hn, h_errno);
-      herror(str);
-      exit(1);
-    }
+    struct addrinfo *result = resolve_host_addrinfo(hn);
 
     if(mydollytab->flag_v) {
       fprintf(stderr, "Connecting to host %s...\n", hn);
