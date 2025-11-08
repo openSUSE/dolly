@@ -180,16 +180,16 @@ void open_outsocks(struct dollytab * mydollytab) {
   }
   for(i = 0; i < max; i++) {  /* For all childs we have */
     if(mydollytab->nr_childs > 1) {
-      strcpy(hn, mydollytab->hostring[mydollytab->nexthosts[i]]);
+      strncpy(hn, mydollytab->hostring[mydollytab->nexthosts[i]], sizeof(hn) - 1);
     } else if(mydollytab->add_nr > 0) {
       if(mydollytab->add_mode == 1) {
-    	strcpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]]);
+    	strncpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]], sizeof(hn) - 1);
     	if(i > 0) {
-    	  strcat(hn, mydollytab->add_name[i - 1]);
+    	  strncat(hn, mydollytab->add_name[i - 1], sizeof(hn) - strlen(hn) - 1);
     	}
       } else if(mydollytab->add_mode == 2) {
     	if(i == 0) {
-    	  strcpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]]);
+    	  strncpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]], sizeof(hn) - 1);
     	} else {
     	  int j = 0;
     	  while(!isdigit(mydollytab->hostring[mydollytab->nexthosts[0]][j])) {
@@ -197,8 +197,8 @@ void open_outsocks(struct dollytab * mydollytab) {
     	    j++;
     	  }
     	  hn[j] = 0;
-    	  strcat(hn, mydollytab->add_name[i - 1]);
-    	  strcat(hn, &mydollytab->hostring[mydollytab->nexthosts[0]][j]);
+    	  strncat(hn, mydollytab->add_name[i - 1], sizeof(hn) - strlen(hn) - 1);
+    	  strncat(hn, &mydollytab->hostring[mydollytab->nexthosts[0]][j], sizeof(hn) - strlen(hn) - 1);
     	}
       } else {
     	fprintf(stderr, "Undefined add_mode %d!\n", mydollytab->add_mode);
@@ -208,8 +208,8 @@ void open_outsocks(struct dollytab * mydollytab) {
       assert(i < 1);
 
       if(mydollytab->add_mode == 1) {
-	strcpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]]);
-	strcat(hn, mydollytab->add_name[0]);
+	strncpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]], sizeof(hn) - 1);
+	strncat(hn, mydollytab->add_name[0], sizeof(hn) - strlen(hn) - 1);
       } else if(mydollytab->add_mode == 2) {
 	int j = 0;
 	while(!isdigit(mydollytab->hostring[mydollytab->nexthosts[0]][j])) {
@@ -217,16 +217,17 @@ void open_outsocks(struct dollytab * mydollytab) {
 	  j++;
 	}
 	hn[j] = 0;
-	strcat(hn, mydollytab->add_name[0]);
-	strcat(hn, &mydollytab->hostring[mydollytab->nexthosts[0]][j]);
+	strncat(hn, mydollytab->add_name[0], sizeof(hn) - strlen(hn) - 1);
+	strncat(hn, &mydollytab->hostring[mydollytab->nexthosts[0]][j], sizeof(hn) - strlen(hn) - 1);
       } else {
 	fprintf(stderr, "Undefined add_mode %d!\n", mydollytab->add_mode);
 	exit(1);
       }
     } else {
       assert(i < 1);
-      strcpy(hn, mydollytab->hostring[mydollytab->nexthosts[i]]);
+      strncpy(hn, mydollytab->hostring[mydollytab->nexthosts[i]], sizeof(hn) - 1);
     }
+    hn[sizeof(hn) - 1] = '\0';
 
     // Using getaddrinfo instead of gethostbyname
     struct addrinfo *result;

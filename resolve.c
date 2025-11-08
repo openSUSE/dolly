@@ -31,7 +31,7 @@ int resolve_host(char *hostname , char *ip, int mode) {
   for(p = servinfo; p != NULL; p = p->ai_next) 
     {
       h = (struct sockaddr_in *) p->ai_addr;
-      strcpy(ip , inet_ntoa( h->sin_addr ));
+      strncpy(ip , inet_ntoa( h->sin_addr ), 256);
     }
   freeaddrinfo(servinfo); // all done with this structure
   return 0;

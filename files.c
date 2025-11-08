@@ -57,7 +57,8 @@ int open_infile(int try_hard,struct dollytab * mydollytab) {
   if(mydollytab->input_split != 0) {
     sprintf(name, "%s_%u", mydollytab->infile, input_nr);
   } else {
-    strcpy(name, mydollytab->infile);
+    strncpy(name, mydollytab->infile, sizeof(name) - 1);
+    name[sizeof(name) - 1] = '\0';
   }
   
   /* Files for input/output */
@@ -126,7 +127,8 @@ int open_outfile(struct dollytab * mydollytab) {
   if(mydollytab->output_split != 0) {
     sprintf(name, "%s_%u", mydollytab->outfile, output_nr);
   } else {
-    strcpy(name, mydollytab->outfile);
+    strncpy(name, mydollytab->outfile, sizeof(name) - 1);
+    name[sizeof(name) - 1] = '\0';
   }
   /* check if file is under /dev, if not open even if the file does not exist. */
   if(strcmp("/dev/",name) > 0 ) {
