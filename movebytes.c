@@ -1,5 +1,6 @@
 #include "movebytes.h"
 #include "dolly.h"
+#include "socks.h"
 
 int movebytes(int fd, int dir, char *addr, unsigned int n,struct dollytab * mydollytab) {
   int ret, bytes;

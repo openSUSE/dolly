@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/socket.h>
+
 
 void hash_data(const unsigned char *data, size_t data_len, unsigned char *hash) {
     EVP_MD_CTX *mdctx;

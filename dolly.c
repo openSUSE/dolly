@@ -1,11 +1,13 @@
+const char version_string[] = "0.70.0, 05-NOV-2025";
+
 #include <dirent.h>
 #include "dolly.h"
 #include "dollytab.h"
 #include "socks.h"
-#include "sha256.h"
+
 #include "transmit.h"
-#include "files.h"
-#include "movebytes.h"
+
+
 #include "ping.h"
 
 /* Clients need the ports before they can listen, so we use defaults. */

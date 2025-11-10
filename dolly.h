@@ -1,6 +1,6 @@
 #ifndef DOLLY_H
 #define DOLLY_H
-static const char version_string[] = "0.70.0, 05-NOV-2025";
+extern const char version_string[];
 
 #include <unistd.h>
 #include <stdio.h>
@@ -40,7 +40,5 @@ extern const char* host_delim;
 
 void print_params(struct dollytab* mydollytab);
 
-/* PIDs of child processes */
-extern int in_child_pid, out_child_pid;
 
 #endif
