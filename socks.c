@@ -1,12 +1,12 @@
 // socks.c
-#include <dirent.h>
+
 #include "dolly.h"
 #include "dollytab.h"
 #include "sha256.h"
-#include "transmit.h"
+
 #include "files.h"
 #include "movebytes.h"
-#include "ping.h"
+
 #include "socks.h"
 #include "resolve.h"
 
@@ -383,7 +383,7 @@ void buildring(struct dollytab * mydollytab) {
   }
 
   if(!mydollytab->meserver) {
-    fprintf(stderr, "DEBUG not a server\n");
+    //fprintf(stderr, "DEBUG not a server\n");
     /* Open the input sockets and wait for connections... */
     if(mydollytab->flag_v) {
       fprintf(stderr, "Accepting...");
@@ -398,12 +398,12 @@ void buildring(struct dollytab * mydollytab) {
     }
 
     if(mydollytab->password_required) {
-      fprintf(stderr, "I am a client sending the token\n");
+      //fprintf(stderr, "I am a client sending the token\n");
       unsigned char password_hash[SHA256_DIGEST_LENGTH];
       unsigned char nonce[SHA256_DIGEST_LENGTH];
       unsigned char client_response_hash[SHA256_DIGEST_LENGTH];
 
-      fprintf(stderr, "Client: Raw password: %s\n", mydollytab->password);
+      //fprintf(stderr, "Client: Raw password: %s\n", mydollytab->password);
       // Hash the client's password once
       hash_data((unsigned char *)mydollytab->password, strlen(mydollytab->password), password_hash);
 
@@ -412,7 +412,7 @@ void buildring(struct dollytab * mydollytab) {
 	fprintf(stderr, "Failed to receive nonce from server.\n");
 	exit(1);
       }
-      fprintf(stderr, "Client: Received nonce: ");
+      //fprintf(stderr, "Client: Received nonce: ");
       for (int k = 0; k < SHA256_DIGEST_LENGTH; k++) {
 	fprintf(stderr, "%02x", nonce[k]);
       }
@@ -420,7 +420,7 @@ void buildring(struct dollytab * mydollytab) {
 
       // Calculate client's response hash (password_hash + nonce)
       hash_data_with_nonce(password_hash, SHA256_DIGEST_LENGTH, nonce, SHA256_DIGEST_LENGTH, client_response_hash);
-      fprintf(stderr, "Client: Generated response hash: ");
+      //fprintf(stderr, "Client: Generated response hash: ");
       for (int k = 0; k < SHA256_DIGEST_LENGTH; k++) {
 	fprintf(stderr, "%02x", client_response_hash[k]);
       }
@@ -438,7 +438,7 @@ void buildring(struct dollytab * mydollytab) {
     	  fprintf(stderr, "Invalid password\n");
     	}
     	exit(1);
-    	fprintf(stderr, "DEBUG: This message should NOT appear if exit(1) works.\n");
+    	//fprintf(stderr, "DEBUG: This message should NOT appear if exit(1) works.\n");
       }
     }
 
@@ -518,7 +518,7 @@ void buildring(struct dollytab * mydollytab) {
 
 	generate_nonce(nonce);
 
-	fprintf(stderr, "Server: Raw password: %s\n", mydollytab->password);
+	//fprintf(stderr, "Server: Raw password: %s\n", mydollytab->password);
 	// Hash the server's password once
 	hash_data((unsigned char *)mydollytab->password, strlen(mydollytab->password), server_password_hash);
 
@@ -531,7 +531,7 @@ void buildring(struct dollytab * mydollytab) {
 	    fprintf(stderr, "Failed to send nonce to client.\n");
 	    exit(1);
 	  }
-	  fprintf(stderr, "Server: Sent nonce to client %u: ", i);
+	  //fprintf(stderr, "Server: Sent nonce to client %u: ", i);
 	  for (int k = 0; k < SHA256_DIGEST_LENGTH; k++) {
 	    fprintf(stderr, "%02x", nonce[k]);
 	  }
@@ -542,7 +542,7 @@ void buildring(struct dollytab * mydollytab) {
     	    fprintf(stderr, "Failed to receive client response hash.\n");
     	    exit(1);
     	  }
-	  fprintf(stderr, "Server: Received client response hash from client %u: ", i);
+	  //fprintf(stderr, "Server: Received client response hash from client %u: ", i);
 	  for (int k = 0; k < SHA256_DIGEST_LENGTH; k++) {
 	    fprintf(stderr, "%02x", client_response_hash[k]);
 	  }
@@ -550,7 +550,7 @@ void buildring(struct dollytab * mydollytab) {
 
 	  // Calculate expected response hash (server_password_hash + nonce)
 	  hash_data_with_nonce(server_password_hash, SHA256_DIGEST_LENGTH, nonce, SHA256_DIGEST_LENGTH, expected_response_hash);
-	  fprintf(stderr, "Server: Expected response hash for client %u: ", i);
+	  //fprintf(stderr, "Server: Expected response hash for client %u: ", i);
 	  for (int k = 0; k < SHA256_DIGEST_LENGTH; k++) {
 	    fprintf(stderr, "%02x", expected_response_hash[k]);
 	  }
@@ -561,7 +561,7 @@ void buildring(struct dollytab * mydollytab) {
     	    write(ctrlout[i], "OK", 3);
     	    i++;
     	  } else {
-	    fprintf(stderr, "Server: Password verification failed for client %u.\n", i);
+	    //fprintf(stderr, "Server: Password verification failed for client %u.\n", i);
     	    char fail_msg[256 + 13]; // "AUTH_FAILED:" + hostname + null terminator
     	    snprintf(fail_msg, sizeof(fail_msg), "AUTH_FAILED:%s", mydollytab->hostring[mydollytab->nexthosts[i]]);
     	    write(ctrlout[i], fail_msg, strlen(fail_msg) + 1); // +1 for null terminator
@@ -666,7 +666,7 @@ void buildring(struct dollytab * mydollytab) {
 
 	  generate_nonce(nonce);
 
-	  fprintf(stderr, "Intermediate Server: Raw password: %s\n", mydollytab->password);
+	  //fprintf(stderr, "Intermediate Server: Raw password: %s\n", mydollytab->password);
 	  // Hash the server's password once
 	  hash_data((unsigned char *)mydollytab->password, strlen(mydollytab->password), server_password_hash);
 
@@ -679,7 +679,7 @@ void buildring(struct dollytab * mydollytab) {
 	      fprintf(stderr, "Failed to send nonce to client.\n");
 	      exit(1);
 	    }
-	    fprintf(stderr, "Intermediate Server: Sent nonce to client %u: ", i);
+	    //fprintf(stderr, "Intermediate Server: Sent nonce to client %u: ", i);
 	    for (int k = 0; k < SHA256_DIGEST_LENGTH; k++) {
 	      fprintf(stderr, "%02x", nonce[k]);
 	    }
@@ -690,7 +690,7 @@ void buildring(struct dollytab * mydollytab) {
     	      fprintf(stderr, "Failed to receive client response hash.\n");
     	      exit(1);
     	    }
-	    fprintf(stderr, "Intermediate Server: Received client response hash from client %u: ", i);
+	    //fprintf(stderr, "Intermediate Server: Received client response hash from client %u: ", i);
 	    for (int k = 0; k < SHA256_DIGEST_LENGTH; k++) {
 	      fprintf(stderr, "%02x", client_response_hash[k]);
 	    }
@@ -698,7 +698,7 @@ void buildring(struct dollytab * mydollytab) {
 
 	    // Calculate expected response hash (server_password_hash + nonce)
 	    hash_data_with_nonce(server_password_hash, SHA256_DIGEST_LENGTH, nonce, SHA256_DIGEST_LENGTH, expected_response_hash);
-	    fprintf(stderr, "Intermediate Server: Expected response hash for client %u: ", i);
+	    //fprintf(stderr, "Intermediate Server: Expected response hash for client %u: ", i);
 	    for (int k = 0; k < SHA256_DIGEST_LENGTH; k++) {
 	      fprintf(stderr, "%02x", expected_response_hash[k]);
 	    }
