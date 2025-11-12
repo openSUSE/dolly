@@ -178,7 +178,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   /* Form of the line: add <nr_extra_interfaces>:<postfix>{:<postfix>} */
   if((strncmp("add ", str, 4) == 0) || (strncmp("add2 ", str, 5) == 0)) {
     char *s1, *s2;
-    int max = 0, i;
+    int max = 0, j;
 
     if(strncmp("add ", str, 4) == 0) {
       mydollytab->add_mode = 1;
@@ -222,7 +222,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
       *s2 = 0;
       strcpy(mydollytab->add_name[0], s1);
     } else {
-      for(i = 0; i < max; i++) {
+      for(j = 0; j < max; j++) {
 	s1 = s2 + 1;
 	s2++;
 	while((*s2 != ':' && *s2 != '\n' && *s2 != 0)) s2++;
@@ -231,7 +231,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
 	  exit(1);
 	}
 	*s2 = 0;
-	strcpy(mydollytab->add_name[i], s1);
+	strcpy(mydollytab->add_name[j], s1);
       }
     }
     mydollytab->add_nr = max;

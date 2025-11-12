@@ -1,6 +1,6 @@
 CXX = g++
 CC = gcc
-CFLAGS += -std=gnu11 -s -O -fPIE $(RPM_OPT_FLAGS)
+CFLAGS += -std=gnu11 -s -O -fPIE $(RPM_OPT_FLAGS) -Wshadow -fstack-protector-strong
 WARNINGS = -Werror -Wall -Wextra -pedantic-errors
 LDFLAGS = -lssl -lcrypto
 LIBRARIES =

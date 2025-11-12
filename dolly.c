@@ -62,10 +62,10 @@ void print_params(struct dollytab* mydollytab) {
   }
 
   if(mydollytab->nr_childs == 0) {
-    fprintf(stderr, "\tnone.\n");
+    fprintf(stderr, "I don't have a client.\n");
   } else {
     for(i = 0; i < mydollytab->nr_childs; i++) {
-      fprintf(stderr, "\t%s (%d)\n",
+      fprintf(stderr, "Next client: %s (%d)\n",
 	      mydollytab->hostring[mydollytab->nexthosts[i]], mydollytab->nexthosts[i]);
     }
   }
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
   unsigned int i;
   int flag_f = 0, flag_cargs = 0, generated_dolly = 0, me = -2;
   FILE *df;
-  char *mnname = NULL, *tmp_str, *host_str, *a_str, *ip_addr;
+  char *mnname = NULL, *tmp_str, *host_str, *ip_addr;
   size_t nr_hosts = 0;
   int fd;
   struct dollytab* mydollytab = (struct dollytab*)malloc(sizeof(struct dollytab));
@@ -162,13 +162,13 @@ int main(int argc, char *argv[]) {
     case 'D': {
       /* Directory mode */
       char *a_str = strdup(optarg);
-      char *tmp_str = a_str;
+      char *tmp_str_d = a_str;
       unsigned int num_dirs = 0;
-      while(*tmp_str) {
-        if(*host_delim == *tmp_str) {
+      while(*tmp_str_d) {
+        if(*host_delim == *tmp_str_d) {
           num_dirs++;
         }
-        tmp_str++;
+        tmp_str_d++;
       }
       num_dirs++;
       mydollytab->num_infiles = num_dirs;
@@ -310,7 +310,7 @@ int main(int argc, char *argv[]) {
       mydollytab->meserver = 1;
 
       /* copying string as it is modified*/
-      a_str = strdup(optarg);
+      char *a_str = strdup(optarg);
       tmp_str = a_str;
       while(*tmp_str) {
         if(*host_delim == *tmp_str) {
@@ -374,8 +374,6 @@ int main(int argc, char *argv[]) {
         free(ip_addr);
         host_str = strtok(NULL,host_delim);
       }
-
-      free(a_str);
 
       if (mydollytab->flag_v) {
         fprintf(stderr, "\n### Client Reachability Status\n");
@@ -444,29 +442,30 @@ int main(int argc, char *argv[]) {
       /* make sure that we are the server */
       mydollytab->meserver = 1;
       flag_cargs = 1;
+      free(a_str);
       break;
 
     case 'X': {
-      char *a_str = strdup(optarg);
-      char *tmp_str = a_str;
+      char *a_str_x = strdup(optarg);
+      char *tmp_str_x = a_str_x;
       unsigned int num_excludes = mydollytab->num_excludes;
-      while(*tmp_str) {
-        if(*host_delim == *tmp_str) {
+      while(*tmp_str_x) {
+        if(*host_delim == *tmp_str_x) {
           num_excludes++;
         }
-        tmp_str++;
+        tmp_str_x++;
       }
       num_excludes++;
       mydollytab->excludes = (char**) realloc(mydollytab->excludes, num_excludes * sizeof(char *));
 
-      char *exclude_str = strtok(a_str, host_delim);
+      char *exclude_str = strtok(a_str_x, host_delim);
       while(exclude_str != NULL) {
         mydollytab->excludes[mydollytab->num_excludes] = (char *)malloc(strlen(exclude_str) + 1);
         strcpy(mydollytab->excludes[mydollytab->num_excludes], exclude_str);
         mydollytab->num_excludes++;
         exclude_str = strtok(NULL, host_delim);
       }
-      free(a_str);
+      free(a_str_x);
       break;
     }
 

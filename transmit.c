@@ -128,7 +128,7 @@ void transmit(struct dollytab * mydollytab) {
       /*
        * Client part
        */
-      unsigned int i, nr_descr;
+      unsigned int i_descr, nr_descr;
       cur_set = real_set;
       ret = select(maxsetnr, &cur_set, NULL, NULL, NULL);
       if(ret == -1) {
@@ -150,7 +150,7 @@ void transmit(struct dollytab * mydollytab) {
 	}
       } else {
 	nr_descr = ret;
-	for(i = 0; i < nr_descr; i++) {
+	for(i_descr = 0; i_descr < nr_descr; i_descr++) {
 	  if(FD_ISSET(ctrlin, &cur_set)) {
 	    char mybuf[128];
 
@@ -172,7 +172,7 @@ void transmit(struct dollytab * mydollytab) {
 	    maxbytes = *(unsigned long long *)&mybuf;
 	    if(!mydollytab->melast) {
 	      for(j = 0; j < mydollytab->nr_childs; j++) {
-          movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8,mydollytab);
+          movebytes(ctrlout[i_descr], WRITE, (char *)&maxbytes, 8,mydollytab);
 	      }
 	    }
 	    t = maxbytes - transbytes;
@@ -202,8 +202,8 @@ void transmit(struct dollytab * mydollytab) {
           }
 	      } /* end input_split */
 	    if(!mydollytab->melast) {
-	      for(i = 0; i < mydollytab->nr_childs; i++) {
-          movebytes(dataout[i], WRITE, buf, ret,mydollytab);
+	      for(unsigned int i_child = 0; i_child < mydollytab->nr_childs; i_child++) {
+          movebytes(dataout[i_child], WRITE, buf, ret,mydollytab);
 	      }
 	    }
 	    transbytes += ret;
@@ -243,16 +243,16 @@ void transmit(struct dollytab * mydollytab) {
 		      ret);
 	      for(i = 0;(int) i < maxsetnr; i++) {
 		if(FD_ISSET(i, &cur_set)) {
-		  unsigned int j;
+		  unsigned int j_fd;
 		  fprintf(stderr, "  file descriptor %u is set.\n", i);
-		  for(j = 0; j < mydollytab->nr_childs; j++) {
-		    if(FD_ISSET(ctrlout[j], &cur_set)) {
-		      fprintf(stderr, "  (fd %u = ctrlout[%u])\n", i, j);
+		  for(j_fd = 0; j_fd < mydollytab->nr_childs; j_fd++) {
+		    if(FD_ISSET(ctrlout[j_fd], &cur_set)) {
+		      fprintf(stderr, "  (fd %u = ctrlout[%u])\n", i, j_fd);
 		    }
 		  }
-		  for(j = 0; j <= mydollytab->add_nr; j++) {
-		    if(FD_ISSET(datain[j], &cur_set)) {
-		      fprintf(stderr, "  (fd %u = datain[%u])\n", i, j);
+		  for(j_fd = 0; j_fd <= mydollytab->add_nr; j_fd++) {
+		    if(FD_ISSET(datain[j_fd], &cur_set)) {
+		      fprintf(stderr, "  (fd %u = datain[%u])\n", i, j_fd);
 		    }
 		  }
 		}
@@ -317,7 +317,7 @@ void transmit(struct dollytab * mydollytab) {
       }
     }
   } else {
-    fprintf(stderr, "Total Transferred MB: %.0f, MB/s: %.3f \n\n",
+    fprintf(stderr, "\nTotal Transferred MB: %.0f, MB/s: %.3f \n\n",
 	    (float)transbytes/1000000, (float)transbytes/td);
     fprintf(stdtty, "\n");
   }
