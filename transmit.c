@@ -176,9 +176,9 @@ void transmit(struct dollytab * mydollytab) {
 	      }
 	    }
 	    t = maxbytes - transbytes;
-	    if(mydollytab->flag_v) {
+	    /*if(mydollytab->flag_v) {
 	      fprintf(stderr,"\nMax. bytes will be %llu bytes. %llu bytes left.\n", maxbytes, t);
-	    }
+	    }*/
 	    FD_CLR(ctrlin, &real_set);
 	    FD_CLR(ctrlin, &cur_set);
 	  } else if(FD_ISSET(datain[0], &cur_set)) {
@@ -317,7 +317,7 @@ void transmit(struct dollytab * mydollytab) {
       }
     }
   } else {
-    fprintf(stderr, "Transfered MB: %.0f, MB/s: %.3f \n\n",
+    fprintf(stderr, "Total Transferred MB: %.0f, MB/s: %.3f \n\n",
 	    (float)transbytes/1000000, (float)transbytes/td);
     fprintf(stdtty, "\n");
   }
@@ -326,7 +326,7 @@ void transmit(struct dollytab * mydollytab) {
   if(dosync){
     sync();
     if(mydollytab->flag_v) {
-      fprintf(stderr, "Synced.\n");
+      fprintf(stderr, "Data synced on disk.\n");
     }
   }
   if(mydollytab->meserver) {
@@ -406,7 +406,7 @@ void transmit(struct dollytab * mydollytab) {
     movebytes(ctrlin, WRITE, (char *)&maxbytes, 8,mydollytab);
   }
   if(mydollytab->flag_v) {
-    fprintf(stderr, "Transmitted.\n");
+    fprintf(stderr, "All data Transmitted.\n");
   }
   free(buf_addr);
 }
