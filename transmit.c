@@ -3,6 +3,7 @@
 #include "movebytes.h"
 #include "files.h"
 #include "socks.h"
+#include "utils.h"
 /* The main transmitting function */
 void transmit(struct dollytab * mydollytab) {
   char *buf_addr, *buf;
@@ -15,7 +16,7 @@ void transmit(struct dollytab * mydollytab) {
   struct timeval tv1, tv2, tv3;
   fd_set real_set, cur_set;
 
-  buf_addr = (char *)malloc(2 * (mydollytab->t_b_size-1));
+  buf_addr = (char *)safe_malloc(2 * (mydollytab->t_b_size-1));
   buf = (char *)((unsigned long)(buf_addr + mydollytab->t_b_size-1) & (~(mydollytab->t_b_size-1)));
 
   t = 0x7fffffff;

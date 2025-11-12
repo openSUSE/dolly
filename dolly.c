@@ -4,7 +4,7 @@ const char version_string[] = "0.70.0, 05-NOV-2025";
 #include "dolly.h"
 #include "dollytab.h"
 #include "socks.h"
-
+#include "utils.h"
 #include "transmit.h"
 
 
@@ -55,7 +55,7 @@ void print_params(struct dollytab* mydollytab) {
     if (!mydollytab->meserver) {
       fprintf(stdtty, "| %-36s | %-40u |\n", "I'm number", mydollytab->hostnr);
     }
-    fprintf(stderr, "| %-36s | %-40u |\n", "Fanout", mydollytab->fanout);
+    //fprintf(stderr, "| %-36s | %-40u |\n", "Fanout", mydollytab->fanout);
     fprintf(stderr, "| %-36s | %-40u |\n", "Number of Childs", mydollytab->nr_childs);
     fprintf(stderr, "| %-36s | %-40u |\n", "Clients in Ring (excluding server)", mydollytab->hostnr);
     fprintf(stderr, "\n");
@@ -125,10 +125,11 @@ int main(int argc, char *argv[]) {
   unsigned int i;
   int flag_f = 0, flag_cargs = 0, generated_dolly = 0, me = -2;
   FILE *df;
-  char *mnname = NULL, *tmp_str, *host_str, *ip_addr;
+  char *mnname = NULL, *tmp_str;
+  char *host_str, *ip_addr;
   size_t nr_hosts = 0;
   int fd;
-  struct dollytab* mydollytab = (struct dollytab*)malloc(sizeof(struct dollytab));
+  struct dollytab* mydollytab = (struct dollytab*)safe_malloc(sizeof(struct dollytab));
   struct sockaddr_in sock_address;
   init_dollytab(mydollytab);
 
@@ -172,12 +173,12 @@ int main(int argc, char *argv[]) {
       }
       num_dirs++;
       mydollytab->num_infiles = num_dirs;
-      mydollytab->infiles = (char**) malloc(num_dirs * sizeof(char *));
+      mydollytab->infiles = (char**) safe_malloc(num_dirs * sizeof(char *));
 
       char *dir_str = strtok(a_str, host_delim);
       num_dirs = 0;
       while(dir_str != NULL) {
-        mydollytab->infiles[num_dirs] = (char *)malloc(strlen(dir_str) + 1);
+        mydollytab->infiles[num_dirs] = (char *)safe_malloc(strlen(dir_str) + 1);
         strcpy(mydollytab->infiles[num_dirs], dir_str);
         DIR* tocheck = opendir(mydollytab->infiles[num_dirs]);
         if (!tocheck) {
@@ -320,19 +321,19 @@ int main(int argc, char *argv[]) {
       }
       nr_hosts++;
       
-      char **reachable_hosts = (char**) malloc(nr_hosts * sizeof(char *));
+      char **reachable_hosts = (char**) safe_malloc(nr_hosts * sizeof(char *));
       size_t reachable_nr_hosts = 0;
 
       // For Host Reachability Status table
-      char **host_ips = (char**) malloc(nr_hosts * sizeof(char *));
-      char **host_statuses = (char**) malloc(nr_hosts * sizeof(char *));
+      char **host_ips = (char**) safe_malloc(nr_hosts * sizeof(char *));
+      char **host_statuses = (char**) safe_malloc(nr_hosts * sizeof(char *));
       size_t table_nr_hosts = 0;
 
       /* now find the first host */
       host_str = strtok(a_str,host_delim);
       
       while(host_str != NULL) {
-        ip_addr = (char*)malloc(sizeof(char)*256);
+        ip_addr = (char*)safe_malloc(sizeof(char)*256);
         if(mydollytab->resolve == 0 && 
            inet_pton(AF_INET,host_str,&(sock_address.sin_addr)) == 1 &&
            inet_pton(AF_INET6,host_str,&(sock_address.sin_addr)) == 1) {
@@ -350,11 +351,7 @@ int main(int argc, char *argv[]) {
 	  /*if(mydollytab->flag_v) {
 	    fprintf(stderr, "Host '%s' (%s) is reachable. Adding to list.\n", host_str, ip_addr);
             }*/
-	  reachable_hosts[reachable_nr_hosts] = (char *)malloc(strlen(ip_addr)+1);
-	  if(!reachable_hosts[reachable_nr_hosts]) {
-	    fprintf(stderr,"Could not get memory for hostring!\n");
-	    exit(1);
-	  }
+	  reachable_hosts[reachable_nr_hosts] = (char *)safe_malloc(strlen(ip_addr)+1);
 	  strcpy(reachable_hosts[reachable_nr_hosts], ip_addr);
 	  reachable_nr_hosts++;
 
@@ -394,11 +391,7 @@ int main(int argc, char *argv[]) {
       free(host_statuses);
 
       mydollytab->hostnr = reachable_nr_hosts;
-      mydollytab->hostring = malloc(mydollytab->hostnr * sizeof(char *));
-      if (!mydollytab->hostring) {
-        perror("malloc failed for hostring");
-        exit(1);
-      }
+      mydollytab->hostring = safe_malloc(mydollytab->hostnr * sizeof(char *));
       for (i = 0; i < reachable_nr_hosts; i++) {
 	mydollytab->hostring[i] = reachable_hosts[i];
       }
@@ -460,7 +453,7 @@ int main(int argc, char *argv[]) {
 
       char *exclude_str = strtok(a_str_x, host_delim);
       while(exclude_str != NULL) {
-        mydollytab->excludes[mydollytab->num_excludes] = (char *)malloc(strlen(exclude_str) + 1);
+        mydollytab->excludes[mydollytab->num_excludes] = (char *)safe_malloc(strlen(exclude_str) + 1);
         strcpy(mydollytab->excludes[mydollytab->num_excludes], exclude_str);
         mydollytab->num_excludes++;
         exclude_str = strtok(NULL, host_delim);
@@ -479,7 +472,7 @@ int main(int argc, char *argv[]) {
     if(strcmp(mydollytab->servername,"") == 0) {
       mnname = getenv("HOST");
       if(mydollytab->resolve != 0) {
-	ip_addr = (char*)malloc(sizeof(char)*256);
+	ip_addr = (char*)safe_malloc(sizeof(char)*256);
 	if(resolve_host(mnname,ip_addr,mydollytab->resolve)) {
 	  fprintf(stderr,"Could resolve the server address '%s'\n",mydollytab->servername);
 	  exit(1);
@@ -496,7 +489,7 @@ int main(int argc, char *argv[]) {
       if(inet_pton(AF_INET,mydollytab->servername,&(sock_address.sin_addr)) == 0 &&
 	 inet_pton(AF_INET6,mydollytab->servername,&(sock_address.sin_addr)) == 0 &&
 	 mydollytab->resolve != 0) {
-	ip_addr = (char*)malloc(sizeof(char)*256);
+	ip_addr = (char*)safe_malloc(sizeof(char)*256);
 	if(resolve_host(mydollytab->servername,ip_addr,mydollytab->resolve)) {
 	  fprintf(stderr,"Could resolve the server address '%s'\n",mydollytab->servername);
 	  exit(1);

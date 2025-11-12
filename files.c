@@ -1,6 +1,7 @@
 #include "files.h"
 #include "socks.h"
 #include "dolly.h"
+#include "utils.h"
 /*
  * If "try_hard" is 1, call must be succesful.
  * If try_hard is 1 and an input file can't be opened, the program terminates.
@@ -23,7 +24,7 @@ int open_infile(int try_hard,struct dollytab * mydollytab) {
       close(id[1]);
       // New logic to handle multiple directories and excludes
       int num_args = 4 + mydollytab->num_infiles + (mydollytab->num_excludes * 2);
-      char **tar_args = malloc(num_args * sizeof(char *));
+      char **tar_args = safe_malloc(num_args * sizeof(char *));
       int arg_idx = 0;
       tar_args[arg_idx++] = "tar";
       tar_args[arg_idx++] = "-Pcf";

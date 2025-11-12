@@ -2,7 +2,7 @@
 #include "dolly.h"
 #include "socks.h"
 
-int movebytes(int fd, int dir, char *addr, unsigned int n,struct dollytab * mydollytab) {
+int movebytes(int fd, int dir, char *addr, unsigned int n, struct dollytab * mydollytab) {
   int ret, bytes;
   static int child_done = 0;
   

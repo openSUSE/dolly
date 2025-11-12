@@ -1,4 +1,5 @@
 #include "dollytab.h"
+#include "utils.h"
 /* init the dollytab struct */
 void init_dollytab(struct dollytab * mdt) {
   mdt->flag_v = 0;
@@ -31,7 +32,7 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->total_bytes = 0;
   mdt->infiles = NULL;
   mdt->num_infiles = 0;
-  mdt->excludes = (char**) malloc(sizeof(char *));
+  mdt->excludes = (char**) safe_malloc(sizeof(char *));
   mdt->excludes[0] = strdup("/proc");
   mdt->num_excludes = 1;
   mdt->password_required = 0;
@@ -373,7 +374,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     perror("getifaddrs");
     exit(EXIT_FAILURE);
   }
-  mydollytab->hostring = (char **)malloc(mydollytab->hostnr * sizeof(char *));
+  mydollytab->hostring = (char **)safe_malloc(mydollytab->hostnr * sizeof(char *));
   for(i = 0; i < mydollytab->hostnr; i++) {
     if(fgets(str, sizeof(str), df) == NULL) {
       char errstr[256];
@@ -384,7 +385,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     if(str[strlen(str)-1] == '\n') {
       str[strlen(str)-1] = '\0';
     }
-    mydollytab->hostring[i] = (char *)malloc(strlen(str)+1);
+    mydollytab->hostring[i] = (char *)safe_malloc(strlen(str)+1);
     strcpy(mydollytab->hostring[i], str);
 
     /* Try to find next host in ring */
@@ -510,11 +511,7 @@ void getparams(int f,struct dollytab * mydollytab) {
     exit(1);
   }
 
-  mydollytab->dollybuf = (char *)malloc(mydollytab->t_b_size);
-  if(mydollytab->dollybuf == NULL) {
-    fprintf(stderr, "Couldn't get memory for dollybuf.\n");
-    exit(1);
-  }
+  mydollytab->dollybuf = (char *)safe_malloc(mydollytab->t_b_size);
 
   readsize = 0;
   do {
