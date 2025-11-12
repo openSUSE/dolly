@@ -7,18 +7,19 @@
  * dollytab.resolve = 6 -> force ipv6
  */
 int resolve_host(char *hostname , char *ip, int mode) {
+  if (!hostname || !ip) {
+    fprintf(stderr, "resolve_host: hostname or ip buffer is NULL.\n");
+    return 1;
+  }
+  if (mode != 0 && mode != 4 && mode != 6) {
+    fprintf(stderr, "resolve_host: invalid mode (%d). Expected 0, 4, or 6.\n", mode);
+    return 1;
+  }
   struct addrinfo hints, *servinfo, *p;
-  struct sockaddr_in *h;
   int rv;
 
   memset(&hints, 0, sizeof hints);
-  if(mode == 4) {
-    hints.ai_family = AF_INET;
-  } else if (mode == 6) {
-    hints.ai_family = AF_INET6;
-  } else {
-    hints.ai_family = AF_UNSPEC;
-  }
+  hints.ai_family = (mode == 4) ? AF_INET : (mode == 6) ? AF_INET6 : AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
 
   if ( (rv = getaddrinfo( hostname , NULL , &hints , &servinfo)) != 0) 
@@ -30,7 +31,7 @@ int resolve_host(char *hostname , char *ip, int mode) {
   // loop through all the results and connect to the first we can
   for(p = servinfo; p != NULL; p = p->ai_next) 
     {
-      h = (struct sockaddr_in *) p->ai_addr;
+      struct sockaddr_in *h = (struct sockaddr_in *) p->ai_addr;
       strncpy(ip , inet_ntoa( h->sin_addr ), 256);
     }
   freeaddrinfo(servinfo); // all done with this structure
