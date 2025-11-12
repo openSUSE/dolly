@@ -233,7 +233,7 @@ void open_outsocks(struct dollytab * mydollytab) {
     struct addrinfo *result = resolve_host_addrinfo(hn);
 
     if(mydollytab->flag_v) {
-      fprintf(stderr, "Connecting to host %s...\n", hn);
+      fprintf(stderr, "Connecting to client %s\n", hn);
       fflush(stderr);
     }
 
@@ -322,7 +322,7 @@ void open_outsocks(struct dollytab * mydollytab) {
 	    }
 	  }
 	  if(mydollytab->flag_v) {
-	    fprintf(stderr, "data ");
+	    fprintf(stderr, "Data socket ready.\n");
 	    fflush(stderr);
 	  }
 	}
@@ -344,7 +344,7 @@ void open_outsocks(struct dollytab * mydollytab) {
     	  } else {
     	    ctrlok = 1;
     	    if(mydollytab->flag_v) {
-    	      fprintf(stderr, "control ");
+    	      fprintf(stderr, "Data control ready.\n");
     	      fflush(stderr);
     	    }
 
@@ -358,9 +358,6 @@ void open_outsocks(struct dollytab * mydollytab) {
 	sleep(1);
       }
     } while(dataok + ctrlok != 2);
-    if(mydollytab->flag_v) {
-      fprintf(stderr, "\b.\n");
-    }
 
     freeaddrinfo(result);
   }
@@ -383,7 +380,6 @@ void buildring(struct dollytab * mydollytab) {
   }
 
   if(!mydollytab->meserver) {
-    //fprintf(stderr, "DEBUG not a server\n");
     /* Open the input sockets and wait for connections... */
     if(mydollytab->flag_v) {
       fprintf(stderr, "Accepting...");
@@ -439,7 +435,6 @@ void buildring(struct dollytab * mydollytab) {
     	  fprintf(stderr, "Invalid password\n");
     	}
     	exit(1);
-    	//fprintf(stderr, "DEBUG: This message should NOT appear if exit(1) works.\n");
       }
     }
 
@@ -475,12 +470,12 @@ void buildring(struct dollytab * mydollytab) {
       }
     }
     if(mydollytab->flag_v) {
-      fprintf(stderr, "Connected data...done.\n");
+      fprintf(stderr, "Client accepted data connection.\n");
     }
     /* The input sockets are now connected. */
 
     /* Give information back to server */
-    sprintf(msg, "Host got parameters '%s'.\n", mydollytab->myhostname);
+    sprintf(msg, "Client %s configured with parameters. Ready to proceed.\n", mydollytab->myhostname);
     ret = movebytes(ctrlin, WRITE, msg, strlen(msg),mydollytab);
     if((unsigned int) ret != strlen(msg)) {
       fprintf(stderr,
@@ -558,11 +553,11 @@ void buildring(struct dollytab * mydollytab) {
 	  fprintf(stderr, "\n");*/
 
     	  if (verify_sha256_key(expected_response_hash, client_response_hash)) {
-	    fprintf(stderr, "Server: Password verification successful for client %u.\n", i);
+	    fprintf(stderr, "Server: Password verification successful for client %s.\n", mydollytab->hostring[mydollytab->nexthosts[i]]);
     	    write(ctrlout[i], "OK", 3);
     	    i++;
     	  } else {
-	    //fprintf(stderr, "Server: Password verification failed for client %u.\n", i);
+	    fprintf(stderr, "Server: Password verification failed for client %s.\n", mydollytab->hostring[mydollytab->nexthosts[i]]);
     	    char fail_msg[256 + 13]; // "AUTH_FAILED:" + hostname + null terminator
     	    snprintf(fail_msg, sizeof(fail_msg), "AUTH_FAILED:%s", mydollytab->hostring[mydollytab->nexthosts[i]]);
     	    write(ctrlout[i], fail_msg, strlen(fail_msg) + 1); // +1 for null terminator
@@ -653,9 +648,9 @@ void buildring(struct dollytab * mydollytab) {
       } while(ready_mach < mydollytab->hostnr);
     }
 
-    if(mydollytab->flag_v) {
+    /*if(mydollytab->flag_v) {
       fprintf(stderr, "Accepted.\n");
-    }
+    }*/
 
     if(!mydollytab->meserver) {
       /* Send it further */
@@ -706,11 +701,11 @@ void buildring(struct dollytab * mydollytab) {
 	    fprintf(stderr, "\n");*/
 
     	    if (verify_sha256_key(expected_response_hash, client_response_hash)) {
-	      fprintf(stderr, "Intermediate Server: Password verification successful for client %u.\n", i);
+	      fprintf(stderr, "Intermediate Server: Password verification successful for client %s.\n", mydollytab->hostring[mydollytab->nexthosts[i]]);
     	      write(ctrlout[i], "OK", 3);
     	      i++;
     	    } else {
-	      fprintf(stderr, "Intermediate Server: Password verification failed for client %u.\n", i);
+	      fprintf(stderr, "Intermediate Server: Password verification failed for client %s.\n", mydollytab->hostring[mydollytab->nexthosts[i]]);
     	      char fail_msg[256 + 13]; // "AUTH_FAILED:" + hostname + null terminator
     	      snprintf(fail_msg, sizeof(fail_msg), "AUTH_FAILED:%s", mydollytab->hostring[mydollytab->nexthosts[i]]);
     	      write(ctrlout[i], fail_msg, strlen(fail_msg) + 1); // +1 for null terminator
@@ -728,7 +723,7 @@ void buildring(struct dollytab * mydollytab) {
       }
 
       /* Give information back to server */
-      sprintf(msg, "Host ready '%s'.\n", mydollytab->myhostname);
+      sprintf(msg, "Client %s ready.\n", mydollytab->myhostname);
       ret = movebytes(ctrlin, WRITE, msg, strlen(msg),mydollytab);
       if((unsigned int) ret != strlen(msg)) {
     	fprintf(stderr,
