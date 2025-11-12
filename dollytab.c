@@ -530,10 +530,6 @@ void getparams(int f,struct dollytab * mydollytab) {
 
   /* Write everything to a file so we can use parse_dollytab(FILE *)
      afterwards.  */
-#if 0
-  tmpfile = tmpnam(NULL);
-  fd = open(tmpfile, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
-#endif
   fd = mkstemp(tmpfile);
   if(fd == -1) {
     perror("Opening temporary file 'tmp' in getparams");
