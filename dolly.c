@@ -40,24 +40,24 @@ void print_params(struct dollytab* mydollytab) {
 
   if (mydollytab->flag_v) {
     fprintf(stderr, "\n### Server Configuration and Details\n");
-    fprintf(stderr, "| %-36s | %-40s |\n", "Parameter", "Value");
-    fprintf(stderr, "| %-36s | %-40s |\n", "------------------------------------", "----------------------------------------");
-    fprintf(stderr, "| %-36s | %-40s |\n", "Hostname", mydollytab->myhostname);
-    fprintf(stderr, "| %-36s | %-40s |\n", "Server Role", (mydollytab->meserver ? "I'm the server" : "I'm not the server"));
-    fprintf(stderr, "| %-36s | %-40s |\n", "Last client", (mydollytab->melast ? "I'm the last client" : "I'm not the last client"));
-    fprintf(stderr, "| %-36s | %-40u |\n", "Control Port", ctrlport);
-    fprintf(stderr, "| %-36s | %-40u |\n", "Data Port", dataport);
+    fprintf(stderr, "| %-34s | %-34s |\n", "Parameter", "Value");
+    fprintf(stderr, "| %-34s | %-34s |\n", "------------------------------------", "----------------------------------------");
+    fprintf(stderr, "| %-34s | %-34s |\n", "Hostname", mydollytab->myhostname);
+    fprintf(stderr, "| %-34s | %-34s |\n", "Server Role", (mydollytab->meserver ? "Yes" : "No"));
+    fprintf(stderr, "| %-34s | %-34s |\n", "Last client", (mydollytab->melast ? "Yes" : "No"));
+    fprintf(stderr, "| %-34s | %-34u |\n", "Control Port", ctrlport);
+    fprintf(stderr, "| %-34s | %-34u |\n", "Data Port", dataport);
     if (mydollytab->meserver) {
-      fprintf(stderr, "| %-36s | %-40s |\n", "Input File", mydollytab->infile);
-      fprintf(stderr, "| %-36s | %-40s |\n", "Output File", mydollytab->outfile);
-      fprintf(stderr, "| %-36s | %-40s |\n", "Directory List", mydollytab->directory_list);
+      fprintf(stderr, "| %-34s | %-34s |\n", "Input File", mydollytab->infile);
+      fprintf(stderr, "| %-34s | %-34s |\n", "Output File", mydollytab->outfile);
+      fprintf(stderr, "| %-34s | %-34s |\n", "Directory List", mydollytab->directory_list);
     }
     if (!mydollytab->meserver) {
-      fprintf(stdtty, "| %-36s | %-40u |\n", "I'm number", mydollytab->hostnr);
+      fprintf(stdtty, "| %-34s | %-34u |\n", "I'm number", mydollytab->hostnr);
     }
-    //fprintf(stderr, "| %-36s | %-40u |\n", "Fanout", mydollytab->fanout);
-    fprintf(stderr, "| %-36s | %-40u |\n", "Number of Childs", mydollytab->nr_childs);
-    fprintf(stderr, "| %-36s | %-40u |\n", "Clients in Ring (excluding server)", mydollytab->hostnr);
+    //fprintf(stderr, "| %-34s | %-34u |\n", "Fanout", mydollytab->fanout);
+    fprintf(stderr, "| %-34s | %-34u |\n", "Number of Childs", mydollytab->nr_childs);
+    fprintf(stderr, "| %-34s | %-34u |\n", "Clients in Ring (excluding server)", mydollytab->hostnr);
     fprintf(stderr, "\n");
   }
 
