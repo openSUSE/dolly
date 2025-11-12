@@ -7,7 +7,7 @@
  * If try_hard is 1 and an input file can't be opened, the program terminates.
  * If try_hard is not 1 and an input file can't be opened, -1 is returend.
  */
-int open_infile(int try_hard,struct dollytab * mydollytab) {
+int open_infile(int try_hard, struct dollytab * mydollytab) {
   char name[256+16];
 
   if(mydollytab->directory_mode) {
