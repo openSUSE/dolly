@@ -308,6 +308,7 @@ void open_outsocks(struct dollytab * mydollytab) {
 	  close(dataout[i]);
 	} else if(ret == -1) {
 	  perror("connect");
+	  close(dataout[i]);
 	  exit(1);
 	} else {
 	  dataok = 1;
@@ -343,6 +344,7 @@ void open_outsocks(struct dollytab * mydollytab) {
     	    close(ctrlout[i]);
     	  } else if(ret == -1) {
     	    perror("connect");
+    	    close(ctrlout[i]);
     	    exit(1);
     	  } else {
     	    ctrlok = 1;
