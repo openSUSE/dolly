@@ -37,16 +37,6 @@ int resolve_host(char *hostname , char *ip, int mode) {
   return 0;
 }
 
-int resolve_host_replace(char *hostname , int mode) {
-  char tmp_str[256];
-  int retval = 0;
-  retval = resolve_host(hostname,tmp_str,mode);
-  if(retval == 0) {
-    strncpy(hostname,tmp_str,256);
-  }
-  return retval;
-}
-
 int get_default_ip(char *hostname , int mode)  {
   /*
    * Find local ip used as source ip in ip packets.
