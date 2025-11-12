@@ -151,7 +151,10 @@ void open_insystemdsocks(struct dollytab * mydollytab) {
     if(mydollytab->flag_v) {
       fprintf(stderr, "\t'%s'\n", mydollytab->hostring[i]);
     }
-    serverAddr.sin_addr.s_addr = inet_addr(mydollytab->hostring[i]);
+    if (inet_pton(AF_INET, mydollytab->hostring[i], &serverAddr.sin_addr) <= 0) {
+      fprintf(stderr, "inet_pton failed for address %s\n", mydollytab->hostring[i]);
+      exit(1);
+    }
     /* Connect to the systemd socket of all client nodes to start the dolly service */
     addr_size = sizeof serverAddr;
     Retval = connect(clientSocket, (struct sockaddr *) &serverAddr, addr_size);

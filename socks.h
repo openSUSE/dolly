@@ -5,6 +5,7 @@
 #define SCKBUFSIZE 1048576
 
 #include "dollytab.h"
+#include <arpa/inet.h>
 
 extern int input;
 extern int output;
