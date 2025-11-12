@@ -41,7 +41,7 @@ void print_params(struct dollytab* mydollytab) {
   if (mydollytab->flag_v) {
     fprintf(stderr, "\n### Server Configuration and Details\n");
     fprintf(stderr, "| %-34s | %-34s |\n", "Parameter", "Value");
-    fprintf(stderr, "| %-34s | %-34s |\n", "------------------------------------", "----------------------------------------");
+    fprintf(stderr, "| %-34s | %-34s |\n", "----------------------------------", "----------------------------------");
     fprintf(stderr, "| %-34s | %-34s |\n", "Hostname", mydollytab->myhostname);
     fprintf(stderr, "| %-34s | %-34s |\n", "Server Role", (mydollytab->meserver ? "Yes" : "No"));
     fprintf(stderr, "| %-34s | %-34s |\n", "Last client", (mydollytab->melast ? "Yes" : "No"));
