@@ -159,7 +159,7 @@ void open_insystemdsocks(struct dollytab * mydollytab) {
     addr_size = sizeof serverAddr;
     Retval = connect(clientSocket, (struct sockaddr *) &serverAddr, addr_size);
     if (Retval < 0) {
-      fprintf(stderr, "Connection failed to %s ! dolly service wont be started !\n (Please do a: systemctl start dolly.socket)\n (To always enable it: systemctl enable dolly.socket)\n", mydollytab->hostring[i]);
+      fprintf(stderr, "Connection failed to %s ! dolly service wont be started !\n (Please start the dolly.socket with systemd)\n (To always enable it: systemctl enable dolly.socket)\n", mydollytab->hostring[i]);
     }
     close(clientSocket);
   }
