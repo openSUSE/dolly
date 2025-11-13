@@ -54,7 +54,11 @@ void generate_sha256_key(unsigned char *key) {
         perror("Failed to open /dev/urandom");
         exit(1);
     }
-    fread(random_data, 1, sizeof(random_data), rand_file);
+    if (fread(random_data, 1, sizeof(random_data), rand_file) != sizeof(random_data)) {
+        perror("Failed to read enough random bytes for key generation");
+        fclose(rand_file);
+        exit(1);
+    }
     fclose(rand_file);
     hash_data(random_data, sizeof(random_data), key);
 }
