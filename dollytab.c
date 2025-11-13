@@ -25,7 +25,6 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->hyphennormal = 0;
   mdt->resolve = 0;
   mdt->dollybufsize = 0;
-  mdt->segsize = 0;
   mdt->t_b_size = 4096;
   mdt->hostring = NULL;
   mdt->directory_mode = 0;
@@ -180,23 +179,6 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     str[sp - str - 1] = '\0';
   }
   
-  /* Get the optional TCPMaxSeg size */ 
-  if(strncmp("segsize ", str, 8) == 0) {
-    if(str[strlen(str)-1] == '\n') {
-      str[strlen(str)-1] = '\0';
-    }
-    sp = strchr(str, ' ');
-    if(sp == NULL) {
-      fprintf(stderr, "Error segsize line.\n");
-      exit(1);
-    }
-    mydollytab->segsize = atoi(sp + 1);
-    if(fgets(str, sizeof(str), df) == NULL) {
-      perror("fgets after segsize");
-      exit(1);
-    }
-  }
-
   /* Get the optional extra network interfaces */
   /* Form of the line: add <nr_extra_interfaces>:<postfix>{:<postfix>} */
   if((strncmp("add ", str, 4) == 0) || (strncmp("add2 ", str, 5) == 0)) {

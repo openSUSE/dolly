@@ -50,7 +50,6 @@ struct dollytab {
   /* when 4 resolve hostanme to ipv4 addresses, when 6 try ipv6 addresse, do not resolve if anything else */
   unsigned int resolve;
   size_t dollybufsize;
-  unsigned int segsize; /* TCP Segment Size (useful for benchmarking only) */
   ssize_t t_b_size;
   char **hostring;
   char *dollybuf;

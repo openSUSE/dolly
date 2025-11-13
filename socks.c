@@ -95,7 +95,7 @@ void close_sockets(void) {
   }
 }
 
-void open_insocks(struct dollytab * mydollytab) {
+void open_insocks(void) {
   struct sockaddr_in addr;
   int optval;
   int recv_size, sizeofint = sizeof(int);
@@ -121,16 +121,6 @@ void open_insocks(struct dollytab * mydollytab) {
     (void)fprintf(stderr, "setsockopt: TCP_NODELAY failed! errno = %d\n",
     		  errno);
     // exit(1);
-  }
-
-  if(mydollytab->segsize > 0) {
-    /* Attempt to set TCP_MAXSEG */
-    fprintf(stderr, "Set TCP_MAXSEG to %u bytes\n", mydollytab->segsize);
-    if(setsockopt(datasock, IPPROTO_TCP, TCP_MAXSEG,
-    		  &mydollytab->segsize, sizeof(int)) < 0) {
-      (void) fprintf(stderr,"setsockopt: TCP_MAXSEG failed! errno=%d\n", errno);
-      // exit(1);
-    }
   }
 
   /* Attempt to set input BUFFER sizes */
@@ -268,16 +258,6 @@ void open_outsocks(struct dollytab * mydollytab) {
 	exit(1);
       }
 
-      if(mydollytab->segsize > 0) {
-    	/* Attempt to set TCP_MAXSEG */
-	fprintf(stderr, "Set TCP_MAXSEG to %u bytes\n", mydollytab->segsize);
-	if(setsockopt(dataout[i], IPPROTO_TCP, TCP_MAXSEG,
-    		      &mydollytab->segsize, sizeof(int)) < 0) {
-    	  (void) fprintf(stderr, "setsockopt: TCP_MAXSEG failed! errno = %d\n", 
-    			 errno);
-    	  exit(1);
-    	}
-      }
       int sckbufsize = SCKBUFSIZE;
       if(setsockopt(dataout[i], SOL_SOCKET, SO_SNDBUF, &sckbufsize, sizeof(sckbufsize)) < 0) {
     	(void) fprintf(stderr, "setsockopt: SO_SNDBUF failed! errno = %d\n", errno);
@@ -371,7 +351,7 @@ void buildring(struct dollytab * mydollytab) {
   char msg[1024];
   char info_buf[1024];
 
-  open_insocks(mydollytab);
+  open_insocks();
 
   if (mydollytab->meserver) {
     if (!mydollytab->melast) {

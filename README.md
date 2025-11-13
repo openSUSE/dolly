@@ -187,13 +187,6 @@ following "EG:" are example lines)
        Will store the incoming data stream in the directory
       /images/cloneimages/ in files sda_all.0, sda_all.1 and so on.
 
--. The optional keyword "segsize" is mostly used to benchmark
-   switches. It specifies the maximal size of TCP segments during the
-   network transfer. Usually you don't need to specify this option at
-   all.
-   Syntax: segsize <TCP_MAXSEG size>
-   EG: segsize 128
-
 -. The optional keyword "hypennormal" instructs Dolly to treat the '-'
    character in hostnames as any other character. By default the
    hyphen is used to separate the base hostnames from the names of the
@@ -383,7 +376,6 @@ The following command line parameters are not tested and are provided as experim
 
 The following configuration file options are not tested are provided as experimental:
 * split: Splitting files is not supported (infile or outfile).
-* segsize: This benchmark switch is not supported.
 
 Bibliography
 ============

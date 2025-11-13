@@ -293,19 +293,10 @@ void transmit(struct dollytab * mydollytab) {
       }
       fprintf(logfd, "outfile = '%s'\n", mydollytab->outfile);
       if(mydollytab->flag_v) {
-        if(mydollytab->segsize > 0) {
-          fprintf(logfd, "TCP segment size : %u Byte (%u Byte eth)\n", 
-            mydollytab->segsize,mydollytab->segsize+54);
-        } else {
           fprintf(logfd,
             "Standard TCP segment size : 1460 Bytes (1514 Byte eth)\n");
-        }
       } else {
-        if(mydollytab->segsize > 0) {
-          fprintf(logfd, " %8u", mydollytab->segsize);
-        } else {
           fprintf(logfd, " %8d", 1460);
-        }
       }
       
       if(mydollytab->flag_v) {
