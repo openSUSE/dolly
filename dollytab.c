@@ -104,7 +104,6 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     sp = sp2 + strlen(sp2);
   }
   snprintf(mydollytab->infile, sizeof(mydollytab->infile), "%.*s", (int)(sp - sp2), sp2);
-  fprintf(stderr, "Parameter: infile, Value: %s\n", mydollytab->infile);
 
   struct stat st_in;
   if (stat(mydollytab->infile, &st_in) == 0) {
@@ -139,7 +138,6 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     sp = sp2 + strlen(sp2);
   }
   strncpy(mydollytab->outfile, sp2, sp - sp2);
-  fprintf(stderr, "Parameter: outfile, Value: %s\n", mydollytab->outfile);
   mydollytab->outfile[sp - sp2] = '\0';
 
   struct stat st_out;
@@ -179,7 +177,6 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
       break;
     }
     mydollytab->output_split = size;
-    fprintf(stderr, "Parameter: outfile split, Value: %llu\n", mydollytab->output_split);
     str[sp - str - 1] = '\0';
   }
   
@@ -286,7 +283,6 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     exit(1);
   }
   strcpy(mydollytab->servername, sp+1);
-  fprintf(stderr, "Parameter: server, Value: %s\n", mydollytab->servername);
 
   /* 
      disgusting hack to make -S work.  If the server name
@@ -318,7 +314,6 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
    */
   if(strncmp("hyphennormal", str, 12) == 0) {
     mydollytab->hyphennormal = 1;
-    fprintf(stderr, "Parameter: hyphennormal, Value: %d\n", mydollytab->hyphennormal);
     if(fgets(str, sizeof(str), df) == NULL) {
       perror("fgets after hyphennormal");
       exit(1);
@@ -326,177 +321,139 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
   if(strncmp("hypheninterface", str, 15) == 0) {
     mydollytab->hyphennormal = 1;
-    fprintf(stderr, "Parameter: hypheninterface, Value: %d\n", mydollytab->hyphennormal);
-    if(fgets(str, sizeof(str), df) == NULL) {
-      perror("fgets after hypheninterface");
+        if(fgets(str, sizeof(str), df) == NULL) {
+          perror("fgets after hypheninterface");
+          exit(1);
+        }
+      }
+      
+      /* Read in all the participating hosts. */
+      mydollytab->hostnr = 0;
+      mydollytab->hostring = NULL;
+
+  // The 'str' variable already contains the first line to be processed (first host or endconfig)
+  do {
+    if (strncmp("endconfig", str, 9) == 0) {
+      break;
+    }
+    // Trim newline
+    if (str[strlen(str) - 1] == '\n') {
+      str[strlen(str) - 1] = '\0';
+    }
+    // Ignore empty lines
+    if (strlen(str) == 0) {
+        // Read next line and continue
+        if (fgets(str, sizeof(str), df) == NULL) {
+            break; // End of file
+        }
+        continue;
+    }
+
+    if (mydollytab->hostnr >= MAXHOSTS) {
+      fprintf(stderr, "I think %u numbers of hosts doesn't make much sense.\n",
+              mydollytab->hostnr);
       exit(1);
     }
-  }
-  
-  /* We need to know the FIRST host of the ring. */
-  /* (Do we still need the firstclient?)         */
-  /*if(fgets(str, sizeof(str), df) == NULL) {
-    perror("fgets for firstclient");
-    exit(1);
-    }*/
-  fprintf(stderr, "%s", str);
-  if(strncmp("firstclient ", str, 12) != 0) {
-    fprintf(stderr, "Missing 'firstclient ' in config-file.\n");
-    exit(1);
-  }
-  fprintf(stderr, "Parameter: firstclient, Value: %s", str);
-  if(str[strlen(str)-1] == '\n') {
-    str[strlen(str)-1] = '\0';
-  }
-  sp = strchr(str, ' ');
-  if(sp == NULL) {
-    fprintf(stderr, "Error in firstclient line.\n");
-    exit(1);
-  }
 
-  /* We need to know the LAST host of the ring. */
-  if(fgets(str, sizeof(str), df) == NULL) {
-    perror("fgets for lastclient");
-    exit(1);
-  }
-  if(strncmp("lastclient ", str, 11) != 0) {
-    fprintf(stderr, "Missing 'lastclient ' in config-file.\n");
-    exit(1);
-  }
-  fprintf(stderr, "Parameter: lastclient, Value: %s", str);
-  if(str[strlen(str)-1] == '\n') {
-    str[strlen(str)-1] = '\0';
-  }
-  sp = strchr(str, ' ');
-  if(sp == NULL) {
-    fprintf(stderr, "Error in lastclient line.\n");
-    exit(1);
-  }
-  if(strcmp(mydollytab->myhostname, sp+1) == 0) {
-    mydollytab->melast = 1;
-  } else {
-    mydollytab->melast = 0;
-  }
+    mydollytab->hostring = (char **)safe_realloc(mydollytab->hostring, (mydollytab->hostnr + 1) * sizeof(char *));
+    mydollytab->hostring[mydollytab->hostnr] = (char *)safe_malloc(strlen(str) + 1);
+    strcpy(mydollytab->hostring[mydollytab->hostnr], str);
+    mydollytab->hostnr++;
+  } while (fgets(str, sizeof(str), df) != NULL); // Read next line for next iteration
 
-  /* Read in all the participating hosts. */
-  if(fgets(str, sizeof(str), df) == NULL) {
-    perror("fgets for clients");
-    exit(1);
-  }
-  if(strncmp("clients ", str, 8) != 0) {
-    fprintf(stderr, "Missing 'clients ' in config-file.\n");
-    exit(1);
-  }
-  mydollytab->hostnr = atoi(str+8);
-  fprintf(stderr, "Parameter: clients, Value: %u\n", mydollytab->hostnr);
-  if((mydollytab->hostnr < 1) || (mydollytab->hostnr > MAXHOSTS)) {
+
+  if ((mydollytab->hostnr < 1) || (mydollytab->hostnr > MAXHOSTS)) {
     fprintf(stderr, "I think %u numbers of hosts doesn't make much sense.\n",
-	    mydollytab->hostnr);
+            mydollytab->hostnr);
     exit(1);
   }
+
   /* get a list to all availabel interfaces */
   if (getifaddrs(&ifaddr) == -1) {
     perror("getifaddrs");
     exit(EXIT_FAILURE);
   }
-  mydollytab->hostring = (char **)safe_malloc(mydollytab->hostnr * sizeof(char *));
-  for(i = 0; i < mydollytab->hostnr; i++) {
-    if(fgets(str, sizeof(str), df) == NULL) {
-      char errstr[256];
-      sprintf(errstr, "gets for host %u", i);
-      perror(errstr);
-      exit(1);
-    }
-    if(str[strlen(str)-1] == '\n') {
-      str[strlen(str)-1] = '\0';
-    }
-    mydollytab->hostring[i] = (char *)safe_malloc(strlen(str)+1);
-    strcpy(mydollytab->hostring[i], str);
 
+  for (i = 0; i < mydollytab->hostnr; i++) {
     /* Try to find next host in ring */
-    /* if(strncmp(mydollytab->hostring[i], mydollytab->myhostname, strlen(mydollytab->myhostname)) == 0) { */
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
       if (ifa->ifa_addr == NULL) {
         continue;
       }
       family = ifa->ifa_addr->sa_family;
       if (family == fm) {
-        name_status = getnameinfo( ifa->ifa_addr, (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6) , host , NI_MAXHOST , NULL , 0 , NI_NUMERICHOST);
+        name_status = getnameinfo(ifa->ifa_addr, (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
         if (name_status != 0) {
           printf("getnameinfo() failed: %s\n", gai_strerror(name_status));
           exit(EXIT_FAILURE);
         }
-        if(strcmp(mydollytab->hostring[i],host) == 0) {
+        if (strcmp(mydollytab->hostring[i], host) == 0) {
           me = i;
-          strcpy(mydollytab->myhostname,host);
-        } else if(!mydollytab->hyphennormal) {
+          strcpy(mydollytab->myhostname, host);
+        } else if (!mydollytab->hyphennormal) {
           /* Check if the hostname is correct, but a different interface is used */
-          if((sp = strchr(mydollytab->hostring[i], '-')) != NULL) {
-            if(strncmp(mydollytab->hostring[i], host, sp - mydollytab->hostring[i]) == 0) {
+          if ((sp = strchr(mydollytab->hostring[i], '-')) != NULL) {
+            if (strncmp(mydollytab->hostring[i], host, sp - mydollytab->hostring[i]) == 0) {
               me = i;
-              strcpy(mydollytab->myhostname,host);
+              strcpy(mydollytab->myhostname, host);
             }
           }
         }
       }
     }
     /* check if hostname was in the configuration and not an ip */
-    if(me == -2) {
+    if (me == -2) {
       mname = getenv("MYNODENAME");
-      if(mname != NULL) {
-	if(strcmp(mydollytab->hostring[i],mname) == 0) {
-	  strcpy(mydollytab->myhostname,mname);
-	  me = i;
-	  if(i == mydollytab->hostnr-1) {
-	    mydollytab->melast = 1;
-	  }
-	}
+      if (mname != NULL) {
+        if (strcmp(mydollytab->hostring[i], mname) == 0) {
+          strcpy(mydollytab->myhostname, mname);
+          me = i;
+          if (i == mydollytab->hostnr - 1) {
+            mydollytab->melast = 1;
+          }
+        }
       }
     }
-    if(me == -2) {
+    if (me == -2) {
       mname = getenv("HOST");
-      if(mname != NULL) {
-	if(strcmp(mydollytab->hostring[i],mname) == 0) {
-	  strcpy(mydollytab->myhostname,mname);
-	  me = i;
-	  if(i == mydollytab->hostnr-1) {
-	    mydollytab->melast = 1;
-	  }
-	}
+      if (mname != NULL) {
+        if (strcmp(mydollytab->hostring[i], mname) == 0) {
+          strcpy(mydollytab->myhostname, mname);
+          me = i;
+          if (i == mydollytab->hostnr - 1) {
+            mydollytab->melast = 1;
+          }
+        }
       }
     }
   }
   freeifaddrs(ifaddr);
-  if(!mydollytab->meserver && (me == -2)) {
-    fprintf(stderr, "Couldn't find myself '%s' in hostlist.\n",mydollytab->myhostname);
+  if (!mydollytab->meserver && (me == -2)) {
+    fprintf(stderr, "Couldn't find myself '%s' in hostlist.\n", mydollytab->myhostname);
     exit(1);
   }
-  
+
   /* Build up topology */
   mydollytab->nr_childs = 0;
-  
-  if(mydollytab->meserver) {
-    if(1 <= mydollytab->hostnr) {
+
+  if (mydollytab->meserver) {
+    if (1 <= mydollytab->hostnr) {
       mydollytab->nexthosts[0] = 0;
       mydollytab->nr_childs++;
     }
   } else {
-    if((unsigned int)((me + 1) + 1) <= mydollytab->hostnr) {
+    if ((unsigned int)((me + 1) + 1) <= mydollytab->hostnr) {
       mydollytab->nexthosts[0] = (me + 1);
       mydollytab->nr_childs++;
     }
   }
   /* In a tree, we might have multiple last machines. */
-  if(mydollytab->nr_childs == 0) {
+  if (mydollytab->nr_childs == 0) {
     mydollytab->melast = 1;
   }
 
   /* Did we reach the end? */
-  if(fgets(str, sizeof(str), df) == NULL) {
-    perror("fgets for endconfig");
-    exit(1);
-  }
-  if(strncmp("endconfig", str, 9) != 0) {
+  if (strncmp("endconfig", str, 9) != 0) {
     fprintf(stderr, "Missing 'endconfig' in config-file.\n");
     exit(1);
   }

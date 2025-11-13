@@ -63,9 +63,15 @@ set:
 output will printed to stdout. This is not mandatory on the commande line, if 
 not specified this will use the same value as the one set in **-I** option.
 
+**-D** DIR,DIR2 : Directories to copy to clients
+
+**-X** DIR,DIR2 : Directories to exclude (not copy to clients)
+
+**-P** PASSWORD : password to connect to server, if the password it not the same
+the client and the server will exit.
+
 **-H** HOSTLIST: A comma seperated hostlist, where then the first host of the list
-is used as firstclient and the last host as lastclient, like in the configuration
-file.
+is used as firstclient and the last host as lastclient.
 
 Following other options are:
 
@@ -202,27 +208,7 @@ following "EG:" are example lines)
    Syntax: server <master machine>
    EG: server cluster-master
 
-4. This entry has the keyword "firstclient" followed by the hostname
-   of the first client in the ring. You should use the hostname of the
-   machine here, not the name of the interface where you want to
-   connect.
-   Syntax: firstclient <name of first machine>
-   EG: firstclient cluster-1
-
-5. This entry has the keyword "lastclient" followed by the hostname of
-   the last client in the ring. You should use the hostname of the
-   machine here, not the name of the interface where you want to
-   connect.
-   Syntax: lastclient <name of last machine>
-   EG: lastclient cluster-9
-
-6. This entry specifies how many clients are in the ring. The keyword
-   is "clients" followed by the actual number of clients. This number
-   does not include the master.
-   Syntax: clients <number of clients>
-   EG: clients 9
-
-7. The following lines contain the interface-names of the client
+4. The following lines contain the interface-names of the client
    machines. The number of machines must match the above number of
    clients (see 6.). You should use the name of the interface on
    which the machines will receive the data.
@@ -235,7 +221,7 @@ following "EG:" are example lines)
        [...]
        cluster-9-giga
 
-8. The last entry in the config file consists of the keyword
+5. The last entry in the config file consists of the keyword
    "endconfig" and marks the end of the configuration file.
    Syntax: endconfig
    EG: endconfig
@@ -364,9 +350,6 @@ should then look as follows:
 infile /dev/sda5
 outfile /dev/sda5
 server node0
-firstclient node1
-lastclient node15
-clients 15
 node1
 node2
 node3
