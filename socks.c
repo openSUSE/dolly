@@ -545,8 +545,7 @@ void buildring(struct dollytab * mydollytab) {
     }
   }
 
-  if(mydollytab->password_required) {
-    if(mydollytab->meserver) {
+    if(mydollytab->meserver && mydollytab->password_required) {
       fprintf(stderr, "I am the server, doing authentication\n");
     }
     if(mydollytab->meserver) {
@@ -719,10 +718,10 @@ void buildring(struct dollytab * mydollytab) {
     if(!mydollytab->meserver) {
       /* Send it further */
       if(!mydollytab->melast) {
+        for(i = 0; i < mydollytab->nr_childs; i++) {
+          movebytes(ctrlout[i], WRITE, (char *)&mydollytab->password_required, sizeof(mydollytab->password_required), mydollytab);
+        }
     	if (mydollytab->password_required) {
-          for(i = 0; i < mydollytab->nr_childs; i++) {
-            movebytes(ctrlout[i], WRITE, (char *)&mydollytab->password_required, sizeof(mydollytab->password_required), mydollytab);
-          }
 	  unsigned int child_idx = 0;
 	  unsigned char server_password_hash[SHA256_DIGEST_LENGTH];
 	  unsigned char nonce[SHA256_DIGEST_LENGTH];
@@ -799,5 +798,4 @@ void buildring(struct dollytab * mydollytab) {
     		ret, strlen(msg));
       }
     }
-  }
 }
