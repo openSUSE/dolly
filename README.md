@@ -481,10 +481,11 @@ and Computation: Practice and Experience, volume 14, issue 3, pages
 ~~Maintained by Felix Rauch.
 http://www.cs.inf.ethz.ch/~rauch/
 Felix Rauch <rauch@inf.ethz.ch>~~
+
 Maintained by openSUSE community
 
 AUTHORS / CONTRIBUTORS
 =======================
-Felix Rauch <rauch@inf.ethz.ch>
-Antoine Ginies <aginies@suse.com>
-Christian Goll <cgoll@suse.com>
+* Felix Rauch <rauch@inf.ethz.ch>
+* Antoine Ginies <aginies@suse.com>
+* Christian Goll <cgoll@suse.com>
