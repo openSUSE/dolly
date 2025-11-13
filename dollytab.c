@@ -1,5 +1,6 @@
 #include "dollytab.h"
 #include "utils.h"
+#include <sys/stat.h>
 /* init the dollytab struct */
 void init_dollytab(struct dollytab * mdt) {
   mdt->flag_v = 0;
@@ -104,6 +105,17 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
   snprintf(mydollytab->infile, sizeof(mydollytab->infile), "%.*s", (int)(sp - sp2), sp2);
   fprintf(stderr, "Parameter: infile, Value: %s\n", mydollytab->infile);
+
+  struct stat st_in;
+  if (stat(mydollytab->infile, &st_in) == 0) {
+    if (S_ISDIR(st_in.st_mode)) {
+      mydollytab->directory_mode = 1;
+      mydollytab->infiles = (char**) safe_malloc(sizeof(char*));
+      mydollytab->infiles[0] = strdup(mydollytab->infile);
+      mydollytab->num_infiles = 1;
+    }
+  }
+
   sp++;
   if(strcmp(sp, "split") == 0) {
     mydollytab->input_split = 1;
@@ -129,6 +141,20 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   strncpy(mydollytab->outfile, sp2, sp - sp2);
   fprintf(stderr, "Parameter: outfile, Value: %s\n", mydollytab->outfile);
   mydollytab->outfile[sp - sp2] = '\0';
+
+  struct stat st_out;
+  if (mydollytab->directory_mode) {
+    if (stat(mydollytab->outfile, &st_out) != 0 || !S_ISDIR(st_out.st_mode)) {
+      fprintf(stderr, "Error: When infile is a directory, outfile must be an existing directory.\n");
+      exit(1);
+    }
+  } else {
+    if (stat(mydollytab->outfile, &st_out) == 0 && S_ISDIR(st_out.st_mode)) {
+      fprintf(stderr, "Error: When infile is a file, outfile cannot be a directory.\n");
+      exit(1);
+    }
+  }
+
   if (mydollytab->outfile[0] != '/') {
     char temp_outfile[sizeof(mydollytab->outfile) + 1];
     snprintf(temp_outfile, sizeof(temp_outfile), "/%s", mydollytab->outfile);
@@ -242,8 +268,8 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
   
   if(fgets(str, sizeof(str), df) == NULL) {
-     perror("fgets after add");
-     exit(1);
+    perror("fgets after add");
+    exit(1);
   }
 
   /* Get the server's name. */
@@ -312,7 +338,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   /*if(fgets(str, sizeof(str), df) == NULL) {
     perror("fgets for firstclient");
     exit(1);
-  }*/
+    }*/
   fprintf(stderr, "%s", str);
   if(strncmp("firstclient ", str, 12) != 0) {
     fprintf(stderr, "Missing 'firstclient ' in config-file.\n");
@@ -449,17 +475,15 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   /* Build up topology */
   mydollytab->nr_childs = 0;
   
-  for(i = 0; i < 1; i++) {
-    if(mydollytab->meserver) {
-      if(i + 1 <= mydollytab->hostnr) {
-        mydollytab->nexthosts[i] = i;
-        mydollytab->nr_childs++;
-      }
-    } else {
-      if((me + 1) * 1 + 1 + i <= mydollytab->hostnr) {
-        mydollytab->nexthosts[i] = (me + 1) * 1 + i;
-        mydollytab->nr_childs++;
-      }
+  if(mydollytab->meserver) {
+    if(1 <= mydollytab->hostnr) {
+      mydollytab->nexthosts[0] = 0;
+      mydollytab->nr_childs++;
+    }
+  } else {
+    if((unsigned int)((me + 1) + 1) <= mydollytab->hostnr) {
+      mydollytab->nexthosts[0] = (me + 1);
+      mydollytab->nr_childs++;
     }
   }
   /* In a tree, we might have multiple last machines. */
@@ -549,4 +573,3 @@ void getparams(int f,struct dollytab * mydollytab) {
   close(fd);
   unlink(tmpfile);
 }
-

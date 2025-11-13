@@ -22,17 +22,17 @@ static int generated_dolly = 0;
 static struct dollytab* mydollytab_for_cleanup = NULL;
 
 static void cleanup_handler(void) {
-    if (generated_dolly) {
-        unlink(dollytab);
-    }
-    if (mydollytab_for_cleanup) {
-        close_sockets();
-    }
+  if (generated_dolly) {
+    unlink(dollytab);
+  }
+  if (mydollytab_for_cleanup) {
+    close_sockets();
+  }
 }
 
 static void signal_handler(int signum) {
-    fprintf(stderr, "\nCaught signal %d. Terminating.\n", signum);
-    exit(128 + signum);
+  fprintf(stderr, "\nCaught signal %d. Terminating.\n", signum);
+  exit(128 + signum);
 }
 
 /* PIDs of child processes */
@@ -437,18 +437,16 @@ int main(int argc, char *argv[]) {
 
       /* Build up topology */
       mydollytab->nr_childs = 0;
-      for(i = 0; i < 1; i++) {
-        if(mydollytab->meserver) {
-          if(i + 1 <= mydollytab->hostnr) {
-            mydollytab->nexthosts[i] = i;
-            mydollytab->nr_childs++;
-          }
-        } else {
-          if((me + 1) * 1 + 1 + i <= mydollytab->hostnr) {
-            mydollytab->nexthosts[i] = (me + 1) * 1 + i;
-            mydollytab->nr_childs++;
-          }
-        }
+      if(mydollytab->meserver) {
+	if(1 <= mydollytab->hostnr) {
+	  mydollytab->nexthosts[0] = 0;
+	  mydollytab->nr_childs++;
+	}
+      } else {
+	if((unsigned int)((me + 1) + 1) <= mydollytab->hostnr) {
+	  mydollytab->nexthosts[0] = (me + 1);
+	  mydollytab->nr_childs++;
+	}
       }
       /* In a tree, we might have multiple last machines. */
       if(mydollytab->nr_childs == 0) {
@@ -605,8 +603,6 @@ int main(int argc, char *argv[]) {
     open_insystemdsocks(mydollytab);
   }
 
-
-  
   alarm(timeout);
 
   buildring(mydollytab);
