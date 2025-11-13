@@ -36,7 +36,6 @@ int timeout = 0;                 /* Timeout for startup */
 int verbignoresignals = 1;       /* warn on ignore signal errors */
 
 int max_retries = 10;
-char dollytab[256];
 
 int flag_log = 0;
 char logfile[256] = "";
@@ -48,6 +47,53 @@ int id[2];
 
 /* PIDs of child processes */
 int in_child_pid = 0, out_child_pid = 0;
+
+void init_sockets(void) {
+  int i;
+  datasock = -1;
+  ctrlin = -1;
+  ctrlsock = -1;
+  for (i = 0; i < MAXFANOUT; i++) {
+    datain[i] = -1;
+    dataout[i] = -1;
+    ctrlout[i] = -1;
+  }
+}
+
+void close_sockets(void) {
+  unsigned int i;
+
+  for (i = 0; i < MAXFANOUT; i++) {
+    if (datain[i] != -1) {
+      close(datain[i]);
+      datain[i] = -1;
+    }
+  }
+
+  if (ctrlin != -1) {
+    close(ctrlin);
+    ctrlin = -1;
+  }
+  if (datasock != -1) {
+    close(datasock);
+    datasock = -1;
+  }
+  if (ctrlsock != -1) {
+    close(ctrlsock);
+    ctrlsock = -1;
+  }
+
+  for (i = 0; i < MAXFANOUT; i++) {
+    if (ctrlout[i] != -1) {
+      close(ctrlout[i]);
+      ctrlout[i] = -1;
+    }
+    if (dataout[i] != -1) {
+      close(dataout[i]);
+      dataout[i] = -1;
+    }
+  }
+}
 
 void open_insocks(struct dollytab * mydollytab) {
   struct sockaddr_in addr;
@@ -398,7 +444,16 @@ void buildring(struct dollytab * mydollytab) {
       exit(1);
     }
 
+    if (read(ctrlin, &mydollytab->password_required, sizeof(mydollytab->password_required)) != sizeof(mydollytab->password_required)) {
+        fprintf(stderr, "Failed to receive password requirement from server.\n");
+        exit(1);
+    }
+
     if(mydollytab->password_required) {
+      if (strlen(mydollytab->password) == 0) {
+          fprintf(stderr, "Error: Server requires a password, but none was provided. Use the -P option.\n");
+          exit(1);
+      }
       //fprintf(stderr, "I am a client sending the token\n");
       unsigned char password_hash[SHA256_DIGEST_LENGTH];
       unsigned char nonce[SHA256_DIGEST_LENGTH];
@@ -511,6 +566,10 @@ void buildring(struct dollytab * mydollytab) {
       ssize_t readsize;
       int fd, maxsetnr = -1;
       fd_set real_set, cur_set;
+
+      for(i = 0; i < mydollytab->nr_childs; i++) {
+        movebytes(ctrlout[i], WRITE, (char *)&mydollytab->password_required, sizeof(mydollytab->password_required), mydollytab);
+      }
 
       if (mydollytab->password_required) {
 	unsigned int child_idx = 0;
@@ -661,6 +720,9 @@ void buildring(struct dollytab * mydollytab) {
       /* Send it further */
       if(!mydollytab->melast) {
     	if (mydollytab->password_required) {
+          for(i = 0; i < mydollytab->nr_childs; i++) {
+            movebytes(ctrlout[i], WRITE, (char *)&mydollytab->password_required, sizeof(mydollytab->password_required), mydollytab);
+          }
 	  unsigned int child_idx = 0;
 	  unsigned char server_password_hash[SHA256_DIGEST_LENGTH];
 	  unsigned char nonce[SHA256_DIGEST_LENGTH];

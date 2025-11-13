@@ -1,5 +1,6 @@
 #ifndef DOLLYTAB_H
 #define DOLLYTAB_H
+#include "dolly.h"
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -12,7 +13,6 @@
 
 #include "resolve.h"
 
-#define MAXFANOUT 8
 #define MAXHOSTS 65536
 
 /* Size of blocks transf. to/from net/disk and one less than that */
@@ -69,6 +69,7 @@ void init_dollytab(struct dollytab *);
 /* Parses the config-file. The path to the file is given in dollytab */
 void parse_dollytab(FILE *df,struct dollytab*);
 void free_dollytab(struct dollytab *mdt);
+void print_params(struct dollytab* mydollytab);
 
 /*
  * Clients read the parameters from the control-socket.

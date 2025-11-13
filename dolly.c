@@ -17,6 +17,24 @@ const char* host_delim = ",";
 
 FILE *stdtty;           /* file pointer to the standard terminal tty */
 
+char dollytab[256];
+static int generated_dolly = 0;
+static struct dollytab* mydollytab_for_cleanup = NULL;
+
+static void cleanup_handler(void) {
+    if (generated_dolly) {
+        unlink(dollytab);
+    }
+    if (mydollytab_for_cleanup) {
+        close_sockets();
+    }
+}
+
+static void signal_handler(int signum) {
+    fprintf(stderr, "\nCaught signal %d. Terminating.\n", signum);
+    exit(128 + signum);
+}
+
 /* PIDs of child processes */
 
 /* Handles timeouts by terminating the program. */
@@ -123,7 +141,7 @@ static void usage(void) {
 int main(int argc, char *argv[]) {
   int c;
   unsigned int i;
-  int flag_f = 0, flag_cargs = 0, generated_dolly = 0, me = -2;
+  int flag_f = 0, flag_cargs = 0, me = -2;
   FILE *df;
   char *mnname = NULL, *tmp_str;
   char *host_str, *ip_addr;
@@ -132,6 +150,12 @@ int main(int argc, char *argv[]) {
   struct dollytab* mydollytab = (struct dollytab*)safe_malloc(sizeof(struct dollytab));
   struct sockaddr_in sock_address;
   init_dollytab(mydollytab);
+  mydollytab_for_cleanup = mydollytab;
+
+  atexit(cleanup_handler);
+  signal(SIGINT, signal_handler);
+  signal(SIGTERM, signal_handler);
+  init_sockets();
 
 
   /* Parse arguments */
@@ -593,19 +617,7 @@ int main(int argc, char *argv[]) {
   }
 
   transmit(mydollytab);
-  /* remove the generated dollytab */
-  if(generated_dolly) {
-    unlink(dollytab);
-  }
-  close(datain[0]);
-  close(ctrlin);
-  close(datasock);
-  close(ctrlsock);
-  for(i = 0; i < mydollytab->nr_childs; i++) {
-    close(ctrlout[i]);
-    close(dataout[i]);
-    //close(client_control_socks[i]);
-  }
+
   if(mydollytab->flag_v) {
     fprintf(stderr, "\n");
   }
