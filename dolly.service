@@ -1,18 +1,15 @@
 [Unit]
 Description=Dolly client daemon
-Wants=dolly.socket
 After=network.target
 After=firewalld.service
 After=iptables.service
 Documentation=https://github.com/openSUSE/dolly
 
 [Service]
-Type=oneshot
+Type=simple
 Restart=no
-ExecStart=/usr/sbin/dolly
+Environment="PASS=opensuse"
+Environment="HOSTNAME=%H"
+ExecStart=/usr/sbin/dolly -v -P ${PASS}
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
-
-[Install]
-WantedBy=multi-user.target
-Also=dolly.socket

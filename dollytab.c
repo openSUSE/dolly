@@ -361,7 +361,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
       }
     }
     if (me == -2) {
-      mname = getenv("HOST");
+      mname = getenv("HOSTNAME");
       if (mname != NULL) {
         if (strcmp(mydollytab->hostring[i], mname) == 0) {
           strcpy(mydollytab->myhostname, mname);

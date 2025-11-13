@@ -489,9 +489,13 @@ int main(int argc, char *argv[]) {
     }
     // always do hostname resolution
     //   if(flag_cargs) {
-    /* only use HOST when servername or ip is not explictly set */
+    /* only use HOSTNAME when servername or ip is not explictly set */
     if(strcmp(mydollytab->servername,"") == 0) {
-      mnname = getenv("HOST");
+      mnname = getenv("HOSTNAME");
+      if (mnname == NULL) {
+        fprintf(stderr, "Error: HOSTNAME environment variable not set. Please set it in the service file or ensure it's available.\n");
+        //exit(1);
+      }
       if(mydollytab->resolve != 0) {
 	ip_addr = (char*)safe_malloc(sizeof(char)*256);
 	if(resolve_host(mnname,ip_addr,mydollytab->resolve)) {
