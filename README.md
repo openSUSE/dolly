@@ -202,13 +202,7 @@ following "EG:" are example lines)
    Syntax: hyphennormal
    EG: hyphennormal
 
-3. After the keyword "server" follows the hostname of the server (or
-   master). This is required for the last machine in the ring to be
-   able to send the end-acknowledge back to the server.
-   Syntax: server <master machine>
-   EG: server cluster-master
-
-4. The following lines contain the interface-names of the client
+3. The following lines contain the interface-names of the client
    machines. The number of machines must match the above number of
    clients (see 6.). You should use the name of the interface on
    which the machines will receive the data.
@@ -221,7 +215,7 @@ following "EG:" are example lines)
        [...]
        cluster-9-giga
 
-5. The last entry in the config file consists of the keyword
+4. The last entry in the config file consists of the keyword
    "endconfig" and marks the end of the configuration file.
    Syntax: endconfig
    EG: endconfig
@@ -349,7 +343,6 @@ should then look as follows:
 ```
 infile /dev/sda5
 outfile /dev/sda5
-server node0
 node1
 node2
 node3
