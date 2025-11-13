@@ -1,14 +1,19 @@
 DOLLY
 =====
-A program to clone over the network disks / partitions / data.
+A program to clone over the network disks / partitions / files / directories.
 Take same amount of time to copy data to one node or to X nodes.
 
 SYNOPSIS
 ========
 
-General syntax:
+General syntax for files/devices:
 ````sh
 dolly **-v** **-a** timeout **-r** max_retries **-s** **-I** infile **-O** outfile|- **-H** hostlist
+````
+
+General syntax for directories:
+````sh
+dolly **-v** **-a** timeout **-r** max_retries **-s** **-D** DIR **-O** TARGET_DIR **-H** hostlist
 ````
 
 Dolly as a server using a configuration file:
@@ -31,21 +36,25 @@ Dolly as a client in verbose mode:
 dolly -v
 ````
 
+Dolly server copy directory /data/llm to / on IPNODE1,IPNODE2,IPNODE3, excluding dir /data/llm/mixtral:
+````sh
+dolly -s -v -H IPNODE1,IPNODE2,IPNODE3 -D /data/llm -X /data/llm/mixtral -O /
+````
+
 
 DESCRIPTION
 ===========
 
 Dolly is used to clone the installation of one machine to (possibly
-many) other machines. It can distribute image-files (even gnu-zipped),
+many) other machines. It can distribute image-files,
 partitions or whole hard disk drives to other partitions or hard disk
 drives. As it forms a "virtual TCP ring" to distribute data, it works
 best with fast switched networks.
 
-As dolly clones whole partitions block-wise.
 
 OPTIONS
 =======
-If used without a configuration file following three commanline options must be
+If used without a configuration file following three commandline options must be
 set:
 
 **-I** FILE : FILE is used as input file.
@@ -93,12 +102,6 @@ Following other options are:
  :  Usually dolly will print a warning when the select() system call
     is interrupted by a signal. This option suppresses these warnings.
 
-  **-c**
- :  With this option it is possible to specify the uncompressed size
-    of a compressed file. It's only needed for performance statistics
-    at the end of a cloning process and not important if you are not
-    interested in the statistics.
-
   **-d**
  :  Connect to systemd socket on clients nodes to start the dolly 
     service (port 9996). This option only available on command 
@@ -107,19 +110,9 @@ Following other options are:
     By default if you use the dolly.socket, the dolly.service start
     as root user, which means that you can delete all your nodes
     data easily while pushing into the ring data in the wrong place.
-    There is **NO AUTH** process, which means that all nodes with a
-    dolly socket open and listed as a target from the server will get
-    the data.
+    Use **-P** option on client to restrict data from a specific
+    server.
 
-  **-t** <seconds>
- :  When in dummy mode, this option allows to specify how long the
-    testrun should approximately take. Since the dummy mode is mostly
-    used for benchmarking purposes and single runs might result in
-    different speeds (especially with many machines and bad switches
-    or with small TCP segment sizes), it's more convenient to specify
-    the run-lenght in seconds, as the benchmark-time becomes more
-    predictable.
- 
   **-f** <config file>
  :  This option is used to select the config file for this cloning
     process. This option makes only sense on the master machine and
@@ -153,54 +146,40 @@ Following other options are:
 CONFIGURATION FILE
 ==================
 
-One can use either us the appropriate commandline options (-i,-o and -H) or a
+One can use either us the appropriate commandline options (-I/-D, -O and -H) or a
 configuration file for the cloning process is needed. Its format is strict, but
 easy. It contains the following entries (note that the order of the entries is
 fix): (The text after "Syntax:" explains the syntax of the entry, the lines
 following "EG:" are example lines)
 
 1. The file/partition you want to clone, preceeded by the keywords
-   "infile" or "compressed infile" in case of a compressed image.
+   "infile".
    This file or partitions needs to be available on the master only.
-   Dolly will warn you if you try to use a compressed infile which
-   does not end with ".gz". The compressed keyword is important so
-   that the master can inform the clients when they have to use gunzip
-   before writing a file. The optional keyword "split" after the
+   The optional keyword "split" after the
    filename instructs Dolly to read all files with the given name and
    an appended number, separated by an underscore.
    Syntax: [compressed] infile <input file or device> [split]
    EG: infile /dev/sda10
        Will just send the partition /dev/sda10 to all clients.
-   EG: compressed infile /images/cloneimages/sda10_WinNTRes.gz
-       Will send the given file compressed to all the clients,
-       instructing them to uncompress the image before writing it.
    EG: infile /images/cloneimages/sda split
        Will send all files of the form /images/cloneimages/sda_<number>
        in order to the clients.
-   EG: compressed infile /images/cloneimages/sda.gz split
-       Will send all files of the form /images/cloneimages/sda.gz_<number>
-       in order to the clients, instructing them to decompress the
-       incoming stream before writing it.
 
 2. The file or partition you want to write (usually its a partition,
    but you can also write to a file) after the keyword "outfile". This
-   file needs to be available on the clients only. The optional
-   keyword "compressed" instructs the server to compress the data
-   before sending it, so the client will store the data
-   compressed. The optional keyword "split" after the filename,
+   file needs to be available on the clients only. 
+   The optional keyword "split" after the filename,
    followed by a number and a multiplier, instructs the client to
    write the data in junks of no more than the given size. This is
    useful if the file system on your client does not allow files
    greater than a certain size. The files will be stored with the
    given namen and an appended "_<number>".
-   Syntax: [compressed] outfile <output file or device> [split <n>(k|M|G|T)]
+   Syntax: outfile <output file or device> [split <n>(k|M|G|T)]
    EG: outfile /dev/sda10
        Will store the incoming data stream to the partition sda10.
-   EG: compressed outfile /images/cloneimages/sda10_SuSE81.gz
-       Will store the compressed data stream in the given file.
-   EG: compressed outfile /images/cloneimages/sda_all.gz split 2G
-       Will store the incoming compressed data stream in the directory
-      /images/cloneimages/ in files sda_all.gz_0, sda_all.gz_1 and so on.
+   EG: outfile /images/cloneimages/sda_all split 2G
+       Will store the incoming data stream in the directory
+      /images/cloneimages/ in files sda_all.0, sda_all.1 and so on.
 
 -. The optional keyword "segsize" is mostly used to benchmark
    switches. It specifies the maximal size of TCP segments during the
@@ -384,8 +363,7 @@ There are different possibilities to clone your master machine:
   used for the cloning process runs on (not the one you want to clone)
   or you need a small one-disk-Linux which you boot on all
   machines. In the later case you also need dolly on all machines
-  (copy it to your floppy disk or mount it with NFS) and the
-  config-file on the master.
+  (mount it with NFS) and the config-file on the master.
 
 WARNING: You can NOT clone an OS which is currently in use. That is why
          we have a small second Linux installation on all of our machines
@@ -401,7 +379,7 @@ See CHANGELOG file
 TODO
 ====
 
-Add an AUTH method to validate client nodes from server.
+Secure transfer of data using SSL?
 
 EXAMPLE
 =======
@@ -438,8 +416,9 @@ endconfig
 Next, we start Dolly on all the clients. No options are required for
 the clients (but you might want to add the "-v" option for verbose
 progress reports). Finally, Dolly is started on the server as follows:
-  dolly -v -s -f dollytab.cfg
-That's all.
+```sh
+dolly -v -s -f dollytab.cfg
+```
 
 EXPERIMENTAL
 ============
@@ -453,10 +432,8 @@ The following command line parameters are not tested and are provided as experim
 * -S: Ignoring the FQDN is not supported.
 * -6: Using IPv6 is not supported.
 * -n: Not doing a sync before exiting is not supported as this can lead to data corruption.
-* -c: Specifying the uncompressed size of a compressed file should only be used for performance statistics.
 
 The following configuration file options are not tested are provided as experimental:
-* compressed: Using the compression option is not supported.
 * split: Splitting files is not supported (infile or outfile).
 * fanout: This option must be set to 1 (a linear list). A binary tree or more is not supported.
 * segsize: This benchmark switch is not supported.
