@@ -33,6 +33,14 @@ struct dollytab {
   /* Sizes for splitted input/output files. 0 means "don't split" (default) */
   unsigned long long output_split;
   unsigned long long input_split;
+  unsigned int add_nr; /* Number of extra links for data transfers */
+  int add_primary; /* Addition Post- or Midfix for primary interf. */
+  /* Postfix or midfix? */
+  /* 0 = undefined, 1 = postfix, 2 = midfix */
+  /* Some explanations about the meanings of postfix and midfix:
+     postfix ex.: hostname = "cops1", postfix = "-giga" -> "cops1-giga"
+     midfix ex.: hostname = "xibalba101", midfix = "-fast" -> "xibalba-fast101"
+  */
   unsigned short add_mode;
   unsigned int nr_childs;
   unsigned int hostnr;

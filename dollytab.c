@@ -15,6 +15,8 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->meserver = 0;
   mdt->output_split = 0;
   mdt->input_split = 0;
+  mdt->add_nr = 0;
+  mdt->add_primary = 0;
   mdt->add_mode = 0;
   mdt->nr_childs = 0;
   mdt->hostnr = 0;
@@ -90,11 +92,10 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
   sp2 = str;
   if(strncmp("infile ", sp2, 7) != 0) {
-    fprintf(stderr, "Missing 'infile' in config-file.\n");
+    fprintf(stderr, "Missing 'infile ' in config-file.\n");
     exit(1);
   }
   sp2 += 7;
-  while(*sp2 == ' ' || *sp2 == '\t') sp2++;
   if(sp2[strlen(sp2)-1] == '\n') {
     sp2[strlen(sp2)-1] = '\0';
   }
@@ -102,7 +103,9 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     sp = sp2 + strlen(sp2);
   }
   snprintf(mydollytab->infile, sizeof(mydollytab->infile), "%.*s", (int)(sp - sp2), sp2);
-  sp++;    if(strcmp(sp, "split") == 0) {
+  fprintf(stderr, "Parameter: infile, Value: %s\n", mydollytab->infile);
+  sp++;
+  if(strcmp(sp, "split") == 0) {
     mydollytab->input_split = 1;
   }
     
@@ -113,7 +116,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
   sp2 = str;
   if(strncmp("outfile ", sp2, 8) != 0) {
-    fprintf(stderr, "Missing 'outfile' in config-file.\n");
+    fprintf(stderr, "Missing 'outfile ' in config-file.\n");
     exit(1);
   }
   sp2 += 8;
@@ -124,6 +127,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     sp = sp2 + strlen(sp2);
   }
   strncpy(mydollytab->outfile, sp2, sp - sp2);
+  fprintf(stderr, "Parameter: outfile, Value: %s\n", mydollytab->outfile);
   mydollytab->outfile[sp - sp2] = '\0';
   if (mydollytab->outfile[0] != '/') {
     char temp_outfile[sizeof(mydollytab->outfile) + 1];
@@ -149,14 +153,11 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
       break;
     }
     mydollytab->output_split = size;
+    fprintf(stderr, "Parameter: outfile split, Value: %llu\n", mydollytab->output_split);
     str[sp - str - 1] = '\0';
   }
   
   /* Get the optional TCPMaxSeg size */ 
-  if(fgets(str, sizeof(str), df) == NULL) {
-    perror("fgets on segsize or fanout");
-    exit(1);
-  }
   if(strncmp("segsize ", str, 8) == 0) {
     if(str[strlen(str)-1] == '\n') {
       str[strlen(str)-1] = '\0';
@@ -173,26 +174,78 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     }
   }
 
-  /*
-   * The parameter "hyphennormal" means that the hyphen '-' is treated
-   * as any other character. The default is to treat it as a separator
-   * between base hostname and the number of the node.
-   */
-  if(strncmp("hyphennormal", str, 12) == 0) {
-    mydollytab->hyphennormal = 1;
-    if(fgets(str, sizeof(str), df) == NULL) {
-      perror("fgets after hyphennormal");
+  /* Get the optional extra network interfaces */
+  /* Form of the line: add <nr_extra_interfaces>:<postfix>{:<postfix>} */
+  if((strncmp("add ", str, 4) == 0) || (strncmp("add2 ", str, 5) == 0)) {
+    char *s1, *s2;
+    int max = 0, j;
+
+    if(strncmp("add ", str, 4) == 0) {
+      mydollytab->add_mode = 1;
+    }
+    if(strncmp("add2 ", str, 5) == 0) {
+      mydollytab->add_mode = 2;
+    }
+    if(mydollytab->add_mode == 0) {
+      fprintf(stderr,
+	      "Bad add_mode: Choose 'add' or 'add2' in config-file.\n");
       exit(1);
     }
-  }
-  if(strncmp("hypheninterface", str, 12) == 0) {
-    mydollytab->hyphennormal = 1;
+    
+    s1 = str + 4;
+    s2 = s1;
+    while((*s2 != ':' && *s2 != '\n' && *s2 != 0)) s2++;
+    if(*s2 == 0) {
+      fprintf(stderr, "Error in add line: First colon missing.\n");
+      exit(1);
+    }
+    *s2 = 0;
+    max = atoi(s1);
+    if(max < 0) {
+      fprintf(stderr, "Error in add line: negative number.\n");
+      exit(1);
+    }
+    if(max >= MAXFANOUT) {
+      fprintf(stderr, "Error in add line: Number larger than MAXFANOUT.\n");
+      exit(1);
+    }
+    if (max==0) {
+      /* change names of primary interface */
+      mydollytab->add_primary = 1;
+      s1 = s2 + 1;
+      s2++;
+      while((*s2 != ':' && *s2 != '\n' && *s2 != 0)) s2++;
+      if(*s2 == 0) {
+        fprintf(stderr, "Error in add line: Preliminary end.\n");
+        exit(1);
+      }
+      *s2 = 0;
+      strcpy(mydollytab->add_name[0], s1);
+    } else {
+      for(j = 0; j < max; j++) {
+	s1 = s2 + 1;
+	s2++;
+	while((*s2 != ':' && *s2 != '\n' && *s2 != 0)) s2++;
+	if(*s2 == 0) {
+	  fprintf(stderr, "Error in add line: Preliminary end.\n");
+	  exit(1);
+	}
+	*s2 = 0;
+	strcpy(mydollytab->add_name[j], s1);
+      }
+    }
+    mydollytab->add_nr = max;
     if(fgets(str, sizeof(str), df) == NULL) {
-      perror("fgets after hypheninterface");
+      perror("fgets after add");
       exit(1);
     }
   }
   
+  if(fgets(str, sizeof(str), df) == NULL) {
+     perror("fgets after add");
+     exit(1);
+  }
+
   /* Get the server's name. */
   if(strncmp("server ", str, 7) != 0) {
     fprintf(stderr, "Missing 'server' in config-file.\n");
@@ -203,10 +256,11 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
   sp = strchr(str, ' ');
   if(sp == NULL) {
-    fprintf(stderr, "Error in firstclient line.\n");
+    fprintf(stderr, "Error in server line.\n");
     exit(1);
   }
   strcpy(mydollytab->servername, sp+1);
+  fprintf(stderr, "Parameter: server, Value: %s\n", mydollytab->servername);
 
   /* 
      disgusting hack to make -S work.  If the server name
@@ -225,17 +279,46 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     fprintf(stderr, "  The config-file specifies '%s'.\n", mydollytab->servername);
     exit(1);
   }
+ 
+  if(fgets(str, sizeof(str), df) == NULL) {
+    perror("fgets for server");
+    exit(1);
+  }
+
+  /*
+   * The parameter "hyphennormal" means that the hyphen '-' is treated
+   * as any other character. The default is to treat it as a separator
+   * between base hostname and the number of the node.
+   */
+  if(strncmp("hyphennormal", str, 12) == 0) {
+    mydollytab->hyphennormal = 1;
+    fprintf(stderr, "Parameter: hyphennormal, Value: %d\n", mydollytab->hyphennormal);
+    if(fgets(str, sizeof(str), df) == NULL) {
+      perror("fgets after hyphennormal");
+      exit(1);
+    }
+  }
+  if(strncmp("hypheninterface", str, 15) == 0) {
+    mydollytab->hyphennormal = 1;
+    fprintf(stderr, "Parameter: hypheninterface, Value: %d\n", mydollytab->hyphennormal);
+    if(fgets(str, sizeof(str), df) == NULL) {
+      perror("fgets after hypheninterface");
+      exit(1);
+    }
+  }
   
   /* We need to know the FIRST host of the ring. */
   /* (Do we still need the firstclient?)         */
-  if(fgets(str, sizeof(str), df) == NULL) {
+  /*if(fgets(str, sizeof(str), df) == NULL) {
     perror("fgets for firstclient");
     exit(1);
-  }
+  }*/
+  fprintf(stderr, "%s", str);
   if(strncmp("firstclient ", str, 12) != 0) {
-    fprintf(stderr, "Missing 'firstclient' in config-file.\n");
+    fprintf(stderr, "Missing 'firstclient ' in config-file.\n");
     exit(1);
   }
+  fprintf(stderr, "Parameter: firstclient, Value: %s", str);
   if(str[strlen(str)-1] == '\n') {
     str[strlen(str)-1] = '\0';
   }
@@ -250,10 +333,11 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     perror("fgets for lastclient");
     exit(1);
   }
-  if(strncmp("lastclient", str, 11) != 0) {
-    fprintf(stderr, "Missing 'lastclient' in config-file.\n");
+  if(strncmp("lastclient ", str, 11) != 0) {
+    fprintf(stderr, "Missing 'lastclient ' in config-file.\n");
     exit(1);
   }
+  fprintf(stderr, "Parameter: lastclient, Value: %s", str);
   if(str[strlen(str)-1] == '\n') {
     str[strlen(str)-1] = '\0';
   }
@@ -274,10 +358,11 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     exit(1);
   }
   if(strncmp("clients ", str, 8) != 0) {
-    fprintf(stderr, "Missing 'clients' in config-file.\n");
+    fprintf(stderr, "Missing 'clients ' in config-file.\n");
     exit(1);
   }
   mydollytab->hostnr = atoi(str+8);
+  fprintf(stderr, "Parameter: clients, Value: %u\n", mydollytab->hostnr);
   if((mydollytab->hostnr < 1) || (mydollytab->hostnr > MAXHOSTS)) {
     fprintf(stderr, "I think %u numbers of hosts doesn't make much sense.\n",
 	    mydollytab->hostnr);
