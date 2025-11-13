@@ -223,56 +223,12 @@ void open_outsocks(struct dollytab * mydollytab) {
 
   if(mydollytab->nr_childs > 1) {
     max = mydollytab->nr_childs;
-  } else if(mydollytab->add_nr > 0) {
-    max = mydollytab->add_nr + 1;
   } else {
     max = 1;
   }
   for(i = 0; i < max; i++) {  /* For all childs we have */
     if(mydollytab->nr_childs > 1) {
       strncpy(hn, mydollytab->hostring[mydollytab->nexthosts[i]], sizeof(hn) - 1);
-    } else if(mydollytab->add_nr > 0) {
-      if(mydollytab->add_mode == 1) {
-    	strncpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]], sizeof(hn) - 1);
-    	if(i > 0) {
-    	  strncat(hn, mydollytab->add_name[i - 1], sizeof(hn) - strlen(hn) - 1);
-    	}
-      } else if(mydollytab->add_mode == 2) {
-    	if(i == 0) {
-    	  strncpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]], sizeof(hn) - 1);
-    	} else {
-    	  int j = 0;
-    	  while(!isdigit(mydollytab->hostring[mydollytab->nexthosts[0]][j])) {
-    	    hn[j] = mydollytab->hostring[mydollytab->nexthosts[0]][j];
-    	    j++;
-    	  }
-    	  hn[j] = 0;
-    	  strncat(hn, mydollytab->add_name[i - 1], sizeof(hn) - strlen(hn) - 1);
-    	  strncat(hn, &mydollytab->hostring[mydollytab->nexthosts[0]][j], sizeof(hn) - strlen(hn) - 1);
-    	}
-      } else {
-    	fprintf(stderr, "Undefined add_mode %d!\n", mydollytab->add_mode);
-    	exit(1);
-      }
-    } else if (mydollytab->add_primary) {
-      assert(i < 1);
-
-      if(mydollytab->add_mode == 1) {
-	strncpy(hn, mydollytab->hostring[mydollytab->nexthosts[0]], sizeof(hn) - 1);
-	strncat(hn, mydollytab->add_name[0], sizeof(hn) - strlen(hn) - 1);
-      } else if(mydollytab->add_mode == 2) {
-	int j = 0;
-	while(!isdigit(mydollytab->hostring[mydollytab->nexthosts[0]][j])) {
-	  hn[j] = mydollytab->hostring[mydollytab->nexthosts[0]][j];
-	  j++;
-	}
-	hn[j] = 0;
-	strncat(hn, mydollytab->add_name[0], sizeof(hn) - strlen(hn) - 1);
-	strncat(hn, &mydollytab->hostring[mydollytab->nexthosts[0]][j], sizeof(hn) - strlen(hn) - 1);
-      } else {
-	fprintf(stderr, "Undefined add_mode %d!\n", mydollytab->add_mode);
-	exit(1);
-      }
     } else {
       assert(i < 1);
       strncpy(hn, mydollytab->hostring[mydollytab->nexthosts[i]], sizeof(hn) - 1);
@@ -364,13 +320,6 @@ void open_outsocks(struct dollytab * mydollytab) {
 	    perror("fcntl");
 	  }
 #endif /* DOLLY_NONBLOCK */
-	  if(mydollytab->add_nr > 0) {
-	    ret = write(dataout[i], &i, sizeof(i));
-	    if(ret == -1) {
-	      perror("Write fd-nr in open_outsocks()");
-	      exit(1);
-	    }
-	  }
 	  if(mydollytab->flag_v) {
 	    fprintf(stderr, "Data socket ready.\n");
 	    fflush(stderr);
@@ -417,7 +366,7 @@ void open_outsocks(struct dollytab * mydollytab) {
 void buildring(struct dollytab * mydollytab) {
   socklen_t size;
   int ret = 0;
-  unsigned int i = 0,j = 0,nr = 0;
+  unsigned int i = 0,j = 0;
   unsigned int ready_mach = 0;  /* Number of ready machines */
   char msg[1024];
   char info_buf[1024];
@@ -517,27 +466,6 @@ void buildring(struct dollytab * mydollytab) {
     if(datain[0] == -1) {
       perror("accept input data socket");
       exit(1);
-    }
-    if(mydollytab->add_nr > 0) {
-      ret = read(datain[0], &nr, sizeof(nr));
-      if(ret == -1) {
-	perror("First read for nr in buildring");
-	exit(1);
-      }
-      assert(nr == 0);
-      for(i = 0; i < mydollytab->add_nr; i++) {
-    	datain[1 + i] = accept(datasock, NULL, &size);
-    	if(datain[1 + i] == -1) {
-    	  perror("accept extra input data socket");
-    	  exit(1);
-    	}
-    	ret = read(datain[1 + i], &nr, sizeof(nr));
-    	if(ret == -1) {
-    	  perror("Read for nr in buildring");
-    	  exit(1);
-    	}
-    	assert(nr == (1 + i));
-      }
     }
     if(mydollytab->flag_v) {
       fprintf(stderr, "I accepted data connection.\n");

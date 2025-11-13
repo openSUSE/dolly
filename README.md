@@ -188,34 +188,6 @@ following "EG:" are example lines)
    Syntax: segsize <TCP_MAXSEG size>
    EG: segsize 128
 
--. With the optional keyword "add" it is possible to add more
-   interfaces to use. The network traffic is then evenly distributed
-   across the interfaces. This option is useful if you have for
-   example two fast ethernet interfaces in your machines: One for
-   administrative purposes and one for your main application on the
-   cluster. This option is not so useful if you have multiple
-   interfaces with different bandwidths. In this case just use the
-   fastest available.
-   You have to specify the number of additional interfaces and the
-   suffixes of thouse interfaces. For example, in a cluster where the
-   machines are named slave0..slave15 on their default interfaces and
-   all the machines have a second interface named
-   slave0-fast..slave15-fast, you should use the line specified below
-   (EG).
-   Syntax: add <nr>:<suffix>{:<suffix>}
-   EG: add 1:-fast
-
--. The optional keyword "fanout" was mostly used during performance
-   tests of different network topologies. You barely need it in
-   practice. Fanout specifies the number of outlinks from the server
-   and the following machines (except the leafes). A fanout of 1 is a
-   linear list (the default behaviour of Dolly and usually the
-   fastest), 2 is a binary tree, 3 is a ternary tree, etc. Dolly
-   automatically connects all the specified clients with the desired
-   topology.
-   Syntax: fanout <fanout>
-   EG: fannout 1
-
 -. The optional keyword "hypennormal" instructs Dolly to treat the '-'
    character in hostnames as any other character. By default the
    hyphen is used to separate the base hostnames from the names of the
@@ -435,9 +407,7 @@ The following command line parameters are not tested and are provided as experim
 
 The following configuration file options are not tested are provided as experimental:
 * split: Splitting files is not supported (infile or outfile).
-* fanout: This option must be set to 1 (a linear list). A binary tree or more is not supported.
 * segsize: This benchmark switch is not supported.
-* add: Using more than one interface to clone data is not supported.
 
 Bibliography
 ============

@@ -73,7 +73,6 @@ void print_params(struct dollytab* mydollytab) {
     if (!mydollytab->meserver) {
       fprintf(stdtty, "| %-34s | %-34u |\n", "I'm number", mydollytab->hostnr);
     }
-    //fprintf(stderr, "| %-34s | %-34u |\n", "Fanout", mydollytab->fanout);
     fprintf(stderr, "| %-34s | %-34u |\n", "Number of Childs", mydollytab->nr_childs);
     fprintf(stderr, "| %-34s | %-34u |\n", "Clients in Ring (excluding server)", mydollytab->hostnr);
     fprintf(stderr, "\n");
@@ -438,15 +437,15 @@ int main(int argc, char *argv[]) {
 
       /* Build up topology */
       mydollytab->nr_childs = 0;
-      for(i = 0; i < mydollytab->fanout; i++) {
+      for(i = 0; i < 1; i++) {
         if(mydollytab->meserver) {
           if(i + 1 <= mydollytab->hostnr) {
             mydollytab->nexthosts[i] = i;
             mydollytab->nr_childs++;
           }
         } else {
-          if((me + 1) * mydollytab->fanout + 1 + i <= mydollytab->hostnr) {
-            mydollytab->nexthosts[i] = (me + 1) * mydollytab->fanout + i;
+          if((me + 1) * 1 + 1 + i <= mydollytab->hostnr) {
+            mydollytab->nexthosts[i] = (me + 1) * 1 + i;
             mydollytab->nr_childs++;
           }
         }

@@ -62,68 +62,49 @@ void transmit(struct dollytab * mydollytab) {
       ret = movebytes(input, READ, buf, bytes,mydollytab);
       maxbytes += ret;
       if(ret > 0) {
-        if(mydollytab->add_nr == 0) {
-          for(i = 0; i < mydollytab->nr_childs; i++) {
-            movebytes(dataout[i], WRITE, buf, ret,mydollytab);
-          }
-        } else {
-          static unsigned int cur_out = 0;
-          movebytes(dataout[cur_out], WRITE, buf, ret,mydollytab);
-          cur_out++;
-          if(cur_out > mydollytab->add_nr) {
-            cur_out = 0;
-          }
-        }
+	for(i = 0; i < mydollytab->nr_childs; i++) {
+	  movebytes(dataout[i], WRITE, buf, ret,mydollytab);
+	}
+     
       } else {
-        /* Here: ret <= 0 */
-        int res = -1;
-        if(mydollytab->input_split) {
-          res = open_infile(0,mydollytab);
-        }
-        if(!mydollytab->input_split || (res < 0)) {
-          if(mydollytab->flag_v) {
-            fprintf(stderr, "\nRead %llu bytes from file(s).\n", maxbytes);
-          }
-          if(mydollytab->add_nr == 0) {
-            for(i = 0; i < mydollytab->nr_childs; i++) {
-              if(mydollytab->flag_v) {
-                (void)fprintf(stderr, "Writing maxbytes = %llu to ctrlout\n",
-                  maxbytes);
-              }
-              movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8,mydollytab);
-              shutdown(dataout[i], 2);
-            }
-          } else {
-            if(mydollytab->flag_v) {
-              (void)fprintf(stderr, "Writing maxbytes = %llu to ctrlout\n",
-                maxbytes);
-            }
-            movebytes(ctrlout[0], WRITE, (char *)&maxbytes, 8,mydollytab);
-            for(i = 0; i <= mydollytab->add_nr; i++) {
-              shutdown(dataout[i], 2);
-            }
-          }
-      } else {
-        /* Next input file opened */
-        ret = 100000;
-        continue;
-      } /* end mydollytab->input_split */
-    }
+	/* Here: ret <= 0 */
+	int res = -1;
+	if(mydollytab->input_split) {
+	  res = open_infile(0,mydollytab);
+	}
+	if(!mydollytab->input_split || (res < 0)) {
+	  if(mydollytab->flag_v) {
+	    fprintf(stderr, "\nRead %llu bytes from file(s).\n", maxbytes);
+	  }
+	  for(i = 0; i < mydollytab->nr_childs; i++) {
+	    if(mydollytab->flag_v) {
+	      (void)fprintf(stderr, "Writing maxbytes = %llu to ctrlout\n",
+			    maxbytes);
+	    }
+	    movebytes(ctrlout[i], WRITE, (char *)&maxbytes, 8,mydollytab);
+	    shutdown(dataout[i], 2);
+	  }
+	} else {
+	  /* Next input file opened */
+	  ret = 100000;
+	  continue;
+	} /* end mydollytab->input_split */
+      }
       //if(mydollytab->flag_v && (maxbytes - lastout >= 10000000)) {
       if(maxbytes - lastout >= 10000000) {
-        tv3=tv2;
-        gettimeofday(&tv2, NULL);
-        td = (tv2.tv_sec*1000000 + tv2.tv_usec)
-          - (tv1.tv_sec*1000000 + tv1.tv_usec);
-        tdlast = (tv2.tv_sec*1000000 + tv2.tv_usec)
-          - (tv3.tv_sec*1000000 + tv3.tv_usec);
+	tv3=tv2;
+	gettimeofday(&tv2, NULL);
+	td = (tv2.tv_sec*1000000 + tv2.tv_usec)
+	  - (tv1.tv_sec*1000000 + tv1.tv_usec);
+	tdlast = (tv2.tv_sec*1000000 + tv2.tv_usec)
+	  - (tv3.tv_sec*1000000 + tv3.tv_usec);
 
-        fprintf(stdtty,
-              "\rTransferred: %.0f MB | Speed: %.3f MB/s (current: %.3f MB/s)      ",
-              (float)maxbytes/1000000,
-              (float)maxbytes/td,(float)(maxbytes - lastout)/tdlast);
-        fflush(stdtty);
-        lastout = maxbytes;
+	fprintf(stdtty,
+		"\rTransferred: %.0f MB | Speed: %.3f MB/s (current: %.3f MB/s)      ",
+		(float)maxbytes/1000000,
+		(float)maxbytes/td,(float)(maxbytes - lastout)/tdlast);
+	fflush(stdtty);
+	lastout = maxbytes;
       }
     } else {
       /*
@@ -134,11 +115,11 @@ void transmit(struct dollytab * mydollytab) {
       ret = select(maxsetnr, &cur_set, NULL, NULL, NULL);
       if(ret == -1) {
         if(errno != EINTR) {
-        /* MATHOG: (on above "if" statement)
-         * Some signal was received, don't have a handler, ignore it.
-         */
-        perror("select");
-        exit(1);
+	  /* MATHOG: (on above "if" statement)
+	   * Some signal was received, don't have a handler, ignore it.
+	   */
+	  perror("select");
+	  exit(1);
         }
         ret = 0;
       }
@@ -173,50 +154,51 @@ void transmit(struct dollytab * mydollytab) {
 	    maxbytes = *(unsigned long long *)&mybuf;
 	    if(!mydollytab->melast) {
 	      for(j = 0; j < mydollytab->nr_childs; j++) {
-          movebytes(ctrlout[i_descr], WRITE, (char *)&maxbytes, 8,mydollytab);
+		movebytes(ctrlout[i_descr], WRITE, (char *)&maxbytes, 8,mydollytab);
 	      }
 	    }
 	    t = maxbytes - transbytes;
 	    /*if(mydollytab->flag_v) {
 	      fprintf(stderr,"\nMax. bytes will be %llu bytes. %llu bytes left.\n", maxbytes, t);
-	    }*/
+	      }*/
 	    FD_CLR(ctrlin, &real_set);
 	    FD_CLR(ctrlin, &cur_set);
 	  } else if(FD_ISSET(datain[0], &cur_set)) {
 	    /* There is data to be read from the net */
 	    bytes = ((ssize_t) t >= mydollytab->t_b_size ? mydollytab->t_b_size : (ssize_t) t);
 	    ret = movebytes(datain[0], READ, buf, bytes,mydollytab);
-	      if(!mydollytab->output_split) {
-          movebytes(output, WRITE, buf, ret,mydollytab);
+	    if(!mydollytab->output_split) {
+	      movebytes(output, WRITE, buf, ret,mydollytab);
+	    } else {
+	      /* Check if output file needs to be split. */
+	      if((transbytes / mydollytab->output_split)
+		 != ((transbytes + ret) / mydollytab->output_split)) {
+		size_t old_part, new_part;
+		old_part = ret - (transbytes + ret) % mydollytab->output_split;
+		new_part = ret - old_part;
+		movebytes(output, WRITE, buf, old_part,mydollytab);
+		open_outfile(mydollytab);
+		movebytes(output, WRITE, buf + old_part, new_part,mydollytab);
 	      } else {
-          /* Check if output file needs to be split. */
-          if((transbytes / mydollytab->output_split)
-             != ((transbytes + ret) / mydollytab->output_split)) {
-            size_t old_part, new_part;
-            old_part = ret - (transbytes + ret) % mydollytab->output_split;
-            new_part = ret - old_part;
-            movebytes(output, WRITE, buf, old_part,mydollytab);
-            open_outfile(mydollytab);
-            movebytes(output, WRITE, buf + old_part, new_part,mydollytab);
-          } else {
-            movebytes(output, WRITE, buf, ret,mydollytab);
-          }
-	      } /* end input_split */
+		movebytes(output, WRITE, buf, ret,mydollytab);
+	      }
+	    } /* end input_split */
 	    if(!mydollytab->melast) {
 	      for(unsigned int i_child = 0; i_child < mydollytab->nr_childs; i_child++) {
-          movebytes(dataout[i_child], WRITE, buf, ret,mydollytab);
+		movebytes(dataout[i_child], WRITE, buf, ret,mydollytab);
 	      }
 	    }
 	    transbytes += ret;
 	    t -= ret;
 	    FD_CLR(datain[0], &cur_set);
 	    /* Handle additional network interfaces, if available */
-	    for(a = 1; a <= mydollytab->add_nr; a++) {
+	    //for(a = 1; a <= mydollytab->add_nr; a++) {
+	    for(a = 1; a <= 1; a++) {
 	      bytes = ((ssize_t)t >= mydollytab->t_b_size ? mydollytab->t_b_size :(ssize_t) t);
 	      ret = movebytes(datain[a], READ, buf, bytes,mydollytab);
-        movebytes(output, WRITE, buf, ret,mydollytab);
+	      movebytes(output, WRITE, buf, ret,mydollytab);
 	      if(!mydollytab->melast) {
-          movebytes(dataout[a], WRITE, buf, bytes,mydollytab);
+		movebytes(dataout[a], WRITE, buf, bytes,mydollytab);
 	      }
 	      transbytes += ret;
 	      t -= ret;
@@ -226,15 +208,15 @@ void transmit(struct dollytab * mydollytab) {
 
 	    for(j = 0; j < mydollytab->nr_childs; j++) {
 	      if(FD_ISSET(ctrlout[j], &cur_set)) {
-          /* Backflow of control-information, just pass it on */
-          ret = read(ctrlout[j], buf, mydollytab->t_b_size);
-          if(ret == -1) {
-            perror("read backflow in transmit");
-            exit(1);
-          }
-          movebytes(ctrlin, WRITE, buf, ret,mydollytab);
-          foundfd++;
-          FD_CLR(ctrlout[j], &cur_set);
+		/* Backflow of control-information, just pass it on */
+		ret = read(ctrlout[j], buf, mydollytab->t_b_size);
+		if(ret == -1) {
+		  perror("read backflow in transmit");
+		  exit(1);
+		}
+		movebytes(ctrlin, WRITE, buf, ret,mydollytab);
+		foundfd++;
+		FD_CLR(ctrlout[j], &cur_set);
 	      }
 	    }
 	    /* if nothing found */
@@ -251,7 +233,8 @@ void transmit(struct dollytab * mydollytab) {
 		      fprintf(stderr, "  (fd %u = ctrlout[%u])\n", i, j_fd);
 		    }
 		  }
-		  for(j_fd = 0; j_fd <= mydollytab->add_nr; j_fd++) {
+		  //for(j_fd = 0; j_fd <= mydollytab->add_nr; j_fd++) {
+		  for(j_fd = 0; j_fd <= 1; j_fd++) {
 		    if(FD_ISSET(datain[j_fd], &cur_set)) {
 		      fprintf(stderr, "  (fd %u = datain[%u])\n", i, j_fd);
 		    }
@@ -295,10 +278,10 @@ void transmit(struct dollytab * mydollytab) {
       if(mydollytab->flag_v) {
         if(mydollytab->segsize > 0) {
           fprintf(logfd, "TCP segment size : %u Byte (%u Byte eth)\n", 
-            mydollytab->segsize,mydollytab->segsize+54);
+		  mydollytab->segsize,mydollytab->segsize+54);
         } else {
           fprintf(logfd,
-            "Standard TCP segment size : 1460 Bytes (1514 Byte eth)\n");
+		  "Standard TCP segment size : 1460 Bytes (1514 Byte eth)\n");
         }
       } else {
         if(mydollytab->segsize > 0) {
@@ -310,7 +293,6 @@ void transmit(struct dollytab * mydollytab) {
       
       if(mydollytab->flag_v) {
         fprintf(logfd, "Server : '%s'\n", mydollytab->myhostname);
-        fprintf(logfd, "Fanout = %u\n", mydollytab->fanout);
         fprintf(logfd, "Nr of childs = %u\n", mydollytab->nr_childs);
         fprintf(logfd, "Nr of hosts = %u\n", mydollytab->hostnr);
       } else {
@@ -338,19 +320,19 @@ void transmit(struct dollytab * mydollytab) {
       ret = movebytes(ctrlout[i], READ, buf, 8,mydollytab);
       if(ret != 8) {
         fprintf(stderr,
-          "Server got only %d bytes back from client %u instead of 8\n",
-          ret, i);
+		"Server got only %d bytes back from client %u instead of 8\n",
+		ret, i);
       }
     }
     buf[8] = 0;
     if(*(unsigned long long *)buf != maxbytes) {
       fprintf(stderr, "*** ERROR *** Didn't get correct maxbytes back!\n");
-	      /* create unneeded error, so removing as only used for debugging 
-	      "Got %lld (0x%016llx) instead of %lld (0x%016llx)\n",
-	      *(unsigned long long *)&buf,
-	      *(unsigned long long *)&buf,
-	      maxbytes, maxbytes);
-	      */
+      /* create unneeded error, so removing as only used for debugging 
+	 "Got %lld (0x%016llx) instead of %lld (0x%016llx)\n",
+	 *(unsigned long long *)&buf,
+	 *(unsigned long long *)&buf,
+	 maxbytes, maxbytes);
+      */
     } else {
       fprintf(stderr, "Transfert to all client nodes done.\n");
     }
@@ -358,7 +340,7 @@ void transmit(struct dollytab * mydollytab) {
       fprintf(stderr, "Time: %lu.%03lu\n", td / 1000000, td % 1000000);
       fprintf(stderr, "MBytes/s: %0.3f\n", (double)maxbytes / td);
       fprintf(stderr, "Aggregate MBytes/s: %0.3f\n",
-	    (double)maxbytes * mydollytab->hostnr / td);
+	      (double)maxbytes * mydollytab->hostnr / td);
     }
     if(maxcbytes != 0) {
       fprintf(stderr, "Bytes written on each node: %llu\n", maxcbytes);
@@ -372,25 +354,25 @@ void transmit(struct dollytab * mydollytab) {
         fprintf(logfd, "Time: %lu.%03lu\n", td / 1000000, td % 1000000);
         fprintf(logfd, "MBytes/s: %0.3f\n", (double)maxbytes / td);
         fprintf(logfd, "Aggregate MBytes/s: %0.3f\n",
-        (double)maxbytes * mydollytab->hostnr / td);
+		(double)maxbytes * mydollytab->hostnr / td);
         if(maxcbytes != 0) {
           fprintf(logfd, "Bytes written on each node: %llu\n", maxcbytes);
           fprintf(logfd, "MBytes/s written: %0.3f\n",
-            (double)maxcbytes / td);
+		  (double)maxcbytes / td);
           fprintf(logfd, "Aggregate MBytes/s written: %0.3f\n",
-            (double)maxcbytes * mydollytab->hostnr / td);
+		  (double)maxcbytes * mydollytab->hostnr / td);
         }
       } else {
         fprintf(logfd, "%4lu.%06lu  ", td / 1000000, td % 1000000);
         fprintf(logfd, "%4.6f  ", (double)maxbytes / td);
         fprintf(logfd, "%4.6f  ",
-          (double)maxbytes * mydollytab->hostnr / td);
+		(double)maxbytes * mydollytab->hostnr / td);
         if(maxcbytes != 0) {
           fprintf(logfd, "Bytes written on each node: %llu\n", maxcbytes);
           fprintf(logfd, "MBytes/s written: %0.3f\n",
-            (double)maxcbytes / td);
+		  (double)maxcbytes / td);
           fprintf(logfd, "Aggregate MBytes/s written: %0.3f\n",
-            (double)maxcbytes * mydollytab->hostnr / td);
+		  (double)maxcbytes * mydollytab->hostnr / td);
         }
         fprintf(logfd, "\n");
       }

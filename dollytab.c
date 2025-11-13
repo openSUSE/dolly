@@ -15,14 +15,11 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->meserver = 0;
   mdt->output_split = 0;
   mdt->input_split = 0;
-  mdt->add_nr = 0;
-  mdt->add_primary = 0;
   mdt->add_mode = 0;
   mdt->nr_childs = 0;
   mdt->hostnr = 0;
   mdt->melast = 0;
   mdt->hyphennormal = 0;
-  mdt->fanout = 1;
   mdt->resolve = 0;
   mdt->dollybufsize = 0;
   mdt->segsize = 0;
@@ -93,10 +90,11 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
   sp2 = str;
   if(strncmp("infile ", sp2, 7) != 0) {
-    fprintf(stderr, "Missing 'infile ' in config-file.\n");
+    fprintf(stderr, "Missing 'infile' in config-file.\n");
     exit(1);
   }
   sp2 += 7;
+  while(*sp2 == ' ' || *sp2 == '\t') sp2++;
   if(sp2[strlen(sp2)-1] == '\n') {
     sp2[strlen(sp2)-1] = '\0';
   }
@@ -115,7 +113,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
   sp2 = str;
   if(strncmp("outfile ", sp2, 8) != 0) {
-    fprintf(stderr, "Missing 'outfile ' in config-file.\n");
+    fprintf(stderr, "Missing 'outfile' in config-file.\n");
     exit(1);
   }
   sp2 += 8;
@@ -171,90 +169,6 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     mydollytab->segsize = atoi(sp + 1);
     if(fgets(str, sizeof(str), df) == NULL) {
       perror("fgets after segsize");
-      exit(1);
-    }
-  }
-
-  /* Get the optional extra network interfaces */
-  /* Form of the line: add <nr_extra_interfaces>:<postfix>{:<postfix>} */
-  if((strncmp("add ", str, 4) == 0) || (strncmp("add2 ", str, 5) == 0)) {
-    char *s1, *s2;
-    int max = 0, j;
-
-    if(strncmp("add ", str, 4) == 0) {
-      mydollytab->add_mode = 1;
-    }
-    if(strncmp("add2 ", str, 5) == 0) {
-      mydollytab->add_mode = 2;
-    }
-    if(mydollytab->add_mode == 0) {
-      fprintf(stderr,
-	      "Bad add_mode: Choose 'add' or 'add2' in config-file.\n");
-      exit(1);
-    }
-    
-    s1 = str + 4;
-    s2 = s1;
-    while((*s2 != ':' && *s2 != '\n' && *s2 != 0)) s2++;
-    if(*s2 == 0) {
-      fprintf(stderr, "Error in add line: First colon missing.\n");
-      exit(1);
-    }
-    *s2 = 0;
-    max = atoi(s1);
-    if(max < 0) {
-      fprintf(stderr, "Error in add line: negative number.\n");
-      exit(1);
-    }
-    if(max >= MAXFANOUT) {
-      fprintf(stderr, "Error in add line: Number larger than MAXFANOUT.\n");
-      exit(1);
-    }
-    if (max==0) {
-      /* change names of primary interface */
-      mydollytab->add_primary = 1;
-      s1 = s2 + 1;
-      s2++;
-      while((*s2 != ':' && *s2 != '\n' && *s2 != 0)) s2++;
-      if(*s2 == 0) {
-        fprintf(stderr, "Error in add line: Preliminary end.\n");
-        exit(1);
-      }
-      *s2 = 0;
-      strcpy(mydollytab->add_name[0], s1);
-    } else {
-      for(j = 0; j < max; j++) {
-	s1 = s2 + 1;
-	s2++;
-	while((*s2 != ':' && *s2 != '\n' && *s2 != 0)) s2++;
-	if(*s2 == 0) {
-	  fprintf(stderr, "Error in add line: Preliminary end.\n");
-	  exit(1);
-	}
-	*s2 = 0;
-	strcpy(mydollytab->add_name[j], s1);
-      }
-    }
-    mydollytab->add_nr = max;
-    if(fgets(str, sizeof(str), df) == NULL) {
-      perror("fgets after add");
-      exit(1);
-    }
-  }
-  
-  /* Get the fanout (1 = linear list, 2 = binary tree, ... */
-  if(strncmp("fanout ", str, 7) == 0) {
-    if(str[strlen(str)-1] == '\n') {
-      str[strlen(str)-1] = '\0';
-    }
-    sp = strchr(str, ' ');
-    if(sp == NULL) {
-      fprintf(stderr, "Error in fanout line.\n");
-      exit(1);
-    }
-    mydollytab->fanout = atoi(sp + 1);
-    if(fgets(str, sizeof(str), df) == NULL) {
-      perror("fgets after fanout");
       exit(1);
     }
   }
@@ -319,7 +233,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     exit(1);
   }
   if(strncmp("firstclient ", str, 12) != 0) {
-    fprintf(stderr, "Missing 'firstclient ' in config-file.\n");
+    fprintf(stderr, "Missing 'firstclient' in config-file.\n");
     exit(1);
   }
   if(str[strlen(str)-1] == '\n') {
@@ -336,8 +250,8 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     perror("fgets for lastclient");
     exit(1);
   }
-  if(strncmp("lastclient ", str, 11) != 0) {
-    fprintf(stderr, "Missing 'lastclient ' in config-file.\n");
+  if(strncmp("lastclient", str, 11) != 0) {
+    fprintf(stderr, "Missing 'lastclient' in config-file.\n");
     exit(1);
   }
   if(str[strlen(str)-1] == '\n') {
@@ -360,7 +274,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     exit(1);
   }
   if(strncmp("clients ", str, 8) != 0) {
-    fprintf(stderr, "Missing 'clients ' in config-file.\n");
+    fprintf(stderr, "Missing 'clients' in config-file.\n");
     exit(1);
   }
   mydollytab->hostnr = atoi(str+8);
@@ -450,15 +364,15 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   /* Build up topology */
   mydollytab->nr_childs = 0;
   
-  for(i = 0; i < mydollytab->fanout; i++) {
+  for(i = 0; i < 1; i++) {
     if(mydollytab->meserver) {
       if(i + 1 <= mydollytab->hostnr) {
         mydollytab->nexthosts[i] = i;
         mydollytab->nr_childs++;
       }
     } else {
-      if((me + 1) * mydollytab->fanout + 1 + i <= mydollytab->hostnr) {
-        mydollytab->nexthosts[i] = (me + 1) * mydollytab->fanout + i;
+      if((me + 1) * 1 + 1 + i <= mydollytab->hostnr) {
+        mydollytab->nexthosts[i] = (me + 1) * 1 + i;
         mydollytab->nr_childs++;
       }
     }
@@ -475,11 +389,6 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
   if(strncmp("endconfig", str, 9) != 0) {
     fprintf(stderr, "Missing 'endconfig' in config-file.\n");
-    exit(1);
-  }
-  if((mydollytab->nr_childs > 1) && (mydollytab->add_nr > 0)) {
-    fprintf(stderr, "Currently dolly supports either a fanout > 1\n"
-	    "OR the use of extra network links, but not both.\n");
     exit(1);
   }
   if(mydollytab->flag_v) {
