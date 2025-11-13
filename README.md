@@ -8,12 +8,12 @@ SYNOPSIS
 
 General syntax for files/devices:
 ````sh
-dolly **-v** **-a** timeout **-r** max_retries **-s** **-I** infile **-O** outfile|- **-H** hostlist
+dolly -v -a timeout -r max_retries -s -I infile -O outfile|- -H hostlist
 ````
 
 General syntax for directories:
 ````sh
-dolly **-v** **-a** timeout **-r** max_retries **-s** **-D** DIR **-O** TARGET_DIR **-H** hostlist
+dolly -v -a timeout -r max_retries -s -D DIR -O TARGET_DIR -H hostlist
 ````
 
 Dolly as a server using a configuration file:
