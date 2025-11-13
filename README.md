@@ -21,12 +21,12 @@ Dolly as a server using a configuration file:
 dolly -s -f config_file
 ````
 
-Dolly as a server, verbose mode, trying to reconnect 40 times, copy /dev/vdd to /dev/vdd on nodes IPNODE1,IPNODE2,IPNODE3:
+Dolly as a server, verbose mode, trying to **reconnect 40 times**, **copy /dev/vdd to /dev/vdd** on nodes **IPNODE1,IPNODE2,IPNODE3**:
 ````sh
 dolly -v -r 40 -S SERVERIP -H IPNODE1,IPNODE2,IPNODE3 -I /dev/vdd -O /dev/vdd
 ````
 
-Dolly as a server, using systemd socket to connect to nodes, copy /dev/vdd to /dev/vdd on nodes IPNODE1,IPNODE2,IPNODE3:
+Dolly as a server, using **systemd socket** to connect to nodes, **copy /dev/vdd to /dev/vdd** on nodes **IPNODE1,IPNODE2,IPNODE3**:
 ````sh
 dolly -d -H IPNODE1,IPNODE2,IPNODE3 -I /dev/vdd
 ````
@@ -36,7 +36,7 @@ Dolly as a client in verbose mode:
 dolly -v
 ````
 
-Dolly server copy directory /data/llm to / on IPNODE1,IPNODE2,IPNODE3, excluding dir /data/llm/mixtral:
+Dolly server copy directory **/data/llm to /** on **IPNODE1,IPNODE2,IPNODE3**, **excluding dir /data/llm/mixtral**:
 ````sh
 dolly -s -v -H IPNODE1,IPNODE2,IPNODE3 -D /data/llm -X /data/llm/mixtral -O /
 ````
