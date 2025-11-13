@@ -478,9 +478,10 @@ distribution of large data sets in theory and practice</em>. Concurrency
 and Computation: Practice and Experience, volume 14, issue 3, pages
 165-181, april 2002. (c) John Wiley & Sons, Ltd.
 
-Maintained by Felix Rauch.
+~~Maintained by Felix Rauch.
 http://www.cs.inf.ethz.ch/~rauch/
-Felix Rauch <rauch@inf.ethz.ch>
+Felix Rauch <rauch@inf.ethz.ch>~~
+Maintained by openSUSE community
 
 AUTHORS / CONTRIBUTORS
 =======================
