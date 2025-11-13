@@ -42,7 +42,7 @@ $(BUILD_DIR)/%.o: %.c
 
 $(EXECUTABLE): $(OBJECTS)
 	@echo "Building $(EXECUTABLE)"
-	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ $(LIBRARIES)
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS) $(LIBRARIES)
 
 .PHONY: clean       
 
