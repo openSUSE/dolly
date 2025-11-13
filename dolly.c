@@ -96,9 +96,9 @@ static void usage(void) {
   fprintf(stderr, "Without -s or -S, dolly runs as a client.\n\n");
 
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "  dolly [-hPVvSsnYR6d] [-c <size>] [-f configfile]\n");
-  fprintf(stderr, "       [-o logfile] [-a timeout] [-I inputfile] [-D inputdir] [-O outputfile]\n");
-  fprintf(stderr, "       [-H node1,node2,...] [-X excludedir]\n\n");
+  fprintf(stderr, "  dolly [-hPVvSsnYR6d] [-f configfile] [-o logfile]\n");
+  fprintf(stderr, "       [-a timeout] [-I inputfile]/[-D inputdir, inputdir2] [-O outputfile]\n");
+  fprintf(stderr, "       [-H node1,node2,...] [-X excludedir,excludedir2] [-P password]\n\n");
 
   fprintf(stderr, "Options:\n");
   fprintf(stderr, "  -s                Run as server (check hostname; not required if -H or -I is used)\n");
@@ -106,7 +106,7 @@ static void usage(void) {
   fprintf(stderr, "  -R                Resolve hostnames to IPv4 addresses\n");
   fprintf(stderr, "  -6                Resolve hostnames to IPv6 addresses\n");
   fprintf(stderr, "  -V                Print version and exit\n");
-  fprintf(stderr, "  -D <inputdir>     Send a directory instead of a file\n");
+  fprintf(stderr, "  -D <inputdir>     Comma-separated list of directories to send\n");
   fprintf(stderr, "  -I <inputfile>    Input file\n");
   fprintf(stderr, "  -X <excludedir>   Comma-separated list of directories to exclude (e.g., /proc,/sys)\n");
   fprintf(stderr, "  -h                Print this help and exit\n");
@@ -566,10 +566,6 @@ int main(int argc, char *argv[]) {
       }
       fprintf(df,"infile %s\n",mydollytab->infile);
       fprintf(df,"outfile %s\n",mydollytab->outfile);
-      fprintf(df,"server %s\n",mydollytab->myhostname);
-      fprintf(df,"firstclient %s\n",mydollytab->hostring[0]);
-      fprintf(df,"lastclient %s\n",mydollytab->hostring[nr_hosts-1]);
-      fprintf(df,"clients %u\n",mydollytab->hostnr);
       for(i = 0; i < mydollytab->hostnr; i++) {
         fprintf(df,"%s\n",mydollytab->hostring[i]);
         

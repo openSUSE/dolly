@@ -14,6 +14,7 @@ V 0.70.0 05-NOV-2025 Antoine Ginies <aginies@suse.com>
   improve server and client layout info
   remove -b and -u options (network options)
   remove compression option
+  remove server, fanout, firstclient, lastclient and clients from configuration file
 
 V 0.64.3 26-APR-2022 Antoine Ginies <aginies@suse.com>
   using the -O outfile option is no more mandatory in commande line

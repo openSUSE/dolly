@@ -264,48 +264,12 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     }
   }
   
+ 
   if(fgets(str, sizeof(str), df) == NULL) {
     perror("fgets after add");
     exit(1);
   }
 
-  /* Get the server's name. */
-  if(strncmp("server ", str, 7) != 0) {
-    fprintf(stderr, "Missing 'server' in config-file.\n");
-    exit(1);
-  }
-  if(str[strlen(str)-1] == '\n') {
-    str[strlen(str)-1] = '\0';
-  }
-  sp = strchr(str, ' ');
-  if(sp == NULL) {
-    fprintf(stderr, "Error in server line.\n");
-    exit(1);
-  }
-  strcpy(mydollytab->servername, sp+1);
-
-  /* 
-     disgusting hack to make -S work.  If the server name
-     specified in the file is wrong bad things will probably happen!
-  */
-  
-  if(mydollytab->meserver == 2){
-    (void) strcpy(mydollytab->myhostname,mydollytab->servername);
-    mydollytab->meserver = 1;
-  }
-
-  if(!(mydollytab->meserver ^ (strcmp(mydollytab->servername, mydollytab->myhostname) != 0))) {
-    fprintf(stderr,
-	    "Commandline parameter -s and config-file disagree on server!\n");
-    fprintf(stderr, "  My name is '%s'.\n", mydollytab->myhostname);
-    fprintf(stderr, "  The config-file specifies '%s'.\n", mydollytab->servername);
-    exit(1);
-  }
- 
-  if(fgets(str, sizeof(str), df) == NULL) {
-    perror("fgets for server");
-    exit(1);
-  }
 
   /*
    * The parameter "hyphennormal" means that the hyphen '-' is treated
