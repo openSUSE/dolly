@@ -426,7 +426,10 @@ void buildring(struct dollytab * mydollytab) {
       send_sha256_key(ctrlin, client_response_hash);
       char ack[256 + 13 + 1]; // "AUTH_FAILED:" + hostname + null terminator
       memset(ack, 0, sizeof(ack));
-      read(ctrlin, ack, sizeof(ack));
+      if (read(ctrlin, ack, sizeof(ack)) < 0) {
+        perror("read ack");
+        exit(1);
+      }
       if (strcmp(ack, "OK") != 0) {
     	if (strncmp(ack, "AUTH_FAILED:", 13) == 0) {
     	  fprintf(stderr, "Authentication failed for client: %s\n", ack + 13);
@@ -535,13 +538,18 @@ void buildring(struct dollytab * mydollytab) {
 
     	  if (verify_sha256_key(expected_response_hash, client_response_hash)) {
 	    fprintf(stderr, "Server: Password verification successful for client %s.\n", mydollytab->hostring[mydollytab->nexthosts[child_idx]]);
-    	    write(ctrlout[child_idx], "OK", 3);
+    	    if (write(ctrlout[child_idx], "OK", 3) < 0) {
+              perror("write OK");
+              exit(1);
+            }
     	    child_idx++;
     	  } else {
 	    fprintf(stderr, "Server: Password verification failed for client %s.\n", mydollytab->hostring[mydollytab->nexthosts[child_idx]]);
     	    char fail_msg[256 + 13]; // "AUTH_FAILED:" + hostname + null terminator
     	    snprintf(fail_msg, sizeof(fail_msg), "AUTH_FAILED:%s", mydollytab->hostring[mydollytab->nexthosts[child_idx]]);
-    	    write(ctrlout[child_idx], fail_msg, strlen(fail_msg) + 1); // +1 for null terminator
+    	    if (write(ctrlout[child_idx], fail_msg, strlen(fail_msg) + 1) < 0) { // +1 for null terminator
+              perror("write fail_msg");
+            }
     	    fprintf(stderr, "Authentication failed for client: %s. Exiting.\n", fail_msg);
     	    close(ctrlout[child_idx]);
     	    close(dataout[child_idx]);
@@ -686,13 +694,18 @@ void buildring(struct dollytab * mydollytab) {
 
     	    if (verify_sha256_key(expected_response_hash, client_response_hash)) {
 	      fprintf(stderr, "Intermediate Server: Password verification successful for client %s.\n", mydollytab->hostring[mydollytab->nexthosts[child_idx]]);
-    	      write(ctrlout[child_idx], "OK", 3);
+    	      if (write(ctrlout[child_idx], "OK", 3) < 0) {
+                perror("write OK");
+                exit(1);
+              }
     	      child_idx++;
     	    } else {
 	      fprintf(stderr, "Intermediate Server: Password verification failed for client %s.\n", mydollytab->hostring[mydollytab->nexthosts[child_idx]]);
     	      char fail_msg[256 + 13]; // "AUTH_FAILED:" + hostname + null terminator
     	      snprintf(fail_msg, sizeof(fail_msg), "AUTH_FAILED:%s", mydollytab->hostring[mydollytab->nexthosts[child_idx]]);
-    	      write(ctrlout[child_idx], fail_msg, strlen(fail_msg) + 1); // +1 for null terminator
+    	      if (write(ctrlout[child_idx], fail_msg, strlen(fail_msg) + 1) < 0) {
+                perror("write fail_msg");
+              }
     	      fprintf(stderr, "Authentication failed for client: %s. Exiting.\n", fail_msg);
     	      close(ctrlout[child_idx]);
     	      close(dataout[child_idx]);
