@@ -444,16 +444,26 @@ void buildring(struct dollytab * mydollytab) {
       exit(1);
     }
 
-    if (read(ctrlin, &mydollytab->password_required, sizeof(mydollytab->password_required)) != sizeof(mydollytab->password_required)) {
+    unsigned char client_thinks_password_is_required = mydollytab->password_required;
+    unsigned char server_requires_password;
+
+    if (read(ctrlin, &server_requires_password, sizeof(server_requires_password)) != sizeof(server_requires_password)) {
         fprintf(stderr, "Failed to receive password requirement from server.\n");
         exit(1);
     }
 
+    if (client_thinks_password_is_required != server_requires_password) {
+        fprintf(stderr, "Error: Password configuration mismatch.\n");
+        if (client_thinks_password_is_required) {
+            fprintf(stderr, "Client has a password, but server does not require one.\n");
+        } else {
+            fprintf(stderr, "Server requires a password, but client does not have one (use -P).\n");
+        }
+        exit(1);
+    }
+
+    mydollytab->password_required = server_requires_password;
     if(mydollytab->password_required) {
-      if (strlen(mydollytab->password) == 0) {
-          fprintf(stderr, "Error: Server requires a password, but none was provided. Use the -P option.\n");
-          exit(1);
-      }
       //fprintf(stderr, "I am a client sending the token\n");
       unsigned char password_hash[SHA256_DIGEST_LENGTH];
       unsigned char nonce[SHA256_DIGEST_LENGTH];
