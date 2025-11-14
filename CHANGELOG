@@ -11,6 +11,7 @@ V 0.70.0 05-NOV-2025 Antoine Ginies <aginies@suse.com>
   add -D option to include directory
   add -X option to exclude some directory
   add -P option to get a basic validation between server and client (avoid erasing all data on client by default)
+  add -K Remotely terminates `dolly` client processes that are waiting for a server connection
   improve server and client layout info
   remove -b and -u options (network options)
   remove compression option
