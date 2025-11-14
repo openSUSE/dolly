@@ -367,6 +367,10 @@ void getparams(int f,struct dollytab * mydollytab) {
 
   readsize = 0;
   do {
+    if (readsize + ret > (long unsigned int)(mydollytab->t_b_size)) {
+      fprintf(stderr, "Buffer overflow detected in getparams. Received data size: %zu, buffer size: %zu", readsize + ret, mydollytab->t_b_size);
+      exit(1);
+    }
     ret = read(f, mydollytab->dollybuf + readsize, mydollytab->t_b_size);
     if(ret == -1) {
       perror("read in getparams while");
