@@ -29,7 +29,7 @@ tar: clean
 	mkdir $(EXECUTABLE)-$(VERSION)
 	find . -maxdepth 1 -type f -exec cp -a {} $(EXECUTABLE)-$(VERSION) \;
 	rm -rf images/
-	tar cfj $(EXECUTABLE)-$(VERSION).tar.bz2 $(EXECUTABLE)-$(VERSION)
+	tar cfJ $(EXECUTABLE)-$(VERSION).tar.xz $(EXECUTABLE)-$(VERSION)
 	rm -rf $(EXECUTABLE)-$(VERSION)
 
 $(BUILD_DIR)/%.d: %.c
