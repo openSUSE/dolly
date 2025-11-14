@@ -49,7 +49,7 @@ $(EXECUTABLE): $(OBJECTS)
 
 clean:
 	rm -rf $(EXECUTABLE) $(OBJECTS) $(DEPS)
-	rm -rf $(EXECUTABLE)-$(VERSION) $(EXECUTABLE)-$(VERSION).tar.bz2
+	rm -rf $(EXECUTABLE)-$(VERSION) $(EXECUTABLE)-$(VERSION).tar.xz
 	rm -rf dolly.1*
 	rm -rf build
 
