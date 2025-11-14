@@ -105,7 +105,10 @@ Following other options are:
     This option must be secified before the "-f" option!
 
   **-K** <hostname[,hostname2,...]>
- :  Remotely terminates one or more `dolly` client processes that are waiting for a server connection. This is useful for cleaning up stale or duplicate `dolly` processes on client machines to ensure a clean start for a new cloning ring.
+ :  Remotely terminates `dolly` client processes that are waiting for a
+    server connection. This is useful for cleaning up stale or duplicate
+    `dolly` processes on client machines to ensure a clean start for a new
+    cloning ring.
 
     The command accepts a single hostname or a comma-separated list of hostnames.
 
