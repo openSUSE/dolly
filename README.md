@@ -3,6 +3,8 @@ DOLLY
 A program to clone over the network disks / partitions / files / directories.
 Take same amount of time to copy data to one node or to X nodes.
 
+![anim](https://github.com/openSUSE/dolly/blob/devel/images/dolly.gif?raw=true)
+
 SYNOPSIS
 ========
 
