@@ -197,8 +197,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     }
   }
   if(strncmp("hypheninterface", str, 15) == 0) {
-    mydollytab->hyphennormal = 1;
-        if(fgets(str, sizeof(str), df) == NULL) {
+    mydollytab->hyphennormal = 1;    if(fgets(str, sizeof(str), df) == NULL) {
           perror("fgets after hypheninterface");
           exit(1);
         }

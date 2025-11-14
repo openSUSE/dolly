@@ -6,6 +6,8 @@ const char version_string[] = "0.70.0, 05-NOV-2025";
 #include "socks.h"
 #include "utils.h"
 #include "transmit.h"
+#include "resolve.h"
+#include "sha256.h"
 
 
 #include "ping.h"
@@ -111,6 +113,7 @@ static void usage(void) {
   fprintf(stderr, "  -X <excludedir>   Comma-separated list of directories to exclude (e.g., /proc,/sys)\n");
   fprintf(stderr, "  -h                Print this help and exit\n");
   fprintf(stderr, "  -d                Connect to systemd socket on client nodes (port 9996)\n");
+  fprintf(stderr, "  -K <hostname>     Kill a waiting dolly client\n");
   fprintf(stderr, "  -v                Verbose mode\n");
   fprintf(stderr, "  -q                Suppress 'ignored signal' messages\n");
   fprintf(stderr, "  -P                Password for simple auth process\n");
@@ -148,6 +151,9 @@ int main(int argc, char *argv[]) {
   int fd;
   struct dollytab* mydollytab = (struct dollytab*)safe_malloc(sizeof(struct dollytab));
   struct sockaddr_in sock_address;
+  int kill_mode = 0;
+  char *kill_hosts = NULL;
+
   init_dollytab(mydollytab);
   mydollytab_for_cleanup = mydollytab;
 
@@ -159,10 +165,14 @@ int main(int argc, char *argv[]) {
 
   /* Parse arguments */
   while(1) {
-    c = getopt(argc, argv, "a:c:f:r:vqo:S:shdnR46:VI:O:Y:H:D:P:X:");
+    c = getopt(argc, argv, "a:c:f:r:vqo:S:shdnR46:VI:O:Y:H:D:P:X:K:");
     if(c == -1) break;
     
     switch(c) {
+    case 'K':
+      kill_mode = 1;
+      kill_hosts = strdup(optarg);
+      break;
     case 'f':
       /* Where to find the config-file. */
       if(strlen(optarg) > 255) {
@@ -540,6 +550,92 @@ int main(int argc, char *argv[]) {
       parse_dollytab(df,mydollytab);
       fclose(df);
     }
+  }
+
+  if (kill_mode) {
+    char *a_str_k = kill_hosts;
+    char *host_str_k = strtok(a_str_k, host_delim);
+    int success = 0;
+    int total = 0;
+
+    while(host_str_k != NULL) {
+      total++;
+      char ip_addr_k[256];
+      int sock_k;
+      struct sockaddr_in serv_addr_k;
+
+      if (resolve_host(host_str_k, ip_addr_k, mydollytab->resolve)) {
+        fprintf(stderr, "Could not resolve the host '%s'\n", host_str_k);
+        host_str_k = strtok(NULL, host_delim);
+        continue;
+      }
+
+      if ((sock_k = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        perror("Socket creation error");
+        host_str_k = strtok(NULL, host_delim);
+        continue;
+      }
+
+      serv_addr_k.sin_family = AF_INET;
+      serv_addr_k.sin_port = htons(ctrlport);
+
+      if (inet_pton(AF_INET, ip_addr_k, &serv_addr_k.sin_addr) <= 0) {
+        fprintf(stderr, "Invalid address/ Address not supported for %s\n", host_str_k);
+        host_str_k = strtok(NULL, host_delim);
+        continue;
+      }
+
+      if (connect(sock_k, (struct sockaddr *)&serv_addr_k, sizeof(serv_addr_k)) < 0) {
+        fprintf(stderr, "Connection Failed to %s. Is dolly running on the client?\n", host_str_k);
+      } else {
+        if (write(sock_k, &mydollytab->password_required, sizeof(mydollytab->password_required)) != sizeof(mydollytab->password_required)) {
+          fprintf(stderr, "Failed to send password requirement to %s.\n", host_str_k);
+        } else {
+          if (mydollytab->password_required) {
+            unsigned char server_password_hash[SHA256_DIGEST_LENGTH];
+            unsigned char nonce[SHA256_DIGEST_LENGTH];
+            unsigned char client_response_hash[SHA256_DIGEST_LENGTH];
+            unsigned char expected_response_hash[SHA256_DIGEST_LENGTH];
+
+            generate_nonce(nonce);
+            hash_data((unsigned char *)mydollytab->password, strlen(mydollytab->password), server_password_hash);
+
+            if (send_sha256_key(sock_k, nonce) != 0) {
+              fprintf(stderr, "Failed to send nonce to %s.\n", host_str_k);
+            } else {
+              if (receive_sha256_key(sock_k, client_response_hash) != 0) {
+                fprintf(stderr, "Failed to receive client response from %s.\n", host_str_k);
+              } else {
+                hash_data_with_nonce(server_password_hash, SHA256_DIGEST_LENGTH, nonce, SHA256_DIGEST_LENGTH, expected_response_hash);
+                if (verify_sha256_key(expected_response_hash, client_response_hash)) {
+                  if (write(sock_k, "OK", 3) < 0) {
+                    perror("write OK");
+                  }
+                  fprintf(stderr, "Successfully authenticated with %s, sending kill signal...\n", host_str_k);
+                  success++;
+                } else {
+                  fprintf(stderr, "Password verification failed for %s.\n", host_str_k);
+                  char fail_msg[256 + 13];
+                  snprintf(fail_msg, sizeof(fail_msg), "AUTH_FAILED:%s", host_str_k);
+                  if (write(sock_k, fail_msg, strlen(fail_msg) + 1) < 0) {
+                    perror("write fail_msg");
+                  }
+                }
+              }
+            }
+          } else {
+            fprintf(stderr, "Successfully connected to %s (no password), sending kill signal...\n", host_str_k);
+            success++;
+          }
+        }
+      }
+      close(sock_k);
+      host_str_k = strtok(NULL, host_delim);
+    }
+    
+    fprintf(stderr, "Done. Killed %d out of %d clients.\n", success, total);
+    free(a_str_k);
+    exit(0);
   }
 
   /* Did we get the parameters we need? */
