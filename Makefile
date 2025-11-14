@@ -25,10 +25,10 @@ EXECUTABLE = dolly
 
 all: $(EXECUTABLE)
 
-tar: clean
+tar: clean man
 	mkdir $(EXECUTABLE)-$(VERSION)
 	find . -maxdepth 1 -type f -exec cp -a {} $(EXECUTABLE)-$(VERSION) \;
-	rm -rf images/
+	rm -rf $(EXECUTABLE)-$(VERSION)/images/
 	tar cfJ $(EXECUTABLE)-$(VERSION).tar.xz $(EXECUTABLE)-$(VERSION)
 	rm -rf $(EXECUTABLE)-$(VERSION)
 
