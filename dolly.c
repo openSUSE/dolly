@@ -169,7 +169,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Name of config-file too long.\n");
         exit(1);
       }
-      strcpy(dollytab, optarg);
+      snprintf(dollytab, sizeof(dollytab), "%s", optarg);
       flag_f = 1;
       break;
     case 'R':
@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
       }
       free(a_str);
 
-      strcpy(mydollytab->directory_list, optarg);
+      snprintf(mydollytab->directory_list, sizeof(mydollytab->directory_list), "%s", optarg);
       mydollytab->directory_mode = 1;
       mydollytab->meserver = 1;
       flag_cargs = 1;
@@ -261,7 +261,7 @@ int main(int argc, char *argv[]) {
         exit(1);
       }
       memset(mydollytab->password, 0, sizeof(mydollytab->password));
-      strncpy(mydollytab->password, optarg, sizeof(mydollytab->password) - 1);
+      snprintf(mydollytab->password, sizeof(mydollytab->password), "%s", optarg);
       mydollytab->password_required = 1;
       break;
     case 'a':
@@ -295,7 +295,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Name of input-file too long.\n");
         exit(1);
       }
-      strcpy(mydollytab->infile,optarg);
+      snprintf(mydollytab->infile, sizeof(mydollytab->infile), "%s", optarg);
       // check this is not a directory
       FILE* file = fopen(mydollytab->infile, "r");
       if (!file) {
@@ -320,7 +320,7 @@ int main(int argc, char *argv[]) {
         snprintf(temp_outfile, sizeof(temp_outfile), "/%s", optarg);
         strcpy(mydollytab->outfile, temp_outfile);
       } else {
-        strcpy(mydollytab->outfile,optarg);
+        snprintf(mydollytab->outfile, sizeof(mydollytab->outfile), "%s", optarg);
       }
       flag_cargs = 1;
       break;
