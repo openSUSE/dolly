@@ -9,7 +9,8 @@ Documentation=https://github.com/openSUSE/dolly
 Type=simple
 Restart=no
 Environment="PASS=opensuse"
+Environment="TIMEOUT=180"
 Environment="HOSTNAME=%H"
-ExecStart=/usr/sbin/dolly -v -P ${PASS}
+ExecStart=/usr/sbin/dolly -v -P ${PASS} -a ${TIMEOUT}
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
