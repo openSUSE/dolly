@@ -67,11 +67,21 @@ not specified this will use the same value as the one set in **-I** option.
 
 **-X** DIR,DIR2 : Directories to exclude (not copy to clients)
 
-**-P** PASSWORD : password to connect to server, if the password it not the same
-the client and the server will exit.
+**-P** <password>
+:   Sets a password to secure the dolly ring. All nodes (server and all clients) must use the exact same password to connect. This prevents unauthorized clients from joining the ring and unauthorized servers from sending data or commands.
 
-**-H** HOSTLIST: A comma seperated hostlist, where then the first host of the list
-is used as firstclient and the last host as lastclient.
+    -   **Client Behavior:** A client started with `-P` will only accept a connection from a server (or parent client) that provides the correct password. Connection attempts with an incorrect password will be rejected, and the client will continue to wait for a valid connection.
+
+    -   **Server Behavior:** A server started with `-P` requires all its clients to authenticate successfully. If any client fails the password check during the ring setup, the server will abort.
+
+    -   **Interaction with -K:** To terminate a password-protected client, the `-K` command must be used with the corresponding `-P` option.
+
+**-H** <host1,host2,...>
+:   Specifies a comma-separated list of client hostnames or IP addresses that will form the data distribution chain. When used, `dolly` automatically operates in server mode.
+
+    The server will connect to the first host in this list. Each subsequent host in the list will connect to the next host, forming a daisy chain for efficient data distribution. Data flows from the server to the first client, then from the first client to the second, and so on, until it reaches the last client in the list.
+
+    Hostnames are resolved to IP addresses; this behavior can be controlled by the `-R` (IPv4) or `-6` (IPv6) options.
 
 Following other options are:
 
@@ -93,6 +103,23 @@ Following other options are:
     another master than the machine on which this option is set.
     This is no more mandatory if server options are used: -H, -I.
     This option must be secified before the "-f" option!
+
+  **-K** <hostname[,hostname2,...]>
+ :  Remotely terminates one or more `dolly` client processes that are waiting for a server connection. This is useful for cleaning up stale or duplicate `dolly` processes on client machines to ensure a clean start for a new cloning ring.
+
+    The command accepts a single hostname or a comma-separated list of hostnames.
+
+    **Important:** If a client was started with a password (using the `-P` option), the `-K` command **must** also be invoked with the same `-P <password>` option. An attempt to kill a password-protected client without the correct password will be rejected by the client, and the process will not be terminated.
+
+    Example (single client):
+    ```sh
+    dolly -K node01 -P mysecretpassword
+    ```
+
+    Example (multiple clients):
+    ```sh
+    dolly -K node01,node02 -P mysecretpassword
+    ```
 
   **-S**
  :  Same as "-s", but dolly will not warn you if the server's hostname
@@ -152,66 +179,63 @@ Following other options are:
 CONFIGURATION FILE
 ==================
 
-One can use either us the appropriate commandline options (-I/-D, -O and -H) or a
-configuration file for the cloning process is needed. Its format is strict, but
-easy. It contains the following entries (note that the order of the entries is
-fix): (The text after "Syntax:" explains the syntax of the entry, the lines
-following "EG:" are example lines)
+As an alternative to providing the hostlist and file paths on the command line, `dolly` can be configured using a configuration file. This file defines the data source, the destination path on the clients, and the list of clients that form the distribution chain.
 
-1. The file/partition you want to clone, preceeded by the keywords
-   "infile".
-   This file or partitions needs to be available on the master only.
-   The optional keyword "split" after the
-   filename instructs Dolly to read all files with the given name and
-   an appended number, separated by an underscore.
-   Syntax: [compressed] infile <input file or device> [split]
-   EG: infile /dev/sda10
-       Will just send the partition /dev/sda10 to all clients.
-   EG: infile /images/cloneimages/sda split
-       Will send all files of the form /images/cloneimages/sda_<number>
-       in order to the clients.
+The server reads this file when started with the `-f <config_file>` option.
 
-2. The file or partition you want to write (usually its a partition,
-   but you can also write to a file) after the keyword "outfile". This
-   file needs to be available on the clients only. 
-   The optional keyword "split" after the filename,
-   followed by a number and a multiplier, instructs the client to
-   write the data in junks of no more than the given size. This is
-   useful if the file system on your client does not allow files
-   greater than a certain size. The files will be stored with the
-   given namen and an appended "_<number>".
-   Syntax: outfile <output file or device> [split <n>(k|M|G|T)]
-   EG: outfile /dev/sda10
-       Will store the incoming data stream to the partition sda10.
-   EG: outfile /images/cloneimages/sda_all split 2G
-       Will store the incoming data stream in the directory
-      /images/cloneimages/ in files sda_all.0, sda_all.1 and so on.
+### Example `dollytab` file:
+```
+# This is a comment. Lines starting with '#' are ignored.
+infile /dev/sda5
+outfile /dev/sda5
 
--. The optional keyword "hypennormal" instructs Dolly to treat the '-'
-   character in hostnames as any other character. By default the
-   hyphen is used to separate the base hostnames from the names of the
-   different interface (e.g. "node12-giga"). You might use this
-   paramater if your hostnames include a hypen (like e.g. "node-12").
-   Syntax: hyphennormal
-   EG: hyphennormal
+# Optional settings
+hyphennormal
 
-3. The following lines contain the interface-names of the client
-   machines. The number of machines must match the above number of
-   clients (see 6.). You should use the name of the interface on
-   which the machines will receive the data.
-   Syntax: <name of client 1>
-           <name of client 2>
-           [...]
-           <name of client n>
-   EG: cluster-1-giga
-       cluster-2-giga
-       [...]
-       cluster-9-giga
+# List of clients in the chain
+node1-giga
+node2-giga
+node3-giga
 
-4. The last entry in the config file consists of the keyword
-   "endconfig" and marks the end of the configuration file.
-   Syntax: endconfig
-   EG: endconfig
+# End of configuration
+endconfig
+```
+
+### Directives
+
+The configuration file is parsed line-by-line and generally expects directives in a specific order.
+
+3.  **`infile`** (Required)
+    :   Specifies the source file or device on the server machine.
+    *   **Syntax:** `[compressed] infile <path> [split]`
+    *   **Example:** `infile /dev/sda10`
+    *   **Experimental Options:**
+        *   `compressed`: Indicates the input is compressed.
+        *   `split`: Instructs Dolly to read from multiple input files named `<path>_<number>`.
+
+4.  **`outfile`** (Required)
+    :   Specifies the destination file or device on all client machines.
+    *   **Syntax:** `outfile <path> [split <n>(k|M|G|T)]`
+    *   **Example:** `outfile /dev/sda10`
+    *   **Experimental Options:**
+        *   `split <size>`: Instructs clients to split the output into chunks of the specified size (e.g., `split 2G`).
+
+5.  **`hyphennormal`** (Optional)
+    :   The optional keyword "hypennormal" instructs Dolly to treat the '-' character in hostnames as any other character. By default the hyphen is used to separate the base hostnames from the names of the different interface (e.g. "node12-giga"). You might use this paramater if your hostnames include a hypen (like e.g. "node-12").
+    *   **Syntax:** `hyphennormal`
+
+6.  **Client Hostnames** (Required)
+    :   A list of client hostnames, one per line, that defines the daisy chain. The server connects to the first client, which connects to the second, and so on.
+    *   **Syntax:** `<hostname>`
+    *   **Example:**
+        ```
+        cluster-1-giga
+        cluster-2-giga
+        ```
+
+7.  **`endconfig`** (Required)
+    :   Marks the end of the configuration file. Any lines after this directive are ignored.
+    *   **Syntax:** `endconfig`
 
 
 NOTE on NODES HOSTNAMES
