@@ -99,7 +99,7 @@ void transmit(struct dollytab * mydollytab) {
           - (tv3.tv_sec*1000000 + tv3.tv_usec);
 
         fprintf(stdtty,
-              "\rTransferred: %.0f MB | Speed: %.3f MB/s (current: %.3f MB/s)      ",
+              "\rTransferred: %.0f MB | Speed: %.2f MB/s (current: %.2f MB/s)      ",
               (float)maxbytes/1000000,
               (float)maxbytes/td,(float)(maxbytes - lastout)/tdlast);
         fflush(stdtty);
@@ -237,7 +237,7 @@ void transmit(struct dollytab * mydollytab) {
 	  - (tv1.tv_sec*1000000 + tv1.tv_usec);
 	tdlast = (tv2.tv_sec*1000000 + tv2.tv_usec)
 	  - (tv3.tv_sec*1000000 + tv3.tv_usec);
-	fprintf(stdtty, "\rTransferred: %.0f MB | Speed: %.3f MB/s (current: %.3f MB/s)      ", (float)transbytes/1000000, (float)transbytes/td,(float)(transbytes - lastout)/tdlast);
+	fprintf(stdtty, "\rTransferred: %.0f MB | Speed: %.2f MB/s (current: %.2f MB/s)      ", (float)transbytes/1000000, (float)transbytes/td,(float)(transbytes - lastout)/tdlast);
 	fflush(stdtty);
 	lastout = transbytes;
       }
