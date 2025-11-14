@@ -12,13 +12,9 @@ void init_dollytab(struct dollytab * mdt) {
   memset(mdt->password, '\0', sizeof(mdt->password));
 
   memset(mdt->nexthosts,0,sizeof(mdt->nexthosts));
-  memset(mdt->add_name,'\0',sizeof(mdt->add_name));
   mdt->meserver = 0;
   mdt->output_split = 0;
   mdt->input_split = 0;
-  mdt->add_nr = 0;
-  mdt->add_primary = 0;
-  mdt->add_mode = 0;
   mdt->nr_childs = 0;
   mdt->hostnr = 0;
   mdt->melast = 0;
@@ -179,72 +175,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     str[sp - str - 1] = '\0';
   }
   
-  /* Get the optional extra network interfaces */
-  /* Form of the line: add <nr_extra_interfaces>:<postfix>{:<postfix>} */
-  if((strncmp("add ", str, 4) == 0) || (strncmp("add2 ", str, 5) == 0)) {
-    char *s1, *s2;
-    int max = 0, j;
 
-    if(strncmp("add ", str, 4) == 0) {
-      mydollytab->add_mode = 1;
-    }
-    if(strncmp("add2 ", str, 5) == 0) {
-      mydollytab->add_mode = 2;
-    }
-    if(mydollytab->add_mode == 0) {
-      fprintf(stderr,
-	      "Bad add_mode: Choose 'add' or 'add2' in config-file.\n");
-      exit(1);
-    }
-    
-    s1 = str + 4;
-    s2 = s1;
-    while((*s2 != ':' && *s2 != '\n' && *s2 != 0)) s2++;
-    if(*s2 == 0) {
-      fprintf(stderr, "Error in add line: First colon missing.\n");
-      exit(1);
-    }
-    *s2 = 0;
-    max = atoi(s1);
-    if(max < 0) {
-      fprintf(stderr, "Error in add line: negative number.\n");
-      exit(1);
-    }
-    if(max >= MAXFANOUT) {
-      fprintf(stderr, "Error in add line: Number larger than MAXFANOUT.\n");
-      exit(1);
-    }
-    if (max==0) {
-      /* change names of primary interface */
-      mydollytab->add_primary = 1;
-      s1 = s2 + 1;
-      s2++;
-      while((*s2 != ':' && *s2 != '\n' && *s2 != 0)) s2++;
-      if(*s2 == 0) {
-        fprintf(stderr, "Error in add line: Preliminary end.\n");
-        exit(1);
-      }
-      *s2 = 0;
-      strcpy(mydollytab->add_name[0], s1);
-    } else {
-      for(j = 0; j < max; j++) {
-	s1 = s2 + 1;
-	s2++;
-	while((*s2 != ':' && *s2 != '\n' && *s2 != 0)) s2++;
-	if(*s2 == 0) {
-	  fprintf(stderr, "Error in add line: Preliminary end.\n");
-	  exit(1);
-	}
-	*s2 = 0;
-	strcpy(mydollytab->add_name[j], s1);
-      }
-    }
-    mydollytab->add_nr = max;
-    if(fgets(str, sizeof(str), df) == NULL) {
-      perror("fgets after add");
-      exit(1);
-    }
-  }
   
  
   if(fgets(str, sizeof(str), df) == NULL) {
