@@ -94,7 +94,7 @@ static void usage(void) {
   fprintf(stderr, "\n");
   fprintf(stderr, "Dolly v%s - Parallel disk/partition/data cloning tool\n", version_string);
   fprintf(stderr, "------------------------------------------------------\n");
-  fprintf(stderr, "Dolly clones data to one or multiple nodes in parallel, saving time.\n");
+  fprintf(stderr, "Dolly clones data to one or multiple nodes/clients in parallel, saving time.\n");
   fprintf(stderr, "Without -s or -S, dolly runs as a client.\n\n");
 
   fprintf(stderr, "Usage:\n");
@@ -103,21 +103,13 @@ static void usage(void) {
   fprintf(stderr, "       [-H node1,node2,...] [-X excludedir,excludedir2] [-P password]\n\n");
 
   fprintf(stderr, "Options:\n");
-  fprintf(stderr, "  -s                Run as server (check hostname; not required if -H or -I is used)\n");
-  fprintf(stderr, "  -S <hostname>     Use <hostname> as server\n");
   fprintf(stderr, "  -R                Resolve hostnames to IPv4 addresses\n");
   fprintf(stderr, "  -6                Resolve hostnames to IPv6 addresses\n");
   fprintf(stderr, "  -V                Print version and exit\n");
-  fprintf(stderr, "  -D <inputdir>     Comma-separated list of directories to send\n");
-  fprintf(stderr, "  -I <inputfile>    Input file\n");
-  fprintf(stderr, "  -X <excludedir>   Comma-separated list of directories to exclude (e.g., /proc,/sys)\n");
   fprintf(stderr, "  -h                Print this help and exit\n");
-  fprintf(stderr, "  -d                Connect to systemd socket on client nodes (port 9996)\n");
-  fprintf(stderr, "  -K <hostname>     Kill a waiting dolly client\n");
   fprintf(stderr, "  -v                Verbose mode\n");
   fprintf(stderr, "  -q                Suppress 'ignored signal' messages\n");
   fprintf(stderr, "  -P                Password for simple auth process\n");
-  fprintf(stderr, "  -f <configfile>   Configuration file (required on server)\n");
   fprintf(stderr, "  -o <logfile>      Write statistics to <logfile>\n");
   fprintf(stderr, "  -a <timeout>      Terminate if no data transfer after <timeout> seconds\n");
   fprintf(stderr, "  -r <n>            Retry connection to node <n> times\n");
@@ -125,17 +117,27 @@ static void usage(void) {
   fprintf(stderr, "  -Y                instructs Dolly to treat the '-' character in hostnames as any other character.\n\n");
 
   fprintf(stderr, "Server Mode (alternative to dollytab):\n");
+  fprintf(stderr, "  -s                Run as server (check hostname; not required if -H or -I is used)\n");
+  fprintf(stderr, "  -S <hostname>     Use <hostname> as server\n");
   fprintf(stderr, "  -H <hosts>        Comma-separated list of target hosts\n");
-  fprintf(stderr, "  -O <outputfile>   Output file (use '-' for stdout; defaults to input filename)\n\n");
+  fprintf(stderr, "  -K <hostname>     Kill a waiting dolly client (Comma-separated list)\n");
+  fprintf(stderr, "  -I <inputfile>    Input file\n");
+  fprintf(stderr, "  -D <inputdir>     Comma-separated list of directories to send\n");
+  fprintf(stderr, "  -X <excludedir>   Comma-separated list of directories to exclude (e.g., /proc,/sys)\n");
+  fprintf(stderr, "  -O <outputfile>   Output file (use '-' for stdout; defaults to input filename)\n");
+  fprintf(stderr, "  -f <configfile>   Configuration file (required on server)\n");
+  fprintf(stderr, "  -d                Connect to systemd socket on client nodes (port 9996)\n\n");
 
   fprintf(stderr, "Examples:\n");
   fprintf(stderr, "  # Client mode:\n");
-  fprintf(stderr, "  dolly -v\n\n");
+  fprintf(stderr, "  dolly -v P password\n\n");
   fprintf(stderr, "  # Server mode:\n");
-  fprintf(stderr, "  dolly -vs -H sle15sp32,sle15sp33,sle15sp34 -I files.tgz -O /tmp/files.tgz\n");
-  fprintf(stderr, "    Copy files.tgz to /tmp/files.tgz on specified nodes (verbose)\n\n");
+  fprintf(stderr, "  dolly -vs -P password -H sle15sp32,sle15sp33,sle15sp34 -I files.tgz -O /tmp/files.tgz\n");
+  fprintf(stderr, "    Copy files.tgz to /tmp/files.tgz on specified clients (verbose)\n\n");
   fprintf(stderr, "  dolly -d -H sle15sp32,sle15sp33,sle15sp34 -I /tmp/files.tgz\n");
-  fprintf(stderr, "    Use systemd socket to copy /tmp/files.tgz to nodes\n");
+  fprintf(stderr, "    Use systemd socket to copy /tmp/files.tgz to clients\n");
+  fprintf(stderr, "  dolly -P password -K sle15sp32,sle15sp33,sle15sp34\n");
+  fprintf(stderr, "    Kill any running dolly with same auth password on clients\n");
 
   exit(1);
 }
@@ -692,10 +694,10 @@ int main(int argc, char *argv[]) {
 
   if(mydollytab->flag_d) {
     if (mydollytab->hostnr < 1) {
-      fprintf(stderr, "\nAt least one node is needed, use the -H parameter\n");
+      fprintf(stderr, "\nAt least one client is needed, use the -H parameter\n");
       exit(1);
     }
-    fprintf(stderr, "\nStart the dolly client on all nodes...\n");
+    fprintf(stderr, "\nStart the dolly client on all clients...\n");
     open_insystemdsocks(mydollytab);
   }
 
