@@ -8,7 +8,7 @@ Documentation=https://github.com/openSUSE/dolly
 [Service]
 Type=simple
 Restart=no
-Environment="PASS=opensuse"
+EnvironmentFile=-/etc/dolly/dolly.env
 Environment="TIMEOUT=180"
 Environment="HOSTNAME=%H"
 ExecStart=/usr/sbin/dolly -v -P ${PASS} -a ${TIMEOUT}
