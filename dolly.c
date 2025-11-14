@@ -1,4 +1,4 @@
-const char version_string[] = "0.70.0, 05-NOV-2025";
+const char version_string[] = "0.70.1, 14-NOV-2025";
 
 #include <dirent.h>
 #include "dolly.h"
