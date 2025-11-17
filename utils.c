@@ -65,3 +65,12 @@ char** expand_host_range(const char* host_str, int* count) {
   free(str);
   return host_list;
 }
+
+int is_ip_in_list(const char *ip, char **ip_list, size_t list_size) {
+    for (size_t i = 0; i < list_size; ++i) {
+        if (strcmp(ip, ip_list[i]) == 0) {
+            return 1; // IP found in list
+        }
+    }
+    return 0; // IP not found
+}
