@@ -188,21 +188,19 @@ int main(int argc, char *argv[]) {
   struct sockaddr_in sock_address;
   int kill_mode = 0;
   char *kill_hosts = NULL;
-  
+
   init_dollytab(mydollytab);
   mydollytab_for_cleanup = mydollytab;
-  
+
   atexit(cleanup_handler);
   signal(SIGINT, signal_handler);
   signal(SIGTERM, signal_handler);
   init_sockets();
-  
-  
+
   /* Parse arguments */
   while(1) {
     c = getopt(argc, argv, "a:c:f:r:vqo:S:shdnR46:VI:O:Y:H:D:P:X:K:");
     if(c == -1) break;
-      
     switch(c) {
     case 'K':
       kill_mode = 1;
@@ -242,7 +240,7 @@ int main(int argc, char *argv[]) {
       num_dirs++;
       mydollytab->num_infiles = num_dirs;
       mydollytab->infiles = (char**) safe_malloc(num_dirs * sizeof(char *));
-  
+
       char *dir_str = strtok(a_str, host_delim);
       num_dirs = 0;
       while(dir_str != NULL) {
@@ -258,7 +256,7 @@ int main(int argc, char *argv[]) {
 	num_dirs++;
       }
       free(a_str);
-  
+
       snprintf(mydollytab->directory_list, sizeof(mydollytab->directory_list), "%s", optarg);
       mydollytab->directory_mode = 1;
       mydollytab->meserver = 1;
@@ -352,7 +350,7 @@ int main(int argc, char *argv[]) {
       mydollytab->meserver = 1;
       flag_cargs = 1;
       break;
-  
+
     case 'O':
       if(strlen(optarg) > 255) {
 	fprintf(stderr, "Name of output-file too long.\n");
@@ -369,21 +367,20 @@ int main(int argc, char *argv[]) {
       }
       flag_cargs = 1;
       break;
-  
+
     case 'Y':
       mydollytab->hyphennormal = 1;
       break;
-  
+
     case 'H':
       /* as -H is used automatically set this machine as the server. */
       mydollytab->meserver = 1;
-  
+
       int host_count;
       char** expanded_hosts = expand_host_range(optarg, &host_count);
-        
       char **reachable_hosts = (char**) safe_malloc(host_count * sizeof(char *));
       size_t reachable_nr_hosts = 0;
-  
+
       // For Host Reachability Status table
       char **host_ips = (char**) safe_malloc(host_count * sizeof(char *));
       char **host_statuses = (char**) safe_malloc(host_count * sizeof(char *));
@@ -401,15 +398,24 @@ int main(int argc, char *argv[]) {
       for (int j = 0; j < host_count; ++j) {
         pthread_join(threads[j], NULL);
 
-        if (args[j].resolved) {
+	if (args[j].resolved) {
 	  if (args[j].reachable) {
-	    reachable_hosts[reachable_nr_hosts] = (char *)safe_malloc(strlen(args[j].ip_addr) + 1);
-	    strcpy(reachable_hosts[reachable_nr_hosts], args[j].ip_addr);
-	    reachable_nr_hosts++;
+	    if (!is_ip_in_list(args[j].ip_addr, reachable_hosts, reachable_nr_hosts)) {
+	      reachable_hosts[reachable_nr_hosts] = (char *)safe_malloc(strlen(args[j].ip_addr) + 1);
+	      strcpy(reachable_hosts[reachable_nr_hosts], args[j].ip_addr);
+	      reachable_nr_hosts++;
 
-	    host_ips[table_nr_hosts] = strdup(args[j].ip_addr);
-	    host_statuses[table_nr_hosts] = strdup("Reachable");
-	    table_nr_hosts++;
+	      host_ips[table_nr_hosts] = strdup(args[j].ip_addr);
+	      host_statuses[table_nr_hosts] = strdup("Reachable");
+	      table_nr_hosts++;
+	    } else {
+	      if (mydollytab->flag_v) {
+		fprintf(stderr, "Client '%s' (%s) is a duplicate and already in the list. Skipping.\n", args[j].hostname, args[j].ip_addr);
+	      }
+	      host_ips[table_nr_hosts] = strdup(args[j].ip_addr);
+	      host_statuses[table_nr_hosts] = strdup("Duplicate (Reachable)");
+	      table_nr_hosts++;
+	    }
 	  } else {
 	    if (mydollytab->flag_v) {
 	      fprintf(stderr, "Client '%s' (%s) is unreachable. Skipping.\n", args[j].hostname, args[j].ip_addr);
@@ -418,23 +424,22 @@ int main(int argc, char *argv[]) {
 	    host_statuses[table_nr_hosts] = strdup("Unreachable");
 	    table_nr_hosts++;
 	  }
-        } else {
+	} else {
 	  fprintf(stderr, "Could not resolve the host '%s'\n", args[j].hostname);
 	  host_ips[table_nr_hosts] = strdup(args[j].hostname);
 	  host_statuses[table_nr_hosts] = strdup("Unresolvable");
 	  table_nr_hosts++;
-        }
-        free(args[j].ip_addr);
+	}        free(args[j].ip_addr);
       }
-      
+
       free(threads);
       free(args);
-  
+
       for (int j = 0; j < host_count; ++j) {
 	free(expanded_hosts[j]);
       }
       free(expanded_hosts);
-  
+
       fprintf(stderr, "\n### Client Reachability Status\n");
       fprintf(stderr, "| Client IP       | Status      |\n");
       fprintf(stderr, "| --------------- | ----------- |\n");
@@ -442,7 +447,7 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "| %-15s | %-11s |\n", host_ips[i], host_statuses[i]);
       }
       fprintf(stderr, "\n");
-  
+
       // Free memory for host_ips and host_statuses
       for (i = 0; i < table_nr_hosts; i++) {
 	free(host_ips[i]);
@@ -450,14 +455,14 @@ int main(int argc, char *argv[]) {
       }
       free(host_ips);
       free(host_statuses);
-  
+
       mydollytab->hostnr = reachable_nr_hosts;
       mydollytab->hostring = safe_malloc(mydollytab->hostnr * sizeof(char *));
       for (i = 0; i < reachable_nr_hosts; i++) {
   	mydollytab->hostring[i] = reachable_hosts[i];
       }
       free(reachable_hosts);
-  
+
       // Re-evaluate 'me' based on the filtered hostring
       me = -2; // Reset me
       for (i = 0; i < mydollytab->hostnr; i++) {
@@ -472,7 +477,7 @@ int main(int argc, char *argv[]) {
   	  }
   	}
       }
-  
+
       /* Build up topology */
       mydollytab->nr_childs = 0;
       if(mydollytab->meserver) {
@@ -490,7 +495,7 @@ int main(int argc, char *argv[]) {
       if(mydollytab->nr_childs == 0) {
 	mydollytab->melast = 1;
       }
-  
+
       /* make sure that we are the server */
       mydollytab->meserver = 1;
       flag_cargs = 1;
@@ -659,7 +664,7 @@ int main(int argc, char *argv[]) {
       close(sock_k);
       host_str_k = strtok(NULL, host_delim);
     }
-    
+
     fprintf(stderr, "Done. Killed %d out of %d clients.\n", success, total);
     free(a_str_k);
     exit(0);
@@ -727,9 +732,8 @@ int main(int argc, char *argv[]) {
   }
 
   alarm(timeout);
-
   buildring(mydollytab);
-  
+
   if(mydollytab->meserver) {
     fprintf(stdtty, "Server: Sending data...\n");
   }
@@ -743,6 +747,5 @@ int main(int argc, char *argv[]) {
   fclose(stdtty);
   free_dollytab(mydollytab);
   free(mydollytab);
- 
   exit(0);
 }
