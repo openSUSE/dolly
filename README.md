@@ -78,8 +78,8 @@ not specified this will use the same value as the one set in **-I** option.
 
     -   **Interaction with -K:** To terminate a password-protected client, the `-K` command must be used with the corresponding `-P` option.
 
-**-H** <host1,host2,...>
-:   Specifies a comma-separated list of client hostnames or IP addresses that will form the data distribution chain. When used, `dolly` automatically operates in server mode.
+**-H** <host1,host2,10.0.1.IP_START-IP_END...>
+:   Specifies a comma-separated list of client hostnames or IP addresses that will form the data distribution chain. When used, `dolly` automatically operates in server mode. The option support IPRANGE.
 
     The server will connect to the first host in this list. Each subsequent host in the list will connect to the next host, forming a daisy chain for efficient data distribution. Data flows from the server to the first client, then from the first client to the second, and so on, until it reaches the last client in the list.
 

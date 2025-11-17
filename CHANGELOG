@@ -6,6 +6,10 @@ Copyright: Felix Rauch <rauch@inf.ethz.ch> and ETH Zurich.
 License: GNU General Public License.
 
 History:
+V 0.70.4 17-NOV-2025 Antoine Ginies <aginies@suse.com>
+  ping use now pthread (faster than sequential...)
+  -H option now support IP range in the list like 10.0.1.45-80
+
 V 0.70.3 17-NOV-2025 Antoine Ginies <aginies@suse.com>
   ping clients before adding them to the queue or remove them
   add -D option to include directory
