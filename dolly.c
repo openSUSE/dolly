@@ -17,6 +17,8 @@ struct ping_thread_args {
   int reachable;
   int resolved;
   int resolve_option;
+  int flag_v;
+  char *detection_method;
 };
 
 void *ping_thread_func(void *arg) {
@@ -38,7 +40,20 @@ void *ping_thread_func(void *arg) {
   }
 
   if(args->resolved) {
+    if (args->flag_v) fprintf(stderr, "Pinging %s (%s)...\n", args->hostname, args->ip_addr);
     args->reachable = is_host_reachable(args->ip_addr);
+    if (args->flag_v) fprintf(stderr, "Ping result for %s: %d\n", args->hostname, args->reachable);
+
+    if (args->reachable) {
+      args->detection_method = "ping";
+    } else {
+      if (args->flag_v) fprintf(stderr, "Ping failed for %s. Checking port 9996...\n", args->hostname);
+      args->reachable = is_port_open(args->ip_addr, 9996);
+      if (args->flag_v) fprintf(stderr, "Port 9996 check for %s: %d\n", args->hostname, args->reachable);
+      if (args->reachable) {
+	args->detection_method = "port 9996";
+      }
+    }
   } else {
     args->reachable = 0;
   }
@@ -383,6 +398,7 @@ int main(int argc, char *argv[]) {
       // For Host Reachability Status table
       char **host_ips = (char**) safe_malloc(host_count * sizeof(char *));
       char **host_statuses = (char**) safe_malloc(host_count * sizeof(char *));
+      char **host_methods = (char**) safe_malloc(host_count * sizeof(char *));
       size_t table_nr_hosts = 0;
 
       pthread_t *threads = (pthread_t *)safe_malloc(host_count * sizeof(pthread_t));
@@ -391,6 +407,7 @@ int main(int argc, char *argv[]) {
       for (int j = 0; j < host_count; ++j) {
         args[j].hostname = expanded_hosts[j];
         args[j].resolve_option = mydollytab->resolve;
+        args[j].flag_v = mydollytab->flag_v;
         pthread_create(&threads[j], NULL, ping_thread_func, &args[j]);
       }
 
@@ -405,6 +422,7 @@ int main(int argc, char *argv[]) {
 
 	      host_ips[table_nr_hosts] = strdup(args[j].ip_addr);
 	      host_statuses[table_nr_hosts] = strdup("Reachable");
+	      host_methods[table_nr_hosts] = strdup(args[j].detection_method);
 	      table_nr_hosts++;
 	    } else {
 	      if (mydollytab->flag_v) {
@@ -412,6 +430,7 @@ int main(int argc, char *argv[]) {
 	      }
 	      host_ips[table_nr_hosts] = strdup(args[j].ip_addr);
 	      host_statuses[table_nr_hosts] = strdup("Reachable (dup)");
+	      host_methods[table_nr_hosts] = strdup(args[j].detection_method);
 	      table_nr_hosts++;
 	    }
 	  } else {
@@ -420,12 +439,14 @@ int main(int argc, char *argv[]) {
 	    }
 	    host_ips[table_nr_hosts] = strdup(args[j].ip_addr);
 	    host_statuses[table_nr_hosts] = strdup("Unreachable");
+	    host_methods[table_nr_hosts] = strdup("N/A");
 	    table_nr_hosts++;
 	  }
 	} else {
 	  fprintf(stderr, "Could not resolve the host '%s'\n", args[j].hostname);
 	  host_ips[table_nr_hosts] = strdup(args[j].hostname);
 	  host_statuses[table_nr_hosts] = strdup("Unresolvable");
+	  host_methods[table_nr_hosts] = strdup("N/A");
 	  table_nr_hosts++;
 	}        free(args[j].ip_addr);
       }
@@ -445,7 +466,7 @@ int main(int argc, char *argv[]) {
       }
 
       if (unreachable_count > 0) {
-        fprintf(stderr, "\n### Unreachable Clients (ping)\n");
+        fprintf(stderr, "\n### Unreachable Clients (ping/port 9996)\n");
         fprintf(stderr, "| Client IP       | Status      |\n");
         fprintf(stderr, "| --------------- | ----------- |\n");
         for (i = 0; i < table_nr_hosts; i++) {
@@ -455,15 +476,15 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "\n");
       }
 
-      fprintf(stderr, "\n### Reachable Clients (ping)\n");
+      fprintf(stderr, "\n### Reachable Clients\n");
       if (unreachable_count == 0) {
 	fprintf(stderr, "All clients are reachable.\n\n");
       }
-      fprintf(stderr, "| Client IP       |\n");
-      fprintf(stderr, "| --------------- |\n");
+      fprintf(stderr, "| Client IP       | Method      |\n");
+      fprintf(stderr, "| --------------- | ----------- |\n");
       for (i = 0; i < table_nr_hosts; i++) {
         if (strcmp(host_statuses[i], "Reachable") == 0) {
-          fprintf(stderr, "| %-15s |\n", host_ips[i]);
+          fprintf(stderr, "| %-15s | %-11s |\n", host_ips[i], host_methods[i]);
         }
       }
       fprintf(stderr, "\n");
@@ -472,9 +493,11 @@ int main(int argc, char *argv[]) {
       for (i = 0; i < table_nr_hosts; i++) {
 	free(host_ips[i]);
 	free(host_statuses[i]);
+	free(host_methods[i]);
       }
       free(host_ips);
       free(host_statuses);
+      free(host_methods);
 
       mydollytab->hostnr = reachable_nr_hosts;
       mydollytab->hostring = safe_malloc(mydollytab->hostnr * sizeof(char *));
