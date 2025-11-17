@@ -8,6 +8,8 @@ Documentation=https://github.com/openSUSE/dolly
 [Service]
 Type=simple
 Restart=no
+User=dolly
+Group=dolly
 EnvironmentFile=-/etc/dolly/dolly.env
 Environment="TIMEOUT=180"
 Environment="HOSTNAME=%H"
