@@ -413,7 +413,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Client '%s' (%s) is a duplicate and already in the list. Skipping.\n", args[j].hostname, args[j].ip_addr);
 	      }
 	      host_ips[table_nr_hosts] = strdup(args[j].ip_addr);
-	      host_statuses[table_nr_hosts] = strdup("Duplicate (Reachable)");
+	      host_statuses[table_nr_hosts] = strdup("Reachable (dup)");
 	      table_nr_hosts++;
 	    }
 	  } else {
@@ -440,11 +440,35 @@ int main(int argc, char *argv[]) {
       }
       free(expanded_hosts);
 
-      fprintf(stderr, "\n### Client Reachability Status\n");
-      fprintf(stderr, "| Client IP       | Status      |\n");
-      fprintf(stderr, "| --------------- | ----------- |\n");
+      int unreachable_count = 0;
       for (i = 0; i < table_nr_hosts; i++) {
-	fprintf(stderr, "| %-15s | %-11s |\n", host_ips[i], host_statuses[i]);
+        if (strcmp(host_statuses[i], "Unreachable") == 0 || strcmp(host_statuses[i], "Unresolvable") == 0) {
+          unreachable_count++;
+        }
+      }
+
+      if (unreachable_count > 0) {
+        fprintf(stderr, "\n### Unreachable Clients\n");
+        fprintf(stderr, "| Client IP       | Status      |\n");
+        fprintf(stderr, "| --------------- | ----------- |\n");
+        for (i = 0; i < table_nr_hosts; i++) {
+          if (strcmp(host_statuses[i], "Unreachable") == 0 || strcmp(host_statuses[i], "Unresolvable") == 0) {
+            fprintf(stderr, "| %-15s | %-11s |\n", host_ips[i], host_statuses[i]);
+          }
+        }
+        fprintf(stderr, "\n");
+      }
+
+      fprintf(stderr, "\n### Reachable Clients\n");
+      if (unreachable_count == 0) {
+          fprintf(stderr, "All clients are reachable.\n\n");
+      }
+      fprintf(stderr, "| Client IP       |\n");
+      fprintf(stderr, "| --------------- |\n");
+      for (i = 0; i < table_nr_hosts; i++) {
+        if (strcmp(host_statuses[i], "Reachable") == 0) {
+          fprintf(stderr, "| %-15s |\n", host_ips[i]);
+        }
       }
       fprintf(stderr, "\n");
 
