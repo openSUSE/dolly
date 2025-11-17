@@ -74,3 +74,16 @@ int is_ip_in_list(const char *ip, char **ip_list, size_t list_size) {
     }
     return 0; // IP not found
 }
+
+int is_valid_hostname(const char *hostname) {
+    if (strlen(hostname) > 255) {
+        return 0;
+    }
+    for (size_t i = 0; i < strlen(hostname); i++) {
+        char c = hostname[i];
+        if (!isalnum(c) && c != '.' && c != '-' && c != ':') {
+            return 0;
+        }
+    }
+    return 1;
+}
