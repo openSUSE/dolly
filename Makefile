@@ -2,7 +2,7 @@ CXX = g++
 CC = gcc
 CFLAGS += -std=gnu11 -s -O -fPIE $(RPM_OPT_FLAGS) -Wshadow -fstack-protector-strong -Wall -Wextra -Wpedantic -flto
 WARNINGS = -Werror -Wall -Wextra -pedantic-errors -Werror=unused-result
-LDFLAGS = -lssl -lcrypto
+LDFLAGS = -lssl -lcrypto -pthread
 LIBRARIES =
 BUILD_DIR = ./build
 SOURCES = $(wildcard *.c)
