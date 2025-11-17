@@ -8,7 +8,9 @@
 #include "movebytes.h"
 
 #include "socks.h"
+#include "utils.h"
 #include "resolve.h"
+#include <pthread.h>
 
 /* File descriptors for file I/O */
 int input = -1, output = -1;
@@ -171,34 +173,59 @@ void open_insocks(void) {
   }
 }
 
-void open_insystemdsocks(struct dollytab * mydollytab) {
-  int clientSocket;
-  unsigned int i;
-  int Retval=-1;
-  struct sockaddr_in serverAddr;
-  socklen_t addr_size;
-  serverAddr.sin_family = AF_INET;
-  serverAddr.sin_port = htons(systemdport);
-  if(mydollytab->flag_v) {
-    fprintf(stderr, "Start dolly client using systemd socket on %u hosts, port %i:\n", mydollytab->hostnr, systemdport);
-  }
-  for(i = 0; i < mydollytab->hostnr; i++) {
+struct systemd_thread_args {
+    char *hostname;
+    int flag_v;
+};
+
+void *systemd_thread_func(void *arg) {
+    struct systemd_thread_args *args = (struct systemd_thread_args *)arg;
+    int clientSocket;
+    struct sockaddr_in serverAddr;
+    socklen_t addr_size;
+
     clientSocket = socket(PF_INET, SOCK_STREAM, 0);
-    if(mydollytab->flag_v) {
-      fprintf(stderr, "\t'%s'\n", mydollytab->hostring[i]);
+    if (args->flag_v) {
+        fprintf(stderr, "\t'%s'\n", args->hostname);
     }
-    if (inet_pton(AF_INET, mydollytab->hostring[i], &serverAddr.sin_addr) <= 0) {
-      fprintf(stderr, "inet_pton failed for address %s\n", mydollytab->hostring[i]);
-      exit(1);
+
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(systemdport);
+    if (inet_pton(AF_INET, args->hostname, &serverAddr.sin_addr) <= 0) {
+        fprintf(stderr, "inet_pton failed for address %s\n", args->hostname);
+        // Don't exit here, just return from the thread
+        close(clientSocket);
+        return NULL;
     }
-    /* Connect to the systemd socket of all client nodes to start the dolly service */
-    addr_size = sizeof serverAddr;
-    Retval = connect(clientSocket, (struct sockaddr *) &serverAddr, addr_size);
-    if (Retval < 0) {
-      fprintf(stderr, "Connection failed to %s ! dolly service wont be started !\n (Please start the dolly.socket with systemd)\n (To always enable it: systemctl enable dolly.socket)\n", mydollytab->hostring[i]);
+
+    addr_size = sizeof(serverAddr);
+    if (connect(clientSocket, (struct sockaddr *)&serverAddr, addr_size) < 0) {
+        fprintf(stderr, "Connection failed to %s ! dolly service wont be started !\n (Please start the dolly.socket with systemd)\n (To always enable it: systemctl enable dolly.socket)\n", args->hostname);
     }
     close(clientSocket);
-  }
+    return NULL;
+}
+
+void open_insystemdsocks(struct dollytab * mydollytab) {
+    if (mydollytab->flag_v) {
+        fprintf(stderr, "Start dolly client using systemd socket on %u hosts, port %i:\n", mydollytab->hostnr, systemdport);
+    }
+
+    pthread_t *threads = (pthread_t *)safe_malloc(mydollytab->hostnr * sizeof(pthread_t));
+    struct systemd_thread_args *args = (struct systemd_thread_args *)safe_malloc(mydollytab->hostnr * sizeof(struct systemd_thread_args));
+
+    for (unsigned int i = 0; i < mydollytab->hostnr; i++) {
+        args[i].hostname = mydollytab->hostring[i];
+        args[i].flag_v = mydollytab->flag_v;
+        pthread_create(&threads[i], NULL, systemd_thread_func, &args[i]);
+    }
+
+    for (unsigned int i = 0; i < mydollytab->hostnr; i++) {
+        pthread_join(threads[i], NULL);
+    }
+    
+    free(threads);
+    free(args);
 }
 
 void open_outsocks(struct dollytab * mydollytab) {
@@ -524,7 +551,9 @@ void buildring(struct dollytab * mydollytab) {
 	  fprintf(stderr, "\n");*/
 
 	if (verify_sha256_key(expected_response_hash, client_response_hash)) {
-	  fprintf(stderr, "Server: Password verification successful for client %s.\n", mydollytab->hostring[mydollytab->nexthosts[child_idx]]);
+	  if (mydollytab->flag_v) {
+	    fprintf(stderr, "Server: Password verification successful for client %s.\n", mydollytab->hostring[mydollytab->nexthosts[child_idx]]);
+	  }
 	  if (write(ctrlout[child_idx], "OK", 3) < 0) {
 	    perror("write OK");
 	    exit(1);
@@ -680,8 +709,9 @@ void buildring(struct dollytab * mydollytab) {
 	    fprintf(stderr, "\n");*/
 
 	  if (verify_sha256_key(expected_response_hash, client_response_hash)) {
-	    fprintf(stderr, "Intermediate Server: Password verification successful for client %s.\n", mydollytab->hostring[mydollytab->nexthosts[child_idx]]);
-	    if (write(ctrlout[child_idx], "OK", 3) < 0) {
+	    	  if (mydollytab->flag_v) {
+	    	    fprintf(stderr, "Intermediate Server: Password verification successful for client %s.\n", mydollytab->hostring[mydollytab->nexthosts[child_idx]]);
+	    	  }	    if (write(ctrlout[child_idx], "OK", 3) < 0) {
 	      perror("write OK");
 	      exit(1);
 	    }
