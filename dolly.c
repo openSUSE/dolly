@@ -75,8 +75,7 @@ static void signal_handler(int signum) {
 
 /* Handles timeouts by terminating the program. */
 static void alarm_handler() {
-  fprintf(stderr, "Timeout reached (was set to %d seconds).\nTerminating.\n",
-          timeout);
+  fprintf(stderr, "Timeout reached (was set to %d seconds).\nTerminating.\n", timeout);
   exit(1);
 }
 
@@ -280,7 +279,7 @@ int main(int argc, char *argv[]) {
       strcpy(logfile, optarg);
       flag_log = 1;
       break;
-  
+
       /* This is now in the config file. */
     case 'n':
       dosync = 0;
@@ -385,7 +384,7 @@ int main(int argc, char *argv[]) {
       char **host_ips = (char**) safe_malloc(host_count * sizeof(char *));
       char **host_statuses = (char**) safe_malloc(host_count * sizeof(char *));
       size_t table_nr_hosts = 0;
-  
+
       pthread_t *threads = (pthread_t *)safe_malloc(host_count * sizeof(pthread_t));
       struct ping_thread_args *args = (struct ping_thread_args *)safe_malloc(host_count * sizeof(struct ping_thread_args));
 
@@ -395,8 +394,7 @@ int main(int argc, char *argv[]) {
         pthread_create(&threads[j], NULL, ping_thread_func, &args[j]);
       }
 
-      for (int j = 0; j < host_count; ++j) {
-        pthread_join(threads[j], NULL);
+      for (int j = 0; j < host_count; ++j) {pthread_join(threads[j], NULL);
 
 	if (args[j].resolved) {
 	  if (args[j].reachable) {
@@ -442,8 +440,7 @@ int main(int argc, char *argv[]) {
 
       int unreachable_count = 0;
       for (i = 0; i < table_nr_hosts; i++) {
-        if (strcmp(host_statuses[i], "Unreachable") == 0 || strcmp(host_statuses[i], "Unresolvable") == 0) {
-          unreachable_count++;
+        if (strcmp(host_statuses[i], "Unreachable") == 0 || strcmp(host_statuses[i], "Unresolvable") == 0) {unreachable_count++;
         }
       }
 
@@ -452,8 +449,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "| Client IP       | Status      |\n");
         fprintf(stderr, "| --------------- | ----------- |\n");
         for (i = 0; i < table_nr_hosts; i++) {
-          if (strcmp(host_statuses[i], "Unreachable") == 0 || strcmp(host_statuses[i], "Unresolvable") == 0) {
-            fprintf(stderr, "| %-15s | %-11s |\n", host_ips[i], host_statuses[i]);
+          if (strcmp(host_statuses[i], "Unreachable") == 0 || strcmp(host_statuses[i], "Unresolvable") == 0) {fprintf(stderr, "| %-15s | %-11s |\n", host_ips[i], host_statuses[i]);
           }
         }
         fprintf(stderr, "\n");
@@ -461,7 +457,7 @@ int main(int argc, char *argv[]) {
 
       fprintf(stderr, "\n### Reachable Clients\n");
       if (unreachable_count == 0) {
-          fprintf(stderr, "All clients are reachable.\n\n");
+	fprintf(stderr, "All clients are reachable.\n\n");
       }
       fprintf(stderr, "| Client IP       |\n");
       fprintf(stderr, "| --------------- |\n");
@@ -482,8 +478,7 @@ int main(int argc, char *argv[]) {
 
       mydollytab->hostnr = reachable_nr_hosts;
       mydollytab->hostring = safe_malloc(mydollytab->hostnr * sizeof(char *));
-      for (i = 0; i < reachable_nr_hosts; i++) {
-  	mydollytab->hostring[i] = reachable_hosts[i];
+      for (i = 0; i < reachable_nr_hosts; i++) {mydollytab->hostring[i] = reachable_hosts[i];
       }
       free(reachable_hosts);
 
@@ -724,7 +719,7 @@ int main(int argc, char *argv[]) {
       fprintf(df,"outfile %s\n",mydollytab->outfile);
       for(i = 0; i < mydollytab->hostnr; i++) {
         fprintf(df,"%s\n",mydollytab->hostring[i]);
-        
+
       }
       fprintf(df,"endconfig\n");
       fclose(df);
