@@ -248,9 +248,7 @@ void transmit(struct dollytab * mydollytab) {
   td = (tv2.tv_sec*1000000 + tv2.tv_usec) - (tv1.tv_sec*1000000 + tv1.tv_usec);
   
   if(mydollytab->meserver) {
-    if(mydollytab->flag_v) {
-      fprintf(stdtty, "\rSent MB: %.0f.       \n", (float)maxbytes/1000000);
-    }
+    fprintf(stdtty, "\rSent MB: %.0f.       \n", (float)maxbytes/1000000);
  
     if(flag_log){
       logfd = fopen(logfile, "a");
@@ -311,12 +309,10 @@ void transmit(struct dollytab * mydollytab) {
     } else {
       fprintf(stderr, "Transfert to all client nodes done.\n");
     }
-    if(mydollytab->flag_v) {
-      fprintf(stderr, "Time: %lu.%02lu sec\n", td / 1000000, td % 1000000);
-      fprintf(stderr, "MBytes/s: %0.3f\n", (double)maxbytes / td);
-      fprintf(stderr, "Aggregate MBytes/s: %0.3f\n",
+    fprintf(stderr, "Time: %lu.%02lu sec\n", td / 1000000, td % 1000000);
+    fprintf(stderr, "MBytes/s: %0.3f\n", (double)maxbytes / td);
+    fprintf(stderr, "Aggregate MBytes/s: %0.3f\n",
 	    (double)maxbytes * mydollytab->hostnr / td);
-    }
     if(maxcbytes != 0) {
       fprintf(stderr, "Bytes written on each node: %llu\n", maxcbytes);
       fprintf(stderr, "MBytes/s written: %0.3f\n",
