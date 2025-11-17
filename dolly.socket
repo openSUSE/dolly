@@ -8,7 +8,7 @@ ListenStream=0.0.0.0:9996
 Accept=no
 TriggerLimitIntervalSec=2
 FlushPending=yes
-SocketMode=0666
+SocketMode=0660
 
 [Install]
 WantedBy=sockets.target
