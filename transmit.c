@@ -312,7 +312,7 @@ void transmit(struct dollytab * mydollytab) {
       fprintf(stderr, "Transfert to all client nodes done.\n");
     }
     if(mydollytab->flag_v) {
-      fprintf(stderr, "Time: %lu.%03lu\n", td / 1000000, td % 1000000);
+      fprintf(stderr, "Time: %lu.%02lu sec\n", td / 1000000, td % 1000000);
       fprintf(stderr, "MBytes/s: %0.3f\n", (double)maxbytes / td);
       fprintf(stderr, "Aggregate MBytes/s: %0.3f\n",
 	    (double)maxbytes * mydollytab->hostnr / td);
@@ -326,7 +326,7 @@ void transmit(struct dollytab * mydollytab) {
     }
     if(flag_log) {
       if(mydollytab->flag_v) {
-        fprintf(logfd, "Time: %lu.%03lu\n", td / 1000000, td % 1000000);
+        fprintf(logfd, "Time: %lu.%03lu sec\n", td / 1000000, td % 1000000);
         fprintf(logfd, "MBytes/s: %0.3f\n", (double)maxbytes / td);
         fprintf(logfd, "Aggregate MBytes/s: %0.3f\n",
         (double)maxbytes * mydollytab->hostnr / td);
