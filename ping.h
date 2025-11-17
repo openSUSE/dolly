@@ -6,5 +6,6 @@
 #include <string.h>
 
 int is_host_reachable(const char *hostname);
+int is_port_open(const char *hostname, int port);
 
 #endif /* PING_H */
