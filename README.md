@@ -1,14 +1,21 @@
 DOLLY
 =====
-A program to clone over the network disks / partitions / data.
+A program to clone over the network disks / partitions / files / directories.
 Take same amount of time to copy data to one node or to X nodes.
+
+![anim](https://github.com/openSUSE/dolly/blob/devel/images/dolly.gif?raw=true)
 
 SYNOPSIS
 ========
 
-General syntax:
+General syntax for files/devices:
 ````sh
-dolly **-v** **-a** timeout **-r** max_retries **-s** **-I** infile **-O** outfile|- **-H** hostlist
+dolly -v -a timeout -r max_retries -s -I infile -O outfile|- -H hostlist
+````
+
+General syntax for directories:
+````sh
+dolly -v -a timeout -r max_retries -s -D DIR -O TARGET_DIR -H hostlist
 ````
 
 Dolly as a server using a configuration file:
@@ -16,12 +23,12 @@ Dolly as a server using a configuration file:
 dolly -s -f config_file
 ````
 
-Dolly as a server, verbose mode, trying to reconnect 40 times, copy /dev/vdd to /dev/vdd on nodes IPNODE1,IPNODE2,IPNODE3:
+Dolly as a server, verbose mode, trying to **reconnect 40 times**, **copy /dev/vdd to /dev/vdd** on nodes **IPNODE1,IPNODE2,IPNODE3**:
 ````sh
 dolly -v -r 40 -S SERVERIP -H IPNODE1,IPNODE2,IPNODE3 -I /dev/vdd -O /dev/vdd
 ````
 
-Dolly as a server, using systemd socket to connect to nodes, copy /dev/vdd to /dev/vdd on nodes IPNODE1,IPNODE2,IPNODE3:
+Dolly as a server, using **systemd socket** to connect to nodes, **copy /dev/vdd to /dev/vdd** on nodes **IPNODE1,IPNODE2,IPNODE3**:
 ````sh
 dolly -d -H IPNODE1,IPNODE2,IPNODE3 -I /dev/vdd
 ````
@@ -31,21 +38,25 @@ Dolly as a client in verbose mode:
 dolly -v
 ````
 
+Dolly server copy directory **/data/llm to /** on **IPNODE1,IPNODE2,IPNODE3**, **excluding dir /data/llm/mixtral**:
+````sh
+dolly -s -v -H IPNODE1,IPNODE2,IPNODE3 -D /data/llm -X /data/llm/mixtral -O /
+````
+
 
 DESCRIPTION
 ===========
 
 Dolly is used to clone the installation of one machine to (possibly
-many) other machines. It can distribute image-files (even gnu-zipped),
+many) other machines. It can distribute image-files,
 partitions or whole hard disk drives to other partitions or hard disk
 drives. As it forms a "virtual TCP ring" to distribute data, it works
 best with fast switched networks.
 
-As dolly clones whole partitions block-wise.
 
 OPTIONS
 =======
-If used without a configuration file following three commanline options must be
+If used without a configuration file following three commandline options must be
 set:
 
 **-I** FILE : FILE is used as input file.
@@ -54,9 +65,25 @@ set:
 output will printed to stdout. This is not mandatory on the commande line, if 
 not specified this will use the same value as the one set in **-I** option.
 
-**-H** HOSTLIST: A comma seperated hostlist, where then the first host of the list
-is used as firstclient and the last host as lastclient, like in the configuration
-file.
+**-D** DIR,DIR2 : Directories to copy to clients
+
+**-X** DIR,DIR2 : Directories to exclude (not copy to clients)
+
+**-P** <password>
+:   Sets a password to secure the dolly ring. All nodes (server and all clients) must use the exact same password to connect. This prevents unauthorized clients from joining the ring and unauthorized servers from sending data or commands.
+
+    -   **Client Behavior:** A client started with `-P` will only accept a connection from a server (or parent client) that provides the correct password. Connection attempts with an incorrect password will be rejected, and the client will continue to wait for a valid connection.
+
+    -   **Server Behavior:** A server started with `-P` requires all its clients to authenticate successfully. If any client fails the password check during the ring setup, the server will abort.
+
+    -   **Interaction with -K:** To terminate a password-protected client, the `-K` command must be used with the corresponding `-P` option.
+
+**-H** <host1,host2,...>
+:   Specifies a comma-separated list of client hostnames or IP addresses that will form the data distribution chain. When used, `dolly` automatically operates in server mode.
+
+    The server will connect to the first host in this list. Each subsequent host in the list will connect to the next host, forming a daisy chain for efficient data distribution. Data flows from the server to the first client, then from the first client to the second, and so on, until it reaches the last client in the list.
+
+    Hostnames are resolved to IP addresses; this behavior can be controlled by the `-R` (IPv4) or `-6` (IPv6) options.
 
 Following other options are:
 
@@ -79,6 +106,26 @@ Following other options are:
     This is no more mandatory if server options are used: -H, -I.
     This option must be secified before the "-f" option!
 
+  **-K** <hostname[,hostname2,...]>
+ :  Remotely terminates `dolly` client processes that are waiting for a
+    server connection. This is useful for cleaning up stale or duplicate
+    `dolly` processes on client machines to ensure a clean start for a new
+    cloning ring.
+
+    The command accepts a single hostname or a comma-separated list of hostnames.
+
+    **Important:** If a client was started with a password (using the `-P` option), the `-K` command **must** also be invoked with the same `-P <password>` option. An attempt to kill a password-protected client without the correct password will be rejected by the client, and the process will not be terminated.
+
+    Example (single client):
+    ```sh
+    dolly -K node01 -P mysecretpassword
+    ```
+
+    Example (multiple clients):
+    ```sh
+    dolly -K node01,node02 -P mysecretpassword
+    ```
+
   **-S**
  :  Same as "-s", but dolly will not warn you if the server's hostname
     and the name specified in the config file do not match.
@@ -93,12 +140,6 @@ Following other options are:
  :  Usually dolly will print a warning when the select() system call
     is interrupted by a signal. This option suppresses these warnings.
 
-  **-c**
- :  With this option it is possible to specify the uncompressed size
-    of a compressed file. It's only needed for performance statistics
-    at the end of a cloning process and not important if you are not
-    interested in the statistics.
-
   **-d**
  :  Connect to systemd socket on clients nodes to start the dolly 
     service (port 9996). This option only available on command 
@@ -107,19 +148,9 @@ Following other options are:
     By default if you use the dolly.socket, the dolly.service start
     as root user, which means that you can delete all your nodes
     data easily while pushing into the ring data in the wrong place.
-    There is **NO AUTH** process, which means that all nodes with a
-    dolly socket open and listed as a target from the server will get
-    the data.
+    Use **-P** option on client to restrict data from a specific
+    server.
 
-  **-t** <seconds>
- :  When in dummy mode, this option allows to specify how long the
-    testrun should approximately take. Since the dummy mode is mostly
-    used for benchmarking purposes and single runs might result in
-    different speeds (especially with many machines and bad switches
-    or with small TCP segment sizes), it's more convenient to specify
-    the run-lenght in seconds, as the benchmark-time becomes more
-    predictable.
- 
   **-f** <config file>
  :  This option is used to select the config file for this cloning
     process. This option makes only sense on the master machine and
@@ -146,14 +177,6 @@ Following other options are:
  :  Do not sync() before exit. Thus, dolly will exit sooner, but data
     may not make it to disk if power fails soon after dolly exits.
 
-  **-u** <size>
- :  Specify the size of buffers for TCP sockets. Should be a Multiple
-    of 4K.
-
-  **-b** <size>
- :  Option to specify the TRANSFER_BLOCK_SIZE. Should be a multiple of
-    the size of buffers for TCP sockets.
-
  **-r** <n>
  :  Retry to connect to node <n> times
 
@@ -161,141 +184,63 @@ Following other options are:
 CONFIGURATION FILE
 ==================
 
-One can use either us the appropriate commandline options (-i,-o and -H) or a
-configuration file for the cloning process is needed. Its format is strict, but
-easy. It contains the following entries (note that the order of the entries is
-fix): (The text after "Syntax:" explains the syntax of the entry, the lines
-following "EG:" are example lines)
+As an alternative to providing the hostlist and file paths on the command line, `dolly` can be configured using a configuration file. This file defines the data source, the destination path on the clients, and the list of clients that form the distribution chain.
 
-1. The file/partition you want to clone, preceeded by the keywords
-   "infile" or "compressed infile" in case of a compressed image.
-   This file or partitions needs to be available on the master only.
-   Dolly will warn you if you try to use a compressed infile which
-   does not end with ".gz". The compressed keyword is important so
-   that the master can inform the clients when they have to use gunzip
-   before writing a file. The optional keyword "split" after the
-   filename instructs Dolly to read all files with the given name and
-   an appended number, separated by an underscore.
-   Syntax: [compressed] infile <input file or device> [split]
-   EG: infile /dev/sda10
-       Will just send the partition /dev/sda10 to all clients.
-   EG: compressed infile /images/cloneimages/sda10_WinNTRes.gz
-       Will send the given file compressed to all the clients,
-       instructing them to uncompress the image before writing it.
-   EG: infile /images/cloneimages/sda split
-       Will send all files of the form /images/cloneimages/sda_<number>
-       in order to the clients.
-   EG: compressed infile /images/cloneimages/sda.gz split
-       Will send all files of the form /images/cloneimages/sda.gz_<number>
-       in order to the clients, instructing them to decompress the
-       incoming stream before writing it.
+The server reads this file when started with the `-f <config_file>` option.
 
-2. The file or partition you want to write (usually its a partition,
-   but you can also write to a file) after the keyword "outfile". This
-   file needs to be available on the clients only. The optional
-   keyword "compressed" instructs the server to compress the data
-   before sending it, so the client will store the data
-   compressed. The optional keyword "split" after the filename,
-   followed by a number and a multiplier, instructs the client to
-   write the data in junks of no more than the given size. This is
-   useful if the file system on your client does not allow files
-   greater than a certain size. The files will be stored with the
-   given namen and an appended "_<number>".
-   Syntax: [compressed] outfile <output file or device> [split <n>(k|M|G|T)]
-   EG: outfile /dev/sda10
-       Will store the incoming data stream to the partition sda10.
-   EG: compressed outfile /images/cloneimages/sda10_SuSE81.gz
-       Will store the compressed data stream in the given file.
-   EG: compressed outfile /images/cloneimages/sda_all.gz split 2G
-       Will store the incoming compressed data stream in the directory
-      /images/cloneimages/ in files sda_all.gz_0, sda_all.gz_1 and so on.
+### Example `dollytab` file:
+```
+# This is a comment. Lines starting with '#' are ignored.
+infile /dev/sda5
+outfile /dev/sda5
 
--. The optional keyword "segsize" is mostly used to benchmark
-   switches. It specifies the maximal size of TCP segments during the
-   network transfer. Usually you don't need to specify this option at
-   all.
-   Syntax: segsize <TCP_MAXSEG size>
-   EG: segsize 128
+# Optional settings
+hyphennormal
 
--. With the optional keyword "add" it is possible to add more
-   interfaces to use. The network traffic is then evenly distributed
-   across the interfaces. This option is useful if you have for
-   example two fast ethernet interfaces in your machines: One for
-   administrative purposes and one for your main application on the
-   cluster. This option is not so useful if you have multiple
-   interfaces with different bandwidths. In this case just use the
-   fastest available.
-   You have to specify the number of additional interfaces and the
-   suffixes of thouse interfaces. For example, in a cluster where the
-   machines are named slave0..slave15 on their default interfaces and
-   all the machines have a second interface named
-   slave0-fast..slave15-fast, you should use the line specified below
-   (EG).
-   Syntax: add <nr>:<suffix>{:<suffix>}
-   EG: add 1:-fast
+# List of clients in the chain
+node1-giga
+node2-giga
+node3-giga
 
--. The optional keyword "fanout" was mostly used during performance
-   tests of different network topologies. You barely need it in
-   practice. Fanout specifies the number of outlinks from the server
-   and the following machines (except the leafes). A fanout of 1 is a
-   linear list (the default behaviour of Dolly and usually the
-   fastest), 2 is a binary tree, 3 is a ternary tree, etc. Dolly
-   automatically connects all the specified clients with the desired
-   topology.
-   Syntax: fanout <fanout>
-   EG: fannout 1
+# End of configuration
+endconfig
+```
 
--. The optional keyword "hypennormal" instructs Dolly to treat the '-'
-   character in hostnames as any other character. By default the
-   hyphen is used to separate the base hostnames from the names of the
-   different interface (e.g. "node12-giga"). You might use this
-   paramater if your hostnames include a hypen (like e.g. "node-12").
-   Syntax: hyphennormal
-   EG: hyphennormal
+### Directives
 
-3. After the keyword "server" follows the hostname of the server (or
-   master). This is required for the last machine in the ring to be
-   able to send the end-acknowledge back to the server.
-   Syntax: server <master machine>
-   EG: server cluster-master
+The configuration file is parsed line-by-line and generally expects directives in a specific order.
 
-4. This entry has the keyword "firstclient" followed by the hostname
-   of the first client in the ring. You should use the hostname of the
-   machine here, not the name of the interface where you want to
-   connect.
-   Syntax: firstclient <name of first machine>
-   EG: firstclient cluster-1
+3.  **`infile`** (Required)
+    :   Specifies the source file or device on the server machine.
+    *   **Syntax:** `[compressed] infile <path> [split]`
+    *   **Example:** `infile /dev/sda10`
+    *   **Experimental Options:**
+        *   `compressed`: Indicates the input is compressed.
+        *   `split`: Instructs Dolly to read from multiple input files named `<path>_<number>`.
 
-5. This entry has the keyword "lastclient" followed by the hostname of
-   the last client in the ring. You should use the hostname of the
-   machine here, not the name of the interface where you want to
-   connect.
-   Syntax: lastclient <name of last machine>
-   EG: lastclient cluster-9
+4.  **`outfile`** (Required)
+    :   Specifies the destination file or device on all client machines.
+    *   **Syntax:** `outfile <path> [split <n>(k|M|G|T)]`
+    *   **Example:** `outfile /dev/sda10`
+    *   **Experimental Options:**
+        *   `split <size>`: Instructs clients to split the output into chunks of the specified size (e.g., `split 2G`).
 
-6. This entry specifies how many clients are in the ring. The keyword
-   is "clients" followed by the actual number of clients. This number
-   does not include the master.
-   Syntax: clients <number of clients>
-   EG: clients 9
+5.  **`hyphennormal`** (Optional)
+    :   The optional keyword "hypennormal" instructs Dolly to treat the '-' character in hostnames as any other character. By default the hyphen is used to separate the base hostnames from the names of the different interface (e.g. "node12-giga"). You might use this paramater if your hostnames include a hypen (like e.g. "node-12").
+    *   **Syntax:** `hyphennormal`
 
-7. The following lines contain the interface-names of the client
-   machines. The number of machines must match the above number of
-   clients (see 6.). You should use the name of the interface on
-   which the machines will receive the data.
-   Syntax: <name of client 1>
-           <name of client 2>
-           [...]
-           <name of client n>
-   EG: cluster-1-giga
-       cluster-2-giga
-       [...]
-       cluster-9-giga
+6.  **Client Hostnames** (Required)
+    :   A list of client hostnames, one per line, that defines the daisy chain. The server connects to the first client, which connects to the second, and so on.
+    *   **Syntax:** `<hostname>`
+    *   **Example:**
+        ```
+        cluster-1-giga
+        cluster-2-giga
+        ```
 
-8. The last entry in the config file consists of the keyword
-   "endconfig" and marks the end of the configuration file.
-   Syntax: endconfig
-   EG: endconfig
+7.  **`endconfig`** (Required)
+    :   Marks the end of the configuration file. Any lines after this directive are ignored.
+    *   **Syntax:** `endconfig`
 
 
 NOTE on NODES HOSTNAMES
@@ -392,8 +337,7 @@ There are different possibilities to clone your master machine:
   used for the cloning process runs on (not the one you want to clone)
   or you need a small one-disk-Linux which you boot on all
   machines. In the later case you also need dolly on all machines
-  (copy it to your floppy disk or mount it with NFS) and the
-  config-file on the master.
+  (mount it with NFS) and the config-file on the master.
 
 WARNING: You can NOT clone an OS which is currently in use. That is why
          we have a small second Linux installation on all of our machines
@@ -409,7 +353,7 @@ See CHANGELOG file
 TODO
 ====
 
-Add an AUTH method to validate client nodes from server.
+Secure transfer of data using SSL?
 
 EXAMPLE
 =======
@@ -421,10 +365,6 @@ should then look as follows:
 ```
 infile /dev/sda5
 outfile /dev/sda5
-server node0
-firstclient node1
-lastclient node15
-clients 15
 node1
 node2
 node3
@@ -446,8 +386,9 @@ endconfig
 Next, we start Dolly on all the clients. No options are required for
 the clients (but you might want to add the "-v" option for verbose
 progress reports). Finally, Dolly is started on the server as follows:
-  dolly -v -s -f dollytab.cfg
-That's all.
+```sh
+dolly -v -s -f dollytab.cfg
+```
 
 EXPERIMENTAL
 ============
@@ -461,14 +402,9 @@ The following command line parameters are not tested and are provided as experim
 * -S: Ignoring the FQDN is not supported.
 * -6: Using IPv6 is not supported.
 * -n: Not doing a sync before exiting is not supported as this can lead to data corruption.
-* -c: Specifying the uncompressed size of a compressed file should only be used for performance statistics.
 
 The following configuration file options are not tested are provided as experimental:
-* compressed: Using the compression option is not supported.
 * split: Splitting files is not supported (infile or outfile).
-* fanout: This option must be set to 1 (a linear list). A binary tree or more is not supported.
-* segsize: This benchmark switch is not supported.
-* add: Using more than one interface to clone data is not supported.
 
 Bibliography
 ============

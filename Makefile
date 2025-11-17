@@ -1,8 +1,8 @@
 CXX = g++
 CC = gcc
-CFLAGS += -std=gnu11 -s -O -fPIE $(RPM_OPT_FLAGS)
-WARNINGS = -Werror -Wall -Wextra -pedantic-errors
-LDFLAGS =
+CFLAGS += -std=gnu11 -s -O -fPIE $(RPM_OPT_FLAGS) -Wshadow -fstack-protector-strong -Wall -Wextra -Wpedantic -flto
+WARNINGS = -Werror -Wall -Wextra -pedantic-errors -Werror=unused-result
+LDFLAGS = -lssl -lcrypto
 LIBRARIES =
 BUILD_DIR = ./build
 SOURCES = $(wildcard *.c)
@@ -10,7 +10,7 @@ OBJECTS = $(SOURCES:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(SOURCES:%.c=$(BUILD_DIR)/%.d)
 # Can 
 DEBUGFLAGS=-ggdb
-VERSION=0.64.3
+VERSION=0.70.1
 
 PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
@@ -19,16 +19,17 @@ SYSTEMDDIR ?= $(PREFIX)/lib/systemd/system
 FIREWALLDDIR ?= $(PREFIX)/lib/firewalld/services
 DATADIR ?= $(PREFIX)/share
 MANDIR ?= $(DATADIR)/man
-SYSCONFDIR ?= /etc
+SYSCONFDIR ?= /etc/dolly
 
 EXECUTABLE = dolly
 
-all: $(EXECUTABLE) man
+all: $(EXECUTABLE)
 
-tar: clean
+tar: clean man
 	mkdir $(EXECUTABLE)-$(VERSION)
 	find . -maxdepth 1 -type f -exec cp -a {} $(EXECUTABLE)-$(VERSION) \;
-	tar cfj $(EXECUTABLE)-$(VERSION).tar.bz2 $(EXECUTABLE)-$(VERSION)
+	rm -rf $(EXECUTABLE)-$(VERSION)/images/
+	tar cfJ $(EXECUTABLE)-$(VERSION).tar.xz $(EXECUTABLE)-$(VERSION)
 	rm -rf $(EXECUTABLE)-$(VERSION)
 
 $(BUILD_DIR)/%.d: %.c
@@ -42,14 +43,15 @@ $(BUILD_DIR)/%.o: %.c
 
 $(EXECUTABLE): $(OBJECTS)
 	@echo "Building $(EXECUTABLE)"
-	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ $(LIBRARIES)
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS) $(LIBRARIES)
 
 .PHONY: clean       
 
 clean:
 	rm -rf $(EXECUTABLE) $(OBJECTS) $(DEPS)
-	rm -rf $(EXECUTABLE)-$(VERSION) $(EXECUTABLE)-$(VERSION).tar.bz2
+	rm -rf $(EXECUTABLE)-$(VERSION) $(EXECUTABLE)-$(VERSION).tar.xz
 	rm -rf dolly.1*
+	rm -rf build
 
 dolly.1.gz:
 	@echo "Building man page"
@@ -68,6 +70,7 @@ install:
 	install -m 0644 dolly.socket $(DESTDIR)$(SYSTEMDDIR)
 	install -m 0644 dolly_firewall.xml $(DESTDIR)$(FIREWALLDDIR)/dolly.xml
 	install -m 0644 dolly.conf $(DESTDIR)$(SYSCONFDIR)
+	install -m 0644 dolly.env $(DESTDIR)$(SYSCONFDIR)
 	-test -e dolly.1.gz && install -d -m 0755 $(DESTDIR)$(MANDIR)/man1
 	-test -e dolly.1.gz && install -m 0644 dolly.1.gz $(DESTDIR)$(MANDIR)/man1/
 

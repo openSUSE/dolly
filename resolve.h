@@ -14,8 +14,7 @@
  * dollytab.resolve = 6 -> force ipv6
  */
 int resolve_host(char *hostname , char *ip, int mode);
-/* same but replaces the hostname */
-int resolve_host_replace(char *hostname , int mode);
 /* get the ip address for the interface used on the default route */
 int get_default_ip(char *hostname , int mode);
+struct addrinfo *resolve_host_addrinfo(const char *hostname);
 #endif

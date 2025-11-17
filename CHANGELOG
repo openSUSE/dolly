@@ -6,6 +6,17 @@ Copyright: Felix Rauch <rauch@inf.ethz.ch> and ETH Zurich.
 License: GNU General Public License.
 
 History:
+V 0.70.0 05-NOV-2025 Antoine Ginies <aginies@suse.com>
+  ping clients before adding them to the queue or remove them
+  add -D option to include directory
+  add -X option to exclude some directory
+  add -P option to get a basic validation between server and client (avoid erasing all data on client by default)
+  add -K Remotely terminates `dolly` client processes that are waiting for a server connection
+  improve server and client layout info
+  remove -b and -u options (network options)
+  remove compression option
+  remove server, fanout, firstclient, lastclient, segsize and clients from configuration file
+
 V 0.64.3 26-APR-2022 Antoine Ginies <aginies@suse.com>
   using the -O outfile option is no more mandatory in commande line
   simplify usage of dolly command (automatically be a server in some scenario)
