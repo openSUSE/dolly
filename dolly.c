@@ -1,4 +1,4 @@
-const char version_string[] = "0.70.1, 14-NOV-2025";
+const char version_string[] = "0.70.4 17-NOV-2025";
 
 #include <dirent.h>
 #include "dolly.h"
@@ -8,9 +8,43 @@ const char version_string[] = "0.70.1, 14-NOV-2025";
 #include "transmit.h"
 #include "resolve.h"
 #include "sha256.h"
-
-
 #include "ping.h"
+#include <pthread.h>
+
+struct ping_thread_args {
+  char *hostname;
+  char *ip_addr;
+  int reachable;
+  int resolved;
+  int resolve_option;
+};
+
+void *ping_thread_func(void *arg) {
+  struct ping_thread_args *args = (struct ping_thread_args *)arg;
+  args->ip_addr = (char*)safe_malloc(sizeof(char)*256);
+  struct sockaddr_in sock_address;
+
+  if(args->resolve_option == 0 &&
+     inet_pton(AF_INET, args->hostname, &(sock_address.sin_addr)) == 1 &&
+     inet_pton(AF_INET6, args->hostname, &(sock_address.sin_addr)) == 1) {
+    strcpy(args->ip_addr, args->hostname);
+    args->resolved = 1;
+  } else {
+    if(resolve_host(args->hostname, args->ip_addr, args->resolve_option)) {
+      args->resolved = 0;
+    } else {
+      args->resolved = 1;
+    }
+  }
+
+  if(args->resolved) {
+    args->reachable = is_host_reachable(args->ip_addr);
+  } else {
+    args->reachable = 0;
+  }
+
+  return NULL;
+}
 
 /* Clients need the ports before they can listen, so we use defaults. */
 const unsigned int dataport = 9998;
@@ -147,29 +181,28 @@ int main(int argc, char *argv[]) {
   unsigned int i;
   int flag_f = 0, flag_cargs = 0, me = -2;
   FILE *df;
-  char *mnname = NULL, *tmp_str;
-  char *host_str, *ip_addr;
-  size_t nr_hosts = 0;
+  char *mnname = NULL;
+  char *ip_addr;
   int fd;
   struct dollytab* mydollytab = (struct dollytab*)safe_malloc(sizeof(struct dollytab));
   struct sockaddr_in sock_address;
   int kill_mode = 0;
   char *kill_hosts = NULL;
-
+  
   init_dollytab(mydollytab);
   mydollytab_for_cleanup = mydollytab;
-
+  
   atexit(cleanup_handler);
   signal(SIGINT, signal_handler);
   signal(SIGTERM, signal_handler);
   init_sockets();
-
-
+  
+  
   /* Parse arguments */
   while(1) {
     c = getopt(argc, argv, "a:c:f:r:vqo:S:shdnR46:VI:O:Y:H:D:P:X:K:");
     if(c == -1) break;
-    
+      
     switch(c) {
     case 'K':
       kill_mode = 1;
@@ -178,15 +211,15 @@ int main(int argc, char *argv[]) {
     case 'f':
       /* Where to find the config-file. */
       if(strlen(optarg) > 255) {
-        fprintf(stderr, "Name of config-file too long.\n");
-        exit(1);
+	fprintf(stderr, "Name of config-file too long.\n");
+	exit(1);
       }
       snprintf(dollytab, sizeof(dollytab), "%s", optarg);
       flag_f = 1;
       break;
     case 'R':
       if(mydollytab->resolve != 6 && mydollytab->resolve != 4) {
-        mydollytab->resolve = 1;
+	mydollytab->resolve = 1;
       }
       break;
     case '6':
@@ -201,31 +234,31 @@ int main(int argc, char *argv[]) {
       char *tmp_str_d = a_str;
       unsigned int num_dirs = 0;
       while(*tmp_str_d) {
-        if(*host_delim == *tmp_str_d) {
-          num_dirs++;
-        }
-        tmp_str_d++;
+	if(*host_delim == *tmp_str_d) {
+	  num_dirs++;
+	}
+	tmp_str_d++;
       }
       num_dirs++;
       mydollytab->num_infiles = num_dirs;
       mydollytab->infiles = (char**) safe_malloc(num_dirs * sizeof(char *));
-
+  
       char *dir_str = strtok(a_str, host_delim);
       num_dirs = 0;
       while(dir_str != NULL) {
-        mydollytab->infiles[num_dirs] = (char *)safe_malloc(strlen(dir_str) + 1);
-        strcpy(mydollytab->infiles[num_dirs], dir_str);
-        DIR* tocheck = opendir(mydollytab->infiles[num_dirs]);
-        if (!tocheck) {
-          fprintf(stderr, "Error ! %s is not a directory.\n", mydollytab->infiles[num_dirs]);
-          exit(1);
-        }
-        closedir(tocheck);
-        dir_str = strtok(NULL, host_delim);
-        num_dirs++;
+	mydollytab->infiles[num_dirs] = (char *)safe_malloc(strlen(dir_str) + 1);
+	strcpy(mydollytab->infiles[num_dirs], dir_str);
+	DIR* tocheck = opendir(mydollytab->infiles[num_dirs]);
+	if (!tocheck) {
+	  fprintf(stderr, "Error ! %s is not a directory.\n", mydollytab->infiles[num_dirs]);
+	  exit(1);
+	}
+	closedir(tocheck);
+	dir_str = strtok(NULL, host_delim);
+	num_dirs++;
       }
       free(a_str);
-
+  
       snprintf(mydollytab->directory_list, sizeof(mydollytab->directory_list), "%s", optarg);
       mydollytab->directory_mode = 1;
       mydollytab->meserver = 1;
@@ -243,13 +276,13 @@ int main(int argc, char *argv[]) {
     case 'o':
       /* log filename */
       if(strlen(optarg) > 255) {
-        fprintf(stderr, "Name of log-file too long.\n");
-        exit(1);
+	fprintf(stderr, "Name of log-file too long.\n");
+	exit(1);
       }
       strcpy(logfile, optarg);
       flag_log = 1;
       break;
-
+  
       /* This is now in the config file. */
     case 'n':
       dosync = 0;
@@ -262,15 +295,15 @@ int main(int argc, char *argv[]) {
       /* This machine is the server - don't check hostname. */
       mydollytab->meserver = 1;
       if(strcmp(optarg,"-") < 0) {
-        fprintf(stderr,"'%s' is not a valid servername\n",optarg);
-        exit(1);
+	fprintf(stderr,"'%s' is not a valid servername\n",optarg);
+	exit(1);
       }
       strcpy(mydollytab->servername,optarg);
       break;
     case 'P':
       if(strlen(optarg) > 255) {
-        fprintf(stderr, "Password too long.\n");
-        exit(1);
+	fprintf(stderr, "Password too long.\n");
+	exit(1);
       }
       memset(mydollytab->password, 0, sizeof(mydollytab->password));
       snprintf(mydollytab->password, sizeof(mydollytab->password), "%s", optarg);
@@ -279,12 +312,12 @@ int main(int argc, char *argv[]) {
     case 'a':
       i = atoi(optarg);
       if((int)i <= 0) {
-        fprintf(stderr, "Timeout of %u doesn't make sense.\n", i);
-        exit(1);
+	fprintf(stderr, "Timeout of %u doesn't make sense.\n", i);
+	exit(1);
       }
       timeout = i;
       if(mydollytab->flag_v) {
-        fprintf(stderr, "Will set timeout to %d seconds.\n", timeout);
+	fprintf(stderr, "Will set timeout to %d seconds.\n", timeout);
       }
       signal(SIGALRM, alarm_handler);
       break;
@@ -304,171 +337,163 @@ int main(int argc, char *argv[]) {
       break;
     case 'I':
       if(strlen(optarg) > 255) {
-        fprintf(stderr, "Name of input-file too long.\n");
-        exit(1);
+	fprintf(stderr, "Name of input-file too long.\n");
+	exit(1);
       }
       snprintf(mydollytab->infile, sizeof(mydollytab->infile), "%s", optarg);
       // check this is not a directory
       FILE* file = fopen(mydollytab->infile, "r");
       if (!file) {
-        fprintf(stderr, "Error ! %s is not a file or a device.\n", mydollytab->infile);
-        exit(1);
+	fprintf(stderr, "Error ! %s is not a file or a device.\n", mydollytab->infile);
+	exit(1);
       }
       fclose(file);
       /* as -I is used automatically set this machine as the server. */
       mydollytab->meserver = 1;
       flag_cargs = 1;
       break;
-
+  
     case 'O':
       if(strlen(optarg) > 255) {
-        fprintf(stderr, "Name of output-file too long.\n");
-        exit(1);
+	fprintf(stderr, "Name of output-file too long.\n");
+	exit(1);
       }
       /* as -I is used automatically set this machine as the server. */
       mydollytab->meserver = 1;
       if (optarg[0] != '/') {
-        char temp_outfile[sizeof(mydollytab->outfile) + 1];
-        snprintf(temp_outfile, sizeof(temp_outfile), "/%s", optarg);
-        strcpy(mydollytab->outfile, temp_outfile);
+	char temp_outfile[sizeof(mydollytab->outfile) + 1];
+	snprintf(temp_outfile, sizeof(temp_outfile), "/%s", optarg);
+	strcpy(mydollytab->outfile, temp_outfile);
       } else {
-        snprintf(mydollytab->outfile, sizeof(mydollytab->outfile), "%s", optarg);
+	snprintf(mydollytab->outfile, sizeof(mydollytab->outfile), "%s", optarg);
       }
       flag_cargs = 1;
       break;
-
+  
     case 'Y':
       mydollytab->hyphennormal = 1;
       break;
-
+  
     case 'H':
       /* as -H is used automatically set this machine as the server. */
       mydollytab->meserver = 1;
-
-      /* copying string as it is modified*/
-      char *a_str = strdup(optarg);
-      tmp_str = a_str;
-      while(*tmp_str) {
-        if(*host_delim == *tmp_str) {
-          nr_hosts++;
-        }
-        tmp_str++;
-      }
-      nr_hosts++;
-      
-      char **reachable_hosts = (char**) safe_malloc(nr_hosts * sizeof(char *));
+  
+      int host_count;
+      char** expanded_hosts = expand_host_range(optarg, &host_count);
+        
+      char **reachable_hosts = (char**) safe_malloc(host_count * sizeof(char *));
       size_t reachable_nr_hosts = 0;
-
+  
       // For Host Reachability Status table
-      char **host_ips = (char**) safe_malloc(nr_hosts * sizeof(char *));
-      char **host_statuses = (char**) safe_malloc(nr_hosts * sizeof(char *));
+      char **host_ips = (char**) safe_malloc(host_count * sizeof(char *));
+      char **host_statuses = (char**) safe_malloc(host_count * sizeof(char *));
       size_t table_nr_hosts = 0;
+  
+      pthread_t *threads = (pthread_t *)safe_malloc(host_count * sizeof(pthread_t));
+      struct ping_thread_args *args = (struct ping_thread_args *)safe_malloc(host_count * sizeof(struct ping_thread_args));
 
-      /* now find the first host */
-      host_str = strtok(a_str,host_delim);
-      
-      while(host_str != NULL) {
-        ip_addr = (char*)safe_malloc(sizeof(char)*256);
-        if(mydollytab->resolve == 0 && 
-           inet_pton(AF_INET,host_str,&(sock_address.sin_addr)) == 1 &&
-           inet_pton(AF_INET6,host_str,&(sock_address.sin_addr)) == 1) {
-          strcpy(ip_addr, host_str);
-        } else { 
-          if(resolve_host(host_str,ip_addr,mydollytab->resolve)) {
-            fprintf(stderr,"Could not resolve the host '%s'\n",host_str);
-            host_str = strtok(NULL,host_delim);
-            free(ip_addr);
-            continue;
-          }
-        }
+      for (int j = 0; j < host_count; ++j) {
+        args[j].hostname = expanded_hosts[j];
+        args[j].resolve_option = mydollytab->resolve;
+        pthread_create(&threads[j], NULL, ping_thread_func, &args[j]);
+      }
 
-        if (is_host_reachable(ip_addr)) {
-	  /*if(mydollytab->flag_v) {
-	    fprintf(stderr, "Host '%s' (%s) is reachable. Adding to list.\n", host_str, ip_addr);
-            }*/
-	  reachable_hosts[reachable_nr_hosts] = (char *)safe_malloc(strlen(ip_addr)+1);
-	  strcpy(reachable_hosts[reachable_nr_hosts], ip_addr);
-	  reachable_nr_hosts++;
+      for (int j = 0; j < host_count; ++j) {
+        pthread_join(threads[j], NULL);
 
-	  // Store for table
-	  host_ips[table_nr_hosts] = strdup(ip_addr);
-	  host_statuses[table_nr_hosts] = strdup("Reachable");
-	  table_nr_hosts++;
-        } else {
-	  if(mydollytab->flag_v) {
-	    fprintf(stderr, "Client '%s' (%s) is unreachable. Skipping.\n", host_str, ip_addr);
+        if (args[j].resolved) {
+	  if (args[j].reachable) {
+	    reachable_hosts[reachable_nr_hosts] = (char *)safe_malloc(strlen(args[j].ip_addr) + 1);
+	    strcpy(reachable_hosts[reachable_nr_hosts], args[j].ip_addr);
+	    reachable_nr_hosts++;
+
+	    host_ips[table_nr_hosts] = strdup(args[j].ip_addr);
+	    host_statuses[table_nr_hosts] = strdup("Reachable");
+	    table_nr_hosts++;
+	  } else {
+	    if (mydollytab->flag_v) {
+	      fprintf(stderr, "Client '%s' (%s) is unreachable. Skipping.\n", args[j].hostname, args[j].ip_addr);
+	    }
+	    host_ips[table_nr_hosts] = strdup(args[j].ip_addr);
+	    host_statuses[table_nr_hosts] = strdup("Unreachable");
+	    table_nr_hosts++;
 	  }
-	  // Store for table
-	  host_ips[table_nr_hosts] = strdup(ip_addr);
-	  host_statuses[table_nr_hosts] = strdup("Unreachable");
+        } else {
+	  fprintf(stderr, "Could not resolve the host '%s'\n", args[j].hostname);
+	  host_ips[table_nr_hosts] = strdup(args[j].hostname);
+	  host_statuses[table_nr_hosts] = strdup("Unresolvable");
 	  table_nr_hosts++;
         }
-        free(ip_addr);
-        host_str = strtok(NULL,host_delim);
+        free(args[j].ip_addr);
       }
-
-      if (mydollytab->flag_v) {
-        fprintf(stderr, "\n### Client Reachability Status\n");
-        fprintf(stderr, "| Client IP       | Status      |\n");
-        fprintf(stderr, "| --------------- | ----------- |\n");
-        for (i = 0; i < table_nr_hosts; i++) {
-          fprintf(stderr, "| %-15s | %-11s |\n", host_ips[i], host_statuses[i]);
-        }
-        fprintf(stderr, "\n");
+      
+      free(threads);
+      free(args);
+  
+      for (int j = 0; j < host_count; ++j) {
+	free(expanded_hosts[j]);
       }
-
+      free(expanded_hosts);
+  
+      fprintf(stderr, "\n### Client Reachability Status\n");
+      fprintf(stderr, "| Client IP       | Status      |\n");
+      fprintf(stderr, "| --------------- | ----------- |\n");
+      for (i = 0; i < table_nr_hosts; i++) {
+	fprintf(stderr, "| %-15s | %-11s |\n", host_ips[i], host_statuses[i]);
+      }
+      fprintf(stderr, "\n");
+  
       // Free memory for host_ips and host_statuses
       for (i = 0; i < table_nr_hosts; i++) {
-        free(host_ips[i]);
-        free(host_statuses[i]);
+	free(host_ips[i]);
+	free(host_statuses[i]);
       }
       free(host_ips);
       free(host_statuses);
-
+  
       mydollytab->hostnr = reachable_nr_hosts;
       mydollytab->hostring = safe_malloc(mydollytab->hostnr * sizeof(char *));
       for (i = 0; i < reachable_nr_hosts; i++) {
-	mydollytab->hostring[i] = reachable_hosts[i];
+  	mydollytab->hostring[i] = reachable_hosts[i];
       }
       free(reachable_hosts);
-
+  
       // Re-evaluate 'me' based on the filtered hostring
       me = -2; // Reset me
       for (i = 0; i < mydollytab->hostnr; i++) {
-	if (strcmp(mydollytab->hostring[i], mydollytab->myhostname) == 0) {
-	  me = i;
-	  break;
-	} else if (!mydollytab->hyphennormal) {
-	  char *sp = strchr(mydollytab->hostring[i], '-');
-	  if (sp != NULL && strncmp(mydollytab->hostring[i], mydollytab->myhostname, sp - mydollytab->hostring[i]) == 0) {
-	    me = i;
-	    break;
-	  }
-	}
+  	if (strcmp(mydollytab->hostring[i], mydollytab->myhostname) == 0) {
+  	  me = i;
+  	  break;
+  	} else if (!mydollytab->hyphennormal) {
+  	  char *sp = strchr(mydollytab->hostring[i], '-');
+  	  if (sp != NULL && strncmp(mydollytab->hostring[i], mydollytab->myhostname, sp - mydollytab->hostring[i]) == 0) {
+  	    me = i;
+  	    break;
+  	  }
+  	}
       }
-
+  
       /* Build up topology */
       mydollytab->nr_childs = 0;
       if(mydollytab->meserver) {
-	if(1 <= mydollytab->hostnr) {
-	  mydollytab->nexthosts[0] = 0;
-	  mydollytab->nr_childs++;
-	}
+  	if(1 <= mydollytab->hostnr) {
+  	  mydollytab->nexthosts[0] = 0;
+  	  mydollytab->nr_childs++;
+  	}
       } else {
-	if((unsigned int)((me + 1) + 1) <= mydollytab->hostnr) {
-	  mydollytab->nexthosts[0] = (me + 1);
-	  mydollytab->nr_childs++;
-	}
+  	if((unsigned int)((me + 1) + 1) <= mydollytab->hostnr) {
+  	  mydollytab->nexthosts[0] = (me + 1);
+  	  mydollytab->nr_childs++;
+  	}
       }
       /* In a tree, we might have multiple last machines. */
       if(mydollytab->nr_childs == 0) {
-        mydollytab->melast = 1;
+	mydollytab->melast = 1;
       }
-
+  
       /* make sure that we are the server */
       mydollytab->meserver = 1;
       flag_cargs = 1;
-      free(a_str);
       break;
 
     case 'X': {
