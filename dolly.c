@@ -445,7 +445,7 @@ int main(int argc, char *argv[]) {
       }
 
       if (unreachable_count > 0) {
-        fprintf(stderr, "\n### Unreachable Clients\n");
+        fprintf(stderr, "\n### Unreachable Clients (ping)\n");
         fprintf(stderr, "| Client IP       | Status      |\n");
         fprintf(stderr, "| --------------- | ----------- |\n");
         for (i = 0; i < table_nr_hosts; i++) {
@@ -455,7 +455,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "\n");
       }
 
-      fprintf(stderr, "\n### Reachable Clients\n");
+      fprintf(stderr, "\n### Reachable Clients (ping)\n");
       if (unreachable_count == 0) {
 	fprintf(stderr, "All clients are reachable.\n\n");
       }
