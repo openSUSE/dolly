@@ -6,9 +6,13 @@ Copyright: Felix Rauch <rauch@inf.ethz.ch> and ETH Zurich.
 License: GNU General Public License.
 
 History:
-V 0.70.4 17-NOV-2025 Antoine Ginies <aginies@suse.com>
-  ping use now pthread (faster than sequential...)
+V 0.71.0 18-NOV-2025 Antoine Ginies <aginies@suse.com>
+  test connection now use pthread (faster than sequential...)
   -H option now support IP range in the list like 10.0.1.45-80
+  validate client by ping or open port (9996)
+  get stat and ETA on file transfer
+  double check that a client is not listed twice (using ip)
+  secured dolly.socket by changing SocketMode to 0660
 
 V 0.70.3 17-NOV-2025 Antoine Ginies <aginies@suse.com>
   ping clients before adding them to the queue or remove them
