@@ -626,7 +626,7 @@ void buildring(struct dollytab * mydollytab) {
 	    exit(1);
 	  }
 	  if(ret == 0) {
-	    fprintf(stderr, "Client %s disconnected due to an authentication failure in the ring. Check log on this client.\n", mydollytab->hostring[mydollytab->nexthosts[j]]);
+	    fprintf(stderr, "Client %s disconnected due to a failure in the ring. Check log on this client.\n", mydollytab->hostring[mydollytab->nexthosts[j]]);
 	    fprintf(stderr, "read returned 0 from backflow in buildring. Client disconnected.\n");
 	    close(ctrlout[j]);
 	    close(dataout[j]);
