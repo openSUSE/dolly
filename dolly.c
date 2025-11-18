@@ -29,7 +29,8 @@ void *ping_thread_func(void *arg) {
   if(args->resolve_option == 0 &&
      inet_pton(AF_INET, args->hostname, &(sock_address.sin_addr)) == 1 &&
      inet_pton(AF_INET6, args->hostname, &(sock_address.sin_addr)) == 1) {
-    strcpy(args->ip_addr, args->hostname);
+    strncpy(args->ip_addr, args->hostname, sizeof(args->ip_addr) - 1);
+    args->ip_addr[sizeof(args->ip_addr) - 1] = '\0';
     args->resolved = 1;
   } else {
     if(resolve_host(args->hostname, args->ip_addr, args->resolve_option)) {
@@ -408,7 +409,10 @@ int main(int argc, char *argv[]) {
         args[j].hostname = expanded_hosts[j];
         args[j].resolve_option = mydollytab->resolve;
         args[j].flag_v = mydollytab->flag_v;
-        pthread_create(&threads[j], NULL, ping_thread_func, &args[j]);
+	if (pthread_create(&threads[j], NULL, ping_thread_func, &args[j]) != 0) {
+          fprintf(stderr, "Failed to create thread for host %s.\n", args[j].hostname);
+          exit(1);
+        }
       }
 
       for (int j = 0; j < host_count; ++j) {pthread_join(threads[j], NULL);
