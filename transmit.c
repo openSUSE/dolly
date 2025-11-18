@@ -98,10 +98,33 @@ void transmit(struct dollytab * mydollytab) {
         tdlast = (tv2.tv_sec*1000000 + tv2.tv_usec)
           - (tv3.tv_sec*1000000 + tv3.tv_usec);
 
-        fprintf(stdtty,
-              "\rTransferred: %.0f MB | Speed: %.2f MB/s (current: %.2f MB/s)      ",
-              (float)maxbytes/1000000,
-              (float)maxbytes/td,(float)(maxbytes - lastout)/tdlast);
+        if (!mydollytab->directory_mode) {
+            float total_mb = (float)mydollytab->total_bytes / 1000000.0;
+            float transferred_mb = (float)maxbytes / 1000000.0;
+            float percentage = (total_mb > 0) ? (transferred_mb / total_mb) * 100.0 : 0.0;
+            float average_speed_mbps = (td > 0) ? (transferred_mb / ((float)td / 1000000.0)) : 0.0;
+            float current_speed_mbps = (tdlast > 0) ? ((float)(maxbytes - lastout) / 1000000.0) / ((float)tdlast / 1000000.0) : 0.0;
+            unsigned long long remaining_bytes = mydollytab->total_bytes - maxbytes;
+            float etr_seconds = (current_speed_mbps > 0) ? ((float)remaining_bytes / 1000000.0) / current_speed_mbps : -1.0;
+            char etr_str[32];
+            if (etr_seconds < 0 || mydollytab->total_bytes == 0) strcpy(etr_str, "N/A");
+            else {
+                int etr_hours = (int)(etr_seconds / 3600);
+                int etr_minutes = (int)((etr_seconds - (etr_hours * 3600)) / 60);
+                int etr_seconds_rem = (int)(etr_seconds - (etr_hours * 3600) - (etr_minutes * 60));
+                if (etr_hours > 0) sprintf(etr_str, "%dh %dm %ds", etr_hours, etr_minutes, etr_seconds_rem);
+                else if (etr_minutes > 0) sprintf(etr_str, "%dm %ds", etr_minutes, etr_seconds_rem);
+                else sprintf(etr_str, "%ds", etr_seconds_rem);
+            }
+            fprintf(stdtty,
+                  "\rTransferred: %.0f/%.0f MB (%.1f%%) | Speed: %.2f MB/s (current: %.2f MB/s) | ETR: %s      ",
+                  transferred_mb, total_mb, percentage, average_speed_mbps, current_speed_mbps, etr_str);
+        } else {
+            fprintf(stdtty,
+                  "\rTransferred: %.0f MB | Speed: %.2f MB/s (current: %.2f MB/s)      ",
+                  (float)maxbytes/1000000,
+                  (float)maxbytes/td,(float)(maxbytes - lastout)/tdlast);
+        }
         fflush(stdtty);
         lastout = maxbytes;
       }
