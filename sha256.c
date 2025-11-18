@@ -124,6 +124,10 @@ int receive_sha256_key(int sock, unsigned char *key) {
 }
 
 int verify_sha256_key(const unsigned char *local_key, const unsigned char *received_key) {
-    /* Verify that the local and received keys match */
-    return (memcmp(local_key, received_key, SHA256_DIGEST_LENGTH) == 0);
+    volatile unsigned char diff = 0; // volatile prevents compiler optimizations
+    size_t i;
+    for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        diff |= local_key[i] ^ received_key[i];
+    }
+    return (diff == 0);
 }
