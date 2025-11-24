@@ -26,13 +26,30 @@ void *ping_thread_func(void *arg) {
   args->ip_addr = (char*)safe_malloc(sizeof(char)*256);
   struct sockaddr_in sock_address;
 
-  if(args->resolve_option == 0 &&
-     inet_pton(AF_INET, args->hostname, &(sock_address.sin_addr)) == 1 &&
-     inet_pton(AF_INET6, args->hostname, &(sock_address.sin_addr)) == 1) {
-    strncpy(args->ip_addr, args->hostname, sizeof(args->ip_addr) - 1);
-    args->ip_addr[sizeof(args->ip_addr) - 1] = '\0';
-    args->resolved = 1;
+  // Check if hostname is already an IP address
+  if(args->resolve_option == 0) {
+    // First check if it's a valid IPv4 address
+    if(inet_pton(AF_INET, args->hostname, &(sock_address.sin_addr)) == 1) {
+      strncpy(args->ip_addr, args->hostname, 255);
+      args->ip_addr[255] = '\0';
+      args->resolved = 1;
+    }
+    // Then check if it's a valid IPv6 address
+    else if(inet_pton(AF_INET6, args->hostname, &(sock_address.sin_addr)) == 1) {
+      strncpy(args->ip_addr, args->hostname, 255);
+      args->ip_addr[255] = '\0';
+      args->resolved = 1;
+    }
+    else {
+      // Not an IP address, try DNS resolution
+      if(resolve_host(args->hostname, args->ip_addr, args->resolve_option)) {
+        args->resolved = 0;
+      } else {
+        args->resolved = 1;
+      }
+    }
   } else {
+    // Force DNS resolution based on resolve_option
     if(resolve_host(args->hostname, args->ip_addr, args->resolve_option)) {
       args->resolved = 0;
     } else {
