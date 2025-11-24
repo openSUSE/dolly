@@ -6,7 +6,7 @@ Copyright: Felix Rauch <rauch@inf.ethz.ch> and ETH Zurich.
 License: GNU General Public License.
 
 History:
-V 0.71.0 18-NOV-2025 Antoine Ginies <aginies@suse.com>
+V 0.71.1 24-NOV-2025 Antoine Ginies <aginies@suse.com>
   test connection now use pthread (faster than sequential...)
   -H option now support IP range in the list like 10.0.1.45-80
   validate client by ping or open port (9996)
