@@ -1,4 +1,4 @@
-const char version_string[] = "0.71.0 18-NOV-2025";
+const char version_string[] = "0.71.1 24-NOV-2025";
 
 #include <dirent.h>
 #include "dolly.h"
@@ -165,7 +165,7 @@ static void usage(void) {
 
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "  dolly [-hPVvSsnYR6d] [-f configfile] [-o logfile]\n");
-  fprintf(stderr, "       [-a timeout] [-I inputfile]/[-D inputdir, inputdir2] [-O outputfile]\n");
+  fprintf(stderr, "       [-a timeout] [-I inputfile]/[-D inputdir, inputdir2] [-O outfile/dir]\n");
   fprintf(stderr, "       [-H node1,node2,...] [-X excludedir,excludedir2] [-P password]\n\n");
 
   fprintf(stderr, "Options:\n");
@@ -190,7 +190,7 @@ static void usage(void) {
   fprintf(stderr, "  -I <inputfile>    Input file\n");
   fprintf(stderr, "  -D <inputdir>     Comma-separated list of directories to send\n");
   fprintf(stderr, "  -X <excludedir>   Comma-separated list of directories to exclude (e.g., /proc,/sys)\n");
-  fprintf(stderr, "  -O <outputfile>   Output file (use '-' for stdout; defaults to input filename)\n");
+  fprintf(stderr, "  -O <outfile/dir>   Output file (use '-' for stdout; defaults to input filename)\n");
   fprintf(stderr, "  -f <configfile>   Configuration file (required on server)\n");
   fprintf(stderr, "  -d                Connect to systemd socket on client nodes (port 9996)\n\n");
 
@@ -743,8 +743,8 @@ int main(int argc, char *argv[]) {
       fprintf(stderr,"inputfile via '-I [FILE|-]' or '-D [DIR]' must be set\n");
       exit(1);
     }
-    if(mydollytab->directory_mode && strlen(mydollytab->outfile) == 0) {
-      fprintf(stderr, "-O [outpufile] must be set when using -D\n");
+    if(strlen(mydollytab->outfile) == 0) {
+      fprintf(stderr, "-O [outfile/dir] must be set when using -D or -I\n");
       exit(1);
     }
     if(strlen(mydollytab->outfile) == 0) {

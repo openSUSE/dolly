@@ -13,6 +13,7 @@ V 0.71.0 18-NOV-2025 Antoine Ginies <aginies@suse.com>
   get stat and ETA on file transfer
   double check that a client is not listed twice (using ip)
   secured dolly.socket by changing SocketMode to 0660
+  don't copy the full path of the directory with "-D", only last dirpath
   various small fixes in code
 
 V 0.70.3 17-NOV-2025 Antoine Ginies <aginies@suse.com>

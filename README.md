@@ -38,9 +38,9 @@ Dolly as a client in verbose mode:
 dolly -v
 ````
 
-Dolly server copy directory **/data/llm to /** on **IPNODE1,IPNODE2,IPNODE3**, **excluding dir /data/llm/mixtral**:
+Dolly server copy directory **/data/llm to /clientdata/** on **IPNODE1,IPNODE2,IPNODE3**, **excluding dir /data/llm/mixtral**, so data will be stored into dir **/clientdata/llm** and **/clientdata/images:
 ````sh
-dolly -s -v -H IPNODE1,IPNODE2,IPNODE3 -D /data/llm -X /data/llm/mixtral -O /
+dolly -s -v -H IPNODE1,IPNODE2,IPNODE3 -D /data/llm,/data/images -X /data/llm/mixtral -O /clientdata/
 ````
 
 
@@ -65,7 +65,10 @@ set:
 output will printed to stdout. This is not mandatory on the commande line, if 
 not specified this will use the same value as the one set in **-I** option.
 
-**-D** DIR,DIR2 : Directories to copy to clients
+**-D** <DIR_1[,DIR_2,...]>
+:   Specifies one or more source directories on the server to be transferred to the clients. For each directory specified, only its base name (the final component of the path) is transferred. The directories are created inside the target directory specified by the `-O` option on the client side.
+
+    For example, if you use `-D /var/log/apache` and `-O /tmp/logs`, the `apache` directory will be created at `/tmp/logs/apache` on the clients.
 
 **-X** DIR,DIR2 : Directories to exclude (not copy to clients)
 
