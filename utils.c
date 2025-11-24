@@ -44,6 +44,13 @@ char** expand_host_range(const char* host_str, int* count) {
 	strncpy(prefix_base, ip_prefix, last_dot - ip_prefix + 1);
 	prefix_base[last_dot - ip_prefix + 1] = '\0';
 
+	// Check for valid range (1-255)
+	if (start_range < 1 || start_range > 255 || end_range < 1 || end_range > 255 || end_range < start_range) {
+	  free(ip_prefix);
+	  free(str);
+	  return host_list;
+	}
+
 	for (int i = start_range; i <= end_range; ++i) {
 	  host_list = (char**)safe_realloc(host_list, (*count + 1) * sizeof(char*));
 	  char ip[256];
