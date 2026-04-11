@@ -1,6 +1,5 @@
 const char version_string[] = "0.70.1, 14-NOV-2025";
 
-#include <dirent.h>
 #include "dolly.h"
 #include "dollytab.h"
 #include "socks.h"
@@ -33,17 +32,18 @@ static void cleanup_handler(void) {
 }
 
 static void signal_handler(int signum) {
-  fprintf(stderr, "\nCaught signal %d. Terminating.\n", signum);
-  exit(128 + signum);
+  const char msg[] = "\nCaught signal. Terminating.\n";
+  write(STDERR_FILENO, msg, sizeof(msg) - 1);
+  _exit(128 + signum);
 }
 
 /* PIDs of child processes */
 
 /* Handles timeouts by terminating the program. */
 static void alarm_handler() {
-  fprintf(stderr, "Timeout reached (was set to %d seconds).\nTerminating.\n",
-          timeout);
-  exit(1);
+  const char msg[] = "Timeout reached. Terminating.\n";
+  write(STDERR_FILENO, msg, sizeof(msg) - 1);
+  _exit(1);
 }
 
 /* This functions prints all the parameters before starting.
@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
     switch(c) {
     case 'K':
       kill_mode = 1;
-      kill_hosts = strdup(optarg);
+      kill_hosts = safe_strdup(optarg);
       break;
     case 'f':
       /* Where to find the config-file. */
@@ -197,7 +197,7 @@ int main(int argc, char *argv[]) {
       break;
     case 'D': {
       /* Directory mode */
-      char *a_str = strdup(optarg);
+      char *a_str = safe_strdup(optarg);
       char *tmp_str_d = a_str;
       unsigned int num_dirs = 0;
       while(*tmp_str_d) {
@@ -214,13 +214,12 @@ int main(int argc, char *argv[]) {
       num_dirs = 0;
       while(dir_str != NULL) {
         mydollytab->infiles[num_dirs] = (char *)safe_malloc(strlen(dir_str) + 1);
-        strcpy(mydollytab->infiles[num_dirs], dir_str);
-        DIR* tocheck = opendir(mydollytab->infiles[num_dirs]);
-        if (!tocheck) {
+        snprintf(mydollytab->infiles[num_dirs], strlen(dir_str) + 1, "%s", dir_str);
+        struct stat tocheck;
+        if (stat(mydollytab->infiles[num_dirs], &tocheck) != 0 || !S_ISDIR(tocheck.st_mode)) {
           fprintf(stderr, "Error ! %s is not a directory.\n", mydollytab->infiles[num_dirs]);
           exit(1);
         }
-        closedir(tocheck);
         dir_str = strtok(NULL, host_delim);
         num_dirs++;
       }
@@ -246,7 +245,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Name of log-file too long.\n");
         exit(1);
       }
-      strcpy(logfile, optarg);
+      snprintf(logfile, sizeof(logfile), "%s", optarg);
       flag_log = 1;
       break;
 
@@ -265,7 +264,11 @@ int main(int argc, char *argv[]) {
         fprintf(stderr,"'%s' is not a valid servername\n",optarg);
         exit(1);
       }
-      strcpy(mydollytab->servername,optarg);
+      if(strlen(optarg) > sizeof(mydollytab->servername) - 1) {
+        fprintf(stderr, "Server name too long.\n");
+        exit(1);
+      }
+      snprintf(mydollytab->servername, sizeof(mydollytab->servername), "%s", optarg);
       break;
     case 'P':
       if(strlen(optarg) > 255) {
@@ -328,9 +331,7 @@ int main(int argc, char *argv[]) {
       /* as -I is used automatically set this machine as the server. */
       mydollytab->meserver = 1;
       if (optarg[0] != '/') {
-        char temp_outfile[sizeof(mydollytab->outfile) + 1];
-        snprintf(temp_outfile, sizeof(temp_outfile), "/%s", optarg);
-        strcpy(mydollytab->outfile, temp_outfile);
+        snprintf(mydollytab->outfile, sizeof(mydollytab->outfile), "/%s", optarg);
       } else {
         snprintf(mydollytab->outfile, sizeof(mydollytab->outfile), "%s", optarg);
       }
@@ -346,7 +347,7 @@ int main(int argc, char *argv[]) {
       mydollytab->meserver = 1;
 
       /* copying string as it is modified*/
-      char *a_str = strdup(optarg);
+      char *a_str = safe_strdup(optarg);
       tmp_str = a_str;
       while(*tmp_str) {
         if(*host_delim == *tmp_str) {
@@ -369,10 +370,11 @@ int main(int argc, char *argv[]) {
       
       while(host_str != NULL) {
         ip_addr = (char*)safe_malloc(sizeof(char)*256);
-        if(mydollytab->resolve == 0 && 
-           inet_pton(AF_INET,host_str,&(sock_address.sin_addr)) == 1 &&
-           inet_pton(AF_INET6,host_str,&(sock_address.sin_addr)) == 1) {
-          strcpy(ip_addr, host_str);
+        struct in6_addr tmp6;
+        if(mydollytab->resolve == 0 &&
+           (inet_pton(AF_INET,host_str,&(sock_address.sin_addr)) == 1 ||
+            inet_pton(AF_INET6,host_str,&tmp6) == 1)) {
+          snprintf(ip_addr, 256, "%s", host_str);
         } else { 
           if(resolve_host(host_str,ip_addr,mydollytab->resolve)) {
             fprintf(stderr,"Could not resolve the host '%s'\n",host_str);
@@ -386,21 +388,20 @@ int main(int argc, char *argv[]) {
 	  /*if(mydollytab->flag_v) {
 	    fprintf(stderr, "Host '%s' (%s) is reachable. Adding to list.\n", host_str, ip_addr);
             }*/
-	  reachable_hosts[reachable_nr_hosts] = (char *)safe_malloc(strlen(ip_addr)+1);
-	  strcpy(reachable_hosts[reachable_nr_hosts], ip_addr);
+	  reachable_hosts[reachable_nr_hosts] = safe_strdup(ip_addr);
 	  reachable_nr_hosts++;
 
 	  // Store for table
-	  host_ips[table_nr_hosts] = strdup(ip_addr);
-	  host_statuses[table_nr_hosts] = strdup("Reachable");
+	  host_ips[table_nr_hosts] = safe_strdup(ip_addr);
+	  host_statuses[table_nr_hosts] = safe_strdup("Reachable");
 	  table_nr_hosts++;
         } else {
 	  if(mydollytab->flag_v) {
 	    fprintf(stderr, "Client '%s' (%s) is unreachable. Skipping.\n", host_str, ip_addr);
 	  }
 	  // Store for table
-	  host_ips[table_nr_hosts] = strdup(ip_addr);
-	  host_statuses[table_nr_hosts] = strdup("Unreachable");
+	  host_ips[table_nr_hosts] = safe_strdup(ip_addr);
+	  host_statuses[table_nr_hosts] = safe_strdup("Unreachable");
 	  table_nr_hosts++;
         }
         free(ip_addr);
@@ -472,7 +473,7 @@ int main(int argc, char *argv[]) {
       break;
 
     case 'X': {
-      char *a_str_x = strdup(optarg);
+      char *a_str_x = safe_strdup(optarg);
       char *tmp_str_x = a_str_x;
       unsigned int num_excludes = mydollytab->num_excludes;
       while(*tmp_str_x) {
@@ -482,12 +483,12 @@ int main(int argc, char *argv[]) {
         tmp_str_x++;
       }
       num_excludes++;
-      mydollytab->excludes = (char**) realloc(mydollytab->excludes, num_excludes * sizeof(char *));
+      mydollytab->excludes = (char**) safe_realloc(mydollytab->excludes, num_excludes * sizeof(char *));
 
       char *exclude_str = strtok(a_str_x, host_delim);
       while(exclude_str != NULL) {
         mydollytab->excludes[mydollytab->num_excludes] = (char *)safe_malloc(strlen(exclude_str) + 1);
-        strcpy(mydollytab->excludes[mydollytab->num_excludes], exclude_str);
+        snprintf(mydollytab->excludes[mydollytab->num_excludes], strlen(exclude_str) + 1, "%s", exclude_str);
         mydollytab->num_excludes++;
         exclude_str = strtok(NULL, host_delim);
       }
@@ -501,25 +502,34 @@ int main(int argc, char *argv[]) {
     }
     // always do hostname resolution
     //   if(flag_cargs) {
-    /* only use HOSTNAME when servername or ip is not explictly set */
+    /* only use HOSTNAME when servername or ip is not explicitly set */
     if(strcmp(mydollytab->servername,"") == 0) {
+      static char hn_buf[256];
       mnname = getenv("HOSTNAME");
-      if (mnname == NULL) {
-        fprintf(stderr, "Error: HOSTNAME environment variable not set. Please set it in the service file or ensure it's available.\n");
-        //exit(1);
+      if(mnname == NULL) {
+        if(gethostname(hn_buf, sizeof(hn_buf)) == 0) {
+          hn_buf[sizeof(hn_buf) - 1] = '\0';
+          mnname = hn_buf;
+        }
       }
-      if(mydollytab->resolve != 0) {
-	ip_addr = (char*)safe_malloc(sizeof(char)*256);
-	if(resolve_host(mnname,ip_addr,mydollytab->resolve)) {
-	  fprintf(stderr,"Could resolve the server address '%s'\n",mydollytab->servername);
-	  exit(1);
-	}
-	memcpy(mydollytab->myhostname,ip_addr,strlen(ip_addr));
-	memcpy(mydollytab->servername,ip_addr,strlen(ip_addr));
-	free(ip_addr);
-      } else {
-	memcpy(mydollytab->myhostname,mnname,strlen(mnname));
-	memcpy(mydollytab->servername,mnname,strlen(mnname));
+      if(mnname != NULL) {
+        if(mydollytab->resolve != 0) {
+          ip_addr = (char*)safe_malloc(sizeof(char)*256);
+          if(resolve_host(mnname,ip_addr,mydollytab->resolve)) {
+            fprintf(stderr,"Could not resolve the server address '%s'\n",mnname);
+            exit(1);
+          }
+          strncpy(mydollytab->myhostname,ip_addr,sizeof(mydollytab->myhostname)-1);
+          mydollytab->myhostname[sizeof(mydollytab->myhostname)-1] = '\0';
+          strncpy(mydollytab->servername,ip_addr,sizeof(mydollytab->servername)-1);
+          mydollytab->servername[sizeof(mydollytab->servername)-1] = '\0';
+          free(ip_addr);
+        } else {
+          strncpy(mydollytab->myhostname,mnname,sizeof(mydollytab->myhostname)-1);
+          mydollytab->myhostname[sizeof(mydollytab->myhostname)-1] = '\0';
+          strncpy(mydollytab->servername,mnname,sizeof(mydollytab->servername)-1);
+          mydollytab->servername[sizeof(mydollytab->servername)-1] = '\0';
+        }
       }
     } else {
       /* check if we allready have a valid ip address */
@@ -528,14 +538,17 @@ int main(int argc, char *argv[]) {
 	 mydollytab->resolve != 0) {
 	ip_addr = (char*)safe_malloc(sizeof(char)*256);
 	if(resolve_host(mydollytab->servername,ip_addr,mydollytab->resolve)) {
-	  fprintf(stderr,"Could resolve the server address '%s'\n",mydollytab->servername);
+	  fprintf(stderr,"Could not resolve the server address '%s'\n",mydollytab->servername);
 	  exit(1);
 	}
-	memcpy(mydollytab->servername,ip_addr,strlen(ip_addr));
-	memcpy(mydollytab->myhostname,ip_addr,strlen(ip_addr));
+	strncpy(mydollytab->servername,ip_addr,sizeof(mydollytab->servername)-1);
+	mydollytab->servername[sizeof(mydollytab->servername)-1] = '\0';
+	strncpy(mydollytab->myhostname,ip_addr,sizeof(mydollytab->myhostname)-1);
+	mydollytab->myhostname[sizeof(mydollytab->myhostname)-1] = '\0';
 	free(ip_addr);
       } else {
-	memcpy(mydollytab->myhostname,mydollytab->servername,strlen(mydollytab->servername));
+	strncpy(mydollytab->myhostname,mydollytab->servername,sizeof(mydollytab->myhostname)-1);
+	mydollytab->myhostname[sizeof(mydollytab->myhostname)-1] = '\0';
       }
     }
 
@@ -545,7 +558,7 @@ int main(int argc, char *argv[]) {
       df = fopen(optarg, "r");
       if(df == NULL) {
         char errstr[256];
-        sprintf(errstr, "fopen dollytab '%s'", optarg);
+        snprintf(errstr, sizeof(errstr), "fopen dollytab '%s'", optarg);
         perror(errstr);
         exit(1);
       }
@@ -656,11 +669,11 @@ int main(int argc, char *argv[]) {
     }
     if(strlen(mydollytab->outfile) == 0) {
       fprintf(stderr,"outfile via '-O FILE' not set, will use '%s' name as target\n", mydollytab->infile);
-      strcpy(mydollytab->outfile,mydollytab->infile);
+      snprintf(mydollytab->outfile, sizeof(mydollytab->outfile), "%s", mydollytab->infile);
     }
     if(strlen(dollytab) == 0) {
       generated_dolly = 1;
-      strcpy(dollytab,"/tmp/dollygenXXXXXX");
+      snprintf(dollytab, sizeof(dollytab), "%s", "/tmp/dollygenXXXXXX");
       fd = mkstemp(dollytab);
       df = fdopen(fd,"w");
       if(df == NULL) {

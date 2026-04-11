@@ -7,7 +7,7 @@ void init_dollytab(struct dollytab * mdt) {
   memset(mdt->myhostname,'\0',sizeof(mdt->myhostname));
   memset(mdt->servername,'\0',sizeof(mdt->servername));
   memset(mdt->infile,'\0',sizeof(mdt->infile));
-  memset(mdt->outfile,'\0',sizeof(mdt->infile));
+  memset(mdt->outfile,'\0',sizeof(mdt->outfile));
   memset(mdt->directory_list,'\0',sizeof(mdt->directory_list));
   memset(mdt->password, '\0', sizeof(mdt->password));
 
@@ -28,7 +28,7 @@ void init_dollytab(struct dollytab * mdt) {
   mdt->infiles = NULL;
   mdt->num_infiles = 0;
   mdt->excludes = (char**) safe_malloc(sizeof(char *));
-  mdt->excludes[0] = strdup("/proc");
+  mdt->excludes[0] = safe_strdup("/proc");
   mdt->num_excludes = 1;
   mdt->password_required = 0;
 }
@@ -105,7 +105,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     if (S_ISDIR(st_in.st_mode)) {
       mydollytab->directory_mode = 1;
       mydollytab->infiles = (char**) safe_malloc(sizeof(char*));
-      mydollytab->infiles[0] = strdup(mydollytab->infile);
+      mydollytab->infiles[0] = safe_strdup(mydollytab->infile);
       mydollytab->num_infiles = 1;
     }
   }
@@ -149,9 +149,11 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
   }
 
   if (mydollytab->outfile[0] != '/') {
-    char temp_outfile[sizeof(mydollytab->outfile) + 1];
-    snprintf(temp_outfile, sizeof(temp_outfile), "/%s", mydollytab->outfile);
-    strcpy(mydollytab->outfile, temp_outfile);
+    size_t olen = strlen(mydollytab->outfile);
+    if (olen + 1 < sizeof(mydollytab->outfile)) {
+      memmove(mydollytab->outfile + 1, mydollytab->outfile, olen + 1);
+      mydollytab->outfile[0] = '/';
+    }
   }
   sp++;
   if(strncmp(sp, "split ", 6) == 0) {
@@ -233,7 +235,7 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
 
     mydollytab->hostring = (char **)safe_realloc(mydollytab->hostring, (mydollytab->hostnr + 1) * sizeof(char *));
     mydollytab->hostring[mydollytab->hostnr] = (char *)safe_malloc(strlen(str) + 1);
-    strcpy(mydollytab->hostring[mydollytab->hostnr], str);
+    snprintf(mydollytab->hostring[mydollytab->hostnr], strlen(str) + 1, "%s", str);
     mydollytab->hostnr++;
   } while (fgets(str, sizeof(str), df) != NULL); // Read next line for next iteration
 
@@ -265,13 +267,15 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
         }
         if (strcmp(mydollytab->hostring[i], host) == 0) {
           me = i;
-          strcpy(mydollytab->myhostname, host);
+          strncpy(mydollytab->myhostname, host, sizeof(mydollytab->myhostname) - 1);
+          mydollytab->myhostname[sizeof(mydollytab->myhostname) - 1] = '\0';
         } else if (!mydollytab->hyphennormal) {
           /* Check if the hostname is correct, but a different interface is used */
           if ((sp = strchr(mydollytab->hostring[i], '-')) != NULL) {
             if (strncmp(mydollytab->hostring[i], host, sp - mydollytab->hostring[i]) == 0) {
               me = i;
-              strcpy(mydollytab->myhostname, host);
+              strncpy(mydollytab->myhostname, host, sizeof(mydollytab->myhostname) - 1);
+              mydollytab->myhostname[sizeof(mydollytab->myhostname) - 1] = '\0';
             }
           }
         }
@@ -282,7 +286,8 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
       mname = getenv("MYNODENAME");
       if (mname != NULL) {
         if (strcmp(mydollytab->hostring[i], mname) == 0) {
-          strcpy(mydollytab->myhostname, mname);
+          strncpy(mydollytab->myhostname, mname, sizeof(mydollytab->myhostname) - 1);
+          mydollytab->myhostname[sizeof(mydollytab->myhostname) - 1] = '\0';
           me = i;
           if (i == mydollytab->hostnr - 1) {
             mydollytab->melast = 1;
@@ -294,7 +299,8 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
       mname = getenv("HOSTNAME");
       if (mname != NULL) {
         if (strcmp(mydollytab->hostring[i], mname) == 0) {
-          strcpy(mydollytab->myhostname, mname);
+          strncpy(mydollytab->myhostname, mname, sizeof(mydollytab->myhostname) - 1);
+          mydollytab->myhostname[sizeof(mydollytab->myhostname) - 1] = '\0';
           me = i;
           if (i == mydollytab->hostnr - 1) {
             mydollytab->melast = 1;

@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <string.h>
 
 // Centralized memory allocation function
 void* safe_malloc(size_t size) {
@@ -17,4 +18,13 @@ void* safe_realloc(void* ptr, size_t size) {
         exit(EXIT_FAILURE);
     }
     return new_ptr;
+}
+
+char* safe_strdup(const char *s) {
+    char *p = strdup(s);
+    if (!p) {
+        fprintf(stderr, "strdup failed\n");
+        exit(EXIT_FAILURE);
+    }
+    return p;
 }

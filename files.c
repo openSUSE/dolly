@@ -19,8 +19,10 @@ int open_infile(int try_hard, struct dollytab * mydollytab) {
     if((in_child_pid = fork()) == 0) {
       /* Here's the child. */
       close(id[0]);
-      close(1);
-      (void) !dup(id[1]);
+      if(dup2(id[1], STDOUT_FILENO) == -1) {
+        perror("dup2 stdout");
+        exit(1);
+      }
       close(id[1]);
       // New logic to handle multiple directories and excludes
       int num_args = 4 + mydollytab->num_infiles + (mydollytab->num_excludes * 2);
@@ -56,7 +58,7 @@ int open_infile(int try_hard, struct dollytab * mydollytab) {
     }
   }
   if(mydollytab->input_split != 0) {
-    sprintf(name, "%s_%u", mydollytab->infile, input_nr);
+    snprintf(name, sizeof(name), "%s_%u", mydollytab->infile, input_nr);
   } else {
     strncpy(name, mydollytab->infile, sizeof(name) - 1);
     name[sizeof(name) - 1] = '\0';
@@ -67,8 +69,8 @@ int open_infile(int try_hard, struct dollytab * mydollytab) {
   input = open(name, O_RDONLY);
   if(input == -1) {
     if(try_hard == 1) {
-      char str[strlen(name)+18];
-      sprintf(str, "open inputfile '%s'", name);
+      char str[sizeof(name) + 18];
+      snprintf(str, sizeof(str), "open inputfile '%s'", name);
       perror(str);
       exit(1);
     } else {
@@ -100,9 +102,11 @@ int open_outfile(struct dollytab * mydollytab) {
     if((out_child_pid = fork()) == 0) {
       /* Here's the child! */
       close(pd[1]);
-      close(0);      /* Close stdin */
-      (void) !dup(pd[0]);    /* Duplicate pipe on stdin */
-      close(pd[0]);  /* Close the unused end of the pipe */
+      if(dup2(pd[0], STDIN_FILENO) == -1) {
+        perror("dup2 stdin");
+        exit(1);
+      }
+      close(pd[0]);
 
       if (chdir(mydollytab->outfile) != 0) {
         perror("chdir to output directory"); exit(1);
@@ -126,7 +130,7 @@ int open_outfile(struct dollytab * mydollytab) {
     }
   }
   if(mydollytab->output_split != 0) {
-    sprintf(name, "%s_%u", mydollytab->outfile, output_nr);
+    snprintf(name, sizeof(name), "%s_%u", mydollytab->outfile, output_nr);
   } else {
     strncpy(name, mydollytab->outfile, sizeof(name) - 1);
     name[sizeof(name) - 1] = '\0';
@@ -153,7 +157,7 @@ int open_outfile(struct dollytab * mydollytab) {
     output = open(name, O_WRONLY | O_CREAT | O_EXCL, 0644);
   }
   if(output == -1) {
-    char str[strlen(name)+19];
+    char str[sizeof(name) + 19];
     snprintf(str, sizeof(str), "open outputfile '%s'", name);
     perror(str);
     exit(1);

@@ -1,13 +1,24 @@
 #include "ping.h"
+#include <fcntl.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 int is_host_reachable(const char *hostname) {
-  char command[256];
-  int result;
-  snprintf(command, sizeof(command), "ping -c 1 -W 1 %s > /dev/null 2>&1", hostname);
-  result = system(command);
-  if (result == 0) {
-    return 1; // Host is reachable
-  } else {
-    return 0; // Host is not reachable
+  pid_t pid = fork();
+  if(pid == 0) {
+    /* child: redirect stdout/stderr to /dev/null to suppress ping output */
+    int devnull = open("/dev/null", O_WRONLY);
+    if(devnull >= 0) {
+      dup2(devnull, STDOUT_FILENO);
+      dup2(devnull, STDERR_FILENO);
+      close(devnull);
+    }
+    execlp("ping", "ping", "-c", "1", "-W", "1", hostname, NULL);
+    _exit(1);
+  } else if(pid < 0) {
+    return 0; /* fork failed */
   }
+  int status;
+  waitpid(pid, &status, 0);
+  return (WIFEXITED(status) && WEXITSTATUS(status) == 0) ? 1 : 0;
 }

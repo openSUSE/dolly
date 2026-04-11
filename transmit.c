@@ -150,10 +150,10 @@ void transmit(struct dollytab * mydollytab) {
 	      fprintf(stderr, "Got %d bytes from ctrlin in transfer, "
 		      "expected 8.\n", ret);
 	    }
-	    maxbytes = *(unsigned long long *)&mybuf;
+	    memcpy(&maxbytes, mybuf, sizeof(maxbytes));
 	    if(!mydollytab->melast) {
 	      for(j = 0; j < mydollytab->nr_childs; j++) {
-          movebytes(ctrlout[i_descr], WRITE, (char *)&maxbytes, 8,mydollytab);
+          movebytes(ctrlout[j], WRITE, (char *)&maxbytes, 8,mydollytab);
 	      }
 	    }
 	    t = maxbytes - transbytes;
@@ -300,7 +300,9 @@ void transmit(struct dollytab * mydollytab) {
       }
     }
     buf[8] = 0;
-    if(*(unsigned long long *)buf != maxbytes) {
+    unsigned long long received;
+    memcpy(&received, buf, sizeof(received));
+    if(received != maxbytes) {
       fprintf(stderr, "*** ERROR *** Didn't get correct maxbytes back!\n");
 	      /* create unneeded error, so removing as only used for debugging 
 	      "Got %lld (0x%016llx) instead of %lld (0x%016llx)\n",

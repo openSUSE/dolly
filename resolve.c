@@ -28,11 +28,13 @@ int resolve_host(char *hostname , char *ip, int mode) {
       return 1;
     }
 
-  // loop through all the results and connect to the first we can
-  for(p = servinfo; p != NULL; p = p->ai_next) 
+  // use the first resolved result
+  for(p = servinfo; p != NULL; p = p->ai_next)
     {
       struct sockaddr_in *h = (struct sockaddr_in *) p->ai_addr;
-      strncpy(ip , inet_ntoa( h->sin_addr ), 256);
+      strncpy(ip, inet_ntoa(h->sin_addr), 255);
+      ip[255] = '\0';
+      break;
     }
   freeaddrinfo(servinfo); // all done with this structure
   return 0;
@@ -47,6 +49,10 @@ int get_default_ip(char *hostname , int mode)  {
   char line[100] , *interface , *c;
   interface = NULL;
   fhandle = fopen("/proc/net/route" , "r");
+  if(fhandle == NULL) {
+    perror("fopen /proc/net/route");
+    return -1;
+  }
   while(fgets(line , 100 , fhandle)) {
     interface = strtok(line , " \t");
     c = strtok(NULL , " \t");
@@ -77,7 +83,7 @@ int get_default_ip(char *hostname , int mode)  {
       continue;
     }
     family = ifa->ifa_addr->sa_family;
-    if(strcmp( ifa->ifa_name , interface) == 0) {
+    if(interface != NULL && strcmp(ifa->ifa_name, interface) == 0) {
       if (family == fm) {
 	s = getnameinfo( ifa->ifa_addr, (family == AF_INET) ? 
 			 sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6) , 
@@ -86,7 +92,8 @@ int get_default_ip(char *hostname , int mode)  {
 	  printf("getnameinfo() failed: %s\n", gai_strerror(s));
 	  exit(EXIT_FAILURE);
 	}
-	strncpy(hostname,host,strlen(host));
+	strncpy(hostname, host, NI_MAXHOST - 1);
+	hostname[NI_MAXHOST - 1] = '\0';
       }
     }
   }
@@ -103,9 +110,10 @@ struct addrinfo *resolve_host_addrinfo(const char *hostname) {
   hints.ai_flags = 0;
   hints.ai_protocol = 0; // Any protocol
 
-  if (getaddrinfo(hostname, NULL, &hints, &result) != 0) {
+  int rv;
+  if ((rv = getaddrinfo(hostname, NULL, &hints, &result)) != 0) {
     fprintf(stderr, "getaddrinfo for host '%s' error: %s\n",
-            hostname, gai_strerror(errno));
+            hostname, gai_strerror(rv));
     exit(1);
   }
   return result;

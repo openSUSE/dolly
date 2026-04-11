@@ -98,7 +98,8 @@ void close_sockets(void) {
 void open_insocks(void) {
   struct sockaddr_in addr;
   int optval;
-  int recv_size, sizeofint = sizeof(int);
+  int recv_size;
+  socklen_t sizeofint = sizeof(int);
 
   /* All machines have an incoming data link */
   datasock = socket(PF_INET, SOCK_STREAM, 0);
@@ -130,8 +131,7 @@ void open_insocks(void) {
     		   errno);
     exit(556);
   }
-  getsockopt(datasock, SOL_SOCKET, SO_RCVBUF,
-    	     (char *) &recv_size, (void *) &sizeofint);
+  getsockopt(datasock, SOL_SOCKET, SO_RCVBUF, &recv_size, &sizeofint);
 
 
   addr.sin_family = AF_INET;
@@ -209,7 +209,8 @@ void open_outsocks(struct dollytab * mydollytab) {
   int optval;
   unsigned int max = 0;
   char hn[256+32];
-  int send_size, sizeofint = sizeof(int);
+  int send_size;
+  socklen_t sizeofint = sizeof(int);
 
   if(mydollytab->nr_childs > 1) {
     max = mydollytab->nr_childs;
@@ -263,8 +264,7 @@ void open_outsocks(struct dollytab * mydollytab) {
     	(void) fprintf(stderr, "setsockopt: SO_SNDBUF failed! errno = %d\n", errno);
     	exit(556);
       }
-      getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF,
-    		 (char *) &send_size, (void *) &sizeofint);
+      getsockopt(dataout[i], SOL_SOCKET, SO_RCVBUF, &send_size, &sizeofint);
       //fprintf(stderr, "Send buffer %u is %d bytes\n", i, send_size);
 
       ///* Setup data port */
@@ -443,7 +443,7 @@ void buildring(struct dollytab * mydollytab) {
     /* The input sockets are now connected. */
 
     /* Give information back to server */
-    sprintf(msg, "Client %s configured with parameters. Ready to proceed.\n", mydollytab->myhostname);
+    snprintf(msg, sizeof(msg), "Client %s configured with parameters. Ready to proceed.\n", mydollytab->myhostname);
     ret = movebytes(ctrlin, WRITE, msg, strlen(msg),mydollytab);
     if((unsigned int) ret != strlen(msg)) {
       fprintf(stderr,
@@ -591,7 +591,7 @@ void buildring(struct dollytab * mydollytab) {
       }
       for(j = 0; j < mydollytab->nr_childs; j++) {
 	if(FD_ISSET(ctrlout[j], &cur_set)) {
-	  ret = read(ctrlout[j], info_buf, 1024);
+	  ret = read(ctrlout[j], info_buf, sizeof(info_buf) - 1);
 	  if(ret == -1) {
 	    perror("read backflow in buildring");
 	    exit(1);
@@ -707,7 +707,7 @@ void buildring(struct dollytab * mydollytab) {
     }
 
     /* Give information back to server */
-    sprintf(msg, "Client %s ready.\n", mydollytab->myhostname);
+    snprintf(msg, sizeof(msg), "Client %s ready.\n", mydollytab->myhostname);
     ret = movebytes(ctrlin, WRITE, msg, strlen(msg),mydollytab);
     if((unsigned int) ret != strlen(msg)) {
       fprintf(stderr,
