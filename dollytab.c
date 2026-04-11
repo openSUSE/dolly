@@ -199,17 +199,17 @@ void parse_dollytab(FILE *df,struct dollytab * mydollytab) {
     }
   }
   if(strncmp("hypheninterface", str, 15) == 0) {
-    mydollytab->hyphennormal = 1;    if(fgets(str, sizeof(str), df) == NULL) {
-          perror("fgets after hypheninterface");
-          exit(1);
-        }
-      }
-      
-      /* Read in all the participating hosts. */
-      mydollytab->hostnr = 0;
-      mydollytab->hostring = NULL;
+    mydollytab->hyphennormal = 1;
+    if(fgets(str, sizeof(str), df) == NULL) {
+      perror("fgets after hypheninterface");
+      exit(1);
+    }
+  }
 
-  // The 'str' variable already contains the first line to be processed (first host or endconfig)
+  /* Read in all the participating hosts. */
+  mydollytab->hostnr = 0;
+  mydollytab->hostring = NULL;
+
   do {
     if (strncmp("endconfig", str, 9) == 0) {
       break;

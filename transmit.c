@@ -297,9 +297,9 @@ void transmit(struct dollytab * mydollytab) {
         fprintf(stderr,
           "Server got only %d bytes back from client %u instead of 8\n",
           ret, i);
+        exit(1);
       }
     }
-    buf[8] = 0;
     unsigned long long received;
     memcpy(&received, buf, sizeof(received));
     if(received != maxbytes) {

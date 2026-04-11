@@ -260,7 +260,7 @@ int main(int argc, char *argv[]) {
     case 'S':
       /* This machine is the server - don't check hostname. */
       mydollytab->meserver = 1;
-      if(strcmp(optarg,"-") < 0) {
+      if(strlen(optarg) == 0) {
         fprintf(stderr,"'%s' is not a valid servername\n",optarg);
         exit(1);
       }
@@ -675,9 +675,15 @@ int main(int argc, char *argv[]) {
       generated_dolly = 1;
       snprintf(dollytab, sizeof(dollytab), "%s", "/tmp/dollygenXXXXXX");
       fd = mkstemp(dollytab);
+      if(fd == -1) {
+        perror("mkstemp dollytab");
+        exit(1);
+      }
       df = fdopen(fd,"w");
       if(df == NULL) {
-        printf("Could not open temporary dollytab");
+        perror("fdopen dollytab");
+        close(fd);
+        exit(1);
       }
       fprintf(df,"infile %s\n",mydollytab->infile);
       fprintf(df,"outfile %s\n",mydollytab->outfile);
@@ -712,6 +718,12 @@ int main(int argc, char *argv[]) {
     }
     fprintf(stderr, "\nStart the dolly client on all clients...\n");
     open_insystemdsocks(mydollytab);
+  }
+
+  if(mydollytab->hostnr > MAXFANOUT) {
+    fprintf(stderr, "Too many clients (%u), max is %d.\n",
+            mydollytab->hostnr, MAXFANOUT);
+    exit(1);
   }
 
   alarm(timeout);
