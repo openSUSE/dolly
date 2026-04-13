@@ -10,7 +10,7 @@ OBJECTS = $(SOURCES:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(SOURCES:%.c=$(BUILD_DIR)/%.d)
 # Can 
 DEBUGFLAGS=-ggdb
-VERSION=0.70.1
+VERSION=0.72.0
 
 PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin

@@ -6,6 +6,20 @@ Copyright: Felix Rauch <rauch@inf.ethz.ch> and ETH Zurich.
 License: GNU General Public License.
 
 History:
+V 0.72.0 13-APR-2026 Antoine Ginies <aginies@suse.com
+  remove some debug
+  dont checkhostname for client
+  various bug fixes and cleanup (by claude)
+
+V 0.71.0 24-NOV-2025 Antoine Ginies <aginies@suse.com>
+  test connection now use pthread (faster than sequential...)
+  -H option now support IP range in the list like 10.0.1.45-80
+  validate client by ping or open port (9996)
+  get stat and ETA on file transfer
+  double check that a client is not listed twice (using ip)
+  secured dolly.socket by changing SocketMode to 0660
+  various small fixes in code
+
 V 0.70.0 05-NOV-2025 Antoine Ginies <aginies@suse.com>
   ping clients before adding them to the queue or remove them
   add -D option to include directory
