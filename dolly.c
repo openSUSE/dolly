@@ -31,18 +31,22 @@ static void cleanup_handler(void) {
   }
 }
 
-static void signal_handler(int signum) {
-  const char msg[] = "\nCaught signal. Terminating.\n";
-  (void)write(STDERR_FILENO, msg, sizeof(msg) - 1);
-  _exit(128 + signum);
+/* Async-signal-safe stderr write; return value intentionally ignored. */
+static void signal_write(const char *msg, size_t len) {
+  ssize_t r = write(STDERR_FILENO, msg, len);
+  (void)r;
 }
 
-/* PIDs of child processes */
+static void signal_handler(int signum) {
+  const char msg[] = "\nCaught signal. Terminating.\n";
+  signal_write(msg, sizeof(msg) - 1);
+  _exit(128 + signum);
+}
 
 /* Handles timeouts by terminating the program. */
 static void alarm_handler() {
   const char msg[] = "Timeout reached. Terminating.\n";
-  (void)write(STDERR_FILENO, msg, sizeof(msg) - 1);
+  signal_write(msg, sizeof(msg) - 1);
   _exit(1);
 }
 
