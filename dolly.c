@@ -33,7 +33,7 @@ static void cleanup_handler(void) {
 
 static void signal_handler(int signum) {
   const char msg[] = "\nCaught signal. Terminating.\n";
-  write(STDERR_FILENO, msg, sizeof(msg) - 1);
+  (void)write(STDERR_FILENO, msg, sizeof(msg) - 1);
   _exit(128 + signum);
 }
 
@@ -42,7 +42,7 @@ static void signal_handler(int signum) {
 /* Handles timeouts by terminating the program. */
 static void alarm_handler() {
   const char msg[] = "Timeout reached. Terminating.\n";
-  write(STDERR_FILENO, msg, sizeof(msg) - 1);
+  (void)write(STDERR_FILENO, msg, sizeof(msg) - 1);
   _exit(1);
 }
 
